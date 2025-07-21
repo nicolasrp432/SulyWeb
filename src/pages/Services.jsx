@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
   Sparkles, 
@@ -8,131 +8,254 @@ import {
   ArrowRight,
   Palette,
   Eye,
-  Heart
+  Heart,
+  Plus,
+  ShoppingBag
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
+import { useBookingCart } from '@/contexts/BookingCartContext';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 
 const Services = () => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedService, setSelectedService] = useState(null);
+  const { addService } = useBookingCart();
 
   const categories = [
     { id: 'all', name: 'Todos', icon: Sparkles },
-    { id: 'nails', name: 'Uñas', icon: Palette },
-    { id: 'beauty', name: 'Belleza y Depilación', icon: Eye }
+    { id: 'nails', name: 'Manicura y Pedicura', icon: Palette },
+    { id: 'beauty', name: 'Pestañas y Depilación', icon: Eye }
   ];
 
   const services = [
     {
       id: 1,
       category: 'nails',
-      title: 'Manicura Clásica',
-      description: 'Cuidado completo de uñas con limado, cutículas y esmaltado tradicional.',
-      duration: '45 min',
-      price: '25€',
-      image: 'Classic manicure with elegant pink nail polish being applied',
-      features: ['Limado profesional', 'Cuidado de cutículas', 'Esmaltado tradicional', 'Masaje de manos'],
+      title: 'Cortar + limar',
+      description: 'Servicio básico para mantener tus uñas en perfecto estado.',
+      duration: '30 min',
+      price: '9,90€',
+      image: 'Classic nail trimming and filing service',
+      features: ['Corte profesional', 'Limado perfecto', 'Acabado uniforme', 'Servicio rápido'],
       popular: false
     },
     {
       id: 2,
       category: 'nails',
-      title: 'Manicura Gel',
-      description: 'Esmalte gel de larga duración para uñas perfectas hasta por 3 semanas.',
-      duration: '60 min',
-      price: '35€',
-      image: 'Woman showing off her glossy gel manicure with long-lasting color',
-      features: ['Preparación profesional', 'Esmalte gel premium', 'Secado UV/LED', 'Duración 3 semanas'],
-      popular: true
+      title: 'Manicura exprés',
+      description: 'Servicio rápido para lucir uñas perfectas en poco tiempo.',
+      duration: '30 min',
+      price: '11,90€',
+      image: 'Quick express manicure service',
+      features: ['Servicio rápido', 'Limado profesional', 'Cutículas perfectas', 'Esmaltado básico'],
+      popular: false
     },
     {
       id: 3,
       category: 'nails',
-      title: 'Manicura Semipermanente',
-      description: 'La combinación perfecta de durabilidad y cuidado para tus uñas naturales.',
-      duration: '50 min',
-      price: '30€',
-      image: 'A close-up of a flawless semi-permanent manicure with a natural shine',
-      features: ['Fórmula híbrida', 'Fácil remoción', 'Cuidado natural', 'Duración 2 semanas'],
-      popular: false
+      title: 'Manicura semi exprés',
+      description: 'Manicura con esmalte semipermanente en tiempo reducido.',
+      duration: '40 min',
+      price: '14,90€',
+      image: 'Semi-permanent express manicure',
+      features: ['Esmalte semipermanente', 'Duración extendida', 'Acabado brillante', 'Servicio eficiente'],
+      popular: true
     },
     {
       id: 4,
       category: 'nails',
-      title: 'Pedicura Clásica',
-      description: 'Cuidado completo de pies con exfoliación, hidratación y esmaltado.',
-      duration: '60 min',
-      price: '30€',
-      image: 'Feet soaking in a bowl of water during a classic pedicure',
-      features: ['Remojo relajante', 'Exfoliación', 'Cuidado de durezas', 'Masaje de pies'],
+      title: 'Manicura adicional',
+      description: 'Servicio completo de manicura con tratamientos adicionales.',
+      duration: '45 min',
+      price: '16,90€',
+      image: 'Complete manicure with additional treatments',
+      features: ['Tratamiento completo', 'Hidratación profunda', 'Masaje de manos', 'Acabado perfecto'],
       popular: false
     },
     {
       id: 5,
       category: 'nails',
-      title: 'Pedicura Spa',
-      description: 'Una experiencia de lujo para tus pies con tratamiento completo y relajación total.',
-      duration: '90 min',
-      price: '45€',
-      image: 'A luxurious spa pedicure setup with flowers and candles',
-      features: ['Baño de pies aromático', 'Exfoliación premium', 'Mascarilla hidratante', 'Masaje relajante'],
+      title: 'Manicura completa spa',
+      description: 'Experiencia spa completa para tus manos con tratamientos premium.',
+      duration: '60 min',
+      price: '19,90€',
+      image: 'Luxury spa manicure treatment',
+      features: ['Exfoliación', 'Mascarilla hidratante', 'Masaje relajante', 'Esmaltado premium'],
       popular: true
     },
     {
       id: 6,
       category: 'nails',
-      title: 'Diseños Personalizados',
-      description: 'Transforma tus uñas en una obra de arte con diseños creativos y únicos.',
-      duration: 'Desde 60 min',
-      price: 'Desde 35€',
-      image: 'Hand with creative custom nail art featuring intricate designs',
-      features: ['Consulta de diseño', 'Técnicas artísticas', 'Materiales premium', 'Acabado profesional'],
+      title: 'Manicura rusa',
+      description: 'Técnica especializada para una manicura perfecta y duradera.',
+      duration: '60 min',
+      price: '25,90€',
+      image: 'Russian manicure technique',
+      features: ['Técnica especializada', 'Cutículas perfectas', 'Mayor duración', 'Acabado profesional'],
       popular: true
     },
     {
       id: 7,
-      category: 'beauty',
-      title: 'Depilación de Cejas',
-      description: 'Consigue un perfilado perfecto de cejas que realza tu mirada natural.',
-      duration: '20 min',
-      price: '15€',
-      image: 'A beautician professionally shaping a client\'s eyebrows',
-      features: ['Análisis de visagismo', 'Perfilado preciso', 'Técnica con pinza o cera', 'Acabado calmante'],
-      popular: false
+      category: 'nails',
+      title: 'Uñas acrílicas / gel',
+      description: 'Extensiones de uñas con materiales de alta calidad para un resultado natural y duradero.',
+      duration: '90 min',
+      price: '35,90€',
+      image: 'Acrylic or gel nail extensions',
+      features: ['Extensiones duraderas', 'Materiales premium', 'Diseño personalizado', 'Acabado natural'],
+      popular: true
     },
     {
       id: 8,
-      category: 'beauty',
-      title: 'Cejas con Henna',
-      description: 'Tinte natural que define, rellena y da color a tus cejas de forma duradera.',
-      duration: '45 min',
-      price: '25€',
-      image: 'Before and after of eyebrows tinted with natural henna',
-      features: ['Tinte 100% natural', 'Color personalizado', 'Cubre canas y huecos', 'Duración hasta 6 semanas'],
+      category: 'nails',
+      title: 'Uñas baby boomer',
+      description: 'Elegante degradado de color que simula una manicura francesa moderna.',
+      duration: '90 min',
+      price: '38,90€',
+      image: 'Baby boomer nail design',
+      features: ['Degradado elegante', 'Efecto natural', 'Tendencia actual', 'Acabado sofisticado'],
       popular: true
     },
     {
       id: 9,
+      category: 'nails',
+      title: 'Relleno de acrílico',
+      description: 'Mantenimiento para tus uñas acrílicas, conservando su belleza y durabilidad.',
+      duration: '60 min',
+      price: '25,00€',
+      image: 'Acrylic nail fill service',
+      features: ['Mantenimiento profesional', 'Corrección de crecimiento', 'Refuerzo estructural', 'Acabado renovado'],
+      popular: false
+    },
+    {
+      id: 10,
+      category: 'nails',
+      title: 'Reparar uña',
+      description: 'Solución rápida para uñas dañadas o rotas.',
+      duration: '15 min',
+      price: '3,00€',
+      image: 'Nail repair service',
+      features: ['Reparación rápida', 'Refuerzo estructural', 'Igualación de longitud', 'Acabado natural'],
+      popular: false
+    },
+    {
+      id: 11,
+      category: 'nails',
+      title: 'Retirar acrílico',
+      description: 'Eliminación segura y profesional de uñas acrílicas.',
+      duration: '30 min',
+      price: '10,00€',
+      image: 'Acrylic nail removal service',
+      features: ['Remoción segura', 'Cuidado de la uña natural', 'Técnica profesional', 'Hidratación posterior'],
+      popular: false
+    },
+    {
+      id: 12,
+      category: 'nails',
+      title: 'Retirar semi',
+      description: 'Eliminación de esmalte semipermanente sin dañar la uña natural.',
+      duration: '20 min',
+      price: '5,00€',
+      image: 'Semi-permanent polish removal',
+      features: ['Remoción cuidadosa', 'Protección de la uña', 'Técnica profesional', 'Servicio rápido'],
+      popular: false
+    },
+    {
+      id: 13,
+      category: 'nails',
+      title: 'Esmaltar pies',
+      description: 'Servicio de esmaltado para lucir unos pies perfectos.',
+      duration: '30 min',
+      price: '14,90€',
+      image: 'Feet nail polish service',
+      features: ['Esmaltado profesional', 'Colores duraderos', 'Acabado brillante', 'Secado rápido'],
+      popular: false
+    },
+    {
+      id: 14,
+      category: 'nails',
+      title: 'Pedicura completa',
+      description: 'Tratamiento integral para pies, incluyendo exfoliación, hidratación y esmaltado.',
+      duration: '60 min',
+      price: '25,90€',
+      image: 'Complete pedicure treatment',
+      features: ['Exfoliación profunda', 'Tratamiento de durezas', 'Hidratación intensiva', 'Esmaltado perfecto'],
+      popular: true
+    },
+    {
+      id: 15,
+      category: 'nails',
+      title: 'Pedicura completa semi / tradicional',
+      description: 'Pedicura integral con opción de esmalte semipermanente o tradicional.',
+      duration: '60 min',
+      price: '25,90€',
+      image: 'Complete pedicure with semi-permanent or traditional polish',
+      features: ['Tratamiento completo', 'Opción de acabado', 'Larga duración', 'Resultados profesionales'],
+      popular: true
+    },
+    {
+      id: 16,
       category: 'beauty',
       title: 'Lifting de Pestañas',
       description: 'Curvatura natural y duradera que eleva y alarga tus pestañas sin extensiones.',
       duration: '60 min',
-      price: '40€',
+      price: '30,00€',
       image: 'A close-up of an eye showing the results of an eyelash lifting treatment',
       features: ['Curvatura natural', 'Efecto rímel', 'Duración 6-8 semanas', 'Incluye tinte de pestañas'],
       popular: true
     },
     {
-      id: 10,
+      id: 17,
       category: 'beauty',
-      title: 'Depilación Facial con Cera',
-      description: 'Depilación profesional de labio superior, mentón o mejillas con cera de alta calidad.',
-      duration: '15-30 min',
-      price: 'Desde 10€',
-      image: 'A professional applying wax for facial hair removal',
-      features: ['Cera hipoalergénica', 'Técnica profesional', 'Piel suave y sin vello', 'Resultados duraderos'],
+      title: 'Depilar cejas',
+      description: 'Perfilado profesional para realzar tu mirada.',
+      duration: '15 min',
+      price: '5,00€',
+      image: 'Eyebrow waxing service',
+      features: ['Diseño personalizado', 'Técnica precisa', 'Acabado natural', 'Realza la mirada'],
+      popular: false
+    },
+    {
+      id: 18,
+      category: 'beauty',
+      title: 'Depilar bigote',
+      description: 'Depilación suave y efectiva del vello facial superior.',
+      duration: '10 min',
+      price: '5,00€',
+      image: 'Upper lip waxing service',
+      features: ['Técnica suave', 'Resultados precisos', 'Piel cuidada', 'Acabado perfecto'],
+      popular: false
+    },
+    {
+      id: 19,
+      category: 'beauty',
+      title: 'Depilar axila',
+      description: 'Depilación profesional para axilas suaves y sin irritación.',
+      duration: '15 min',
+      price: '9,90€',
+      image: 'Underarm waxing service',
+      features: ['Técnica profesional', 'Mínima irritación', 'Resultados duraderos', 'Piel cuidada'],
+      popular: false
+    },
+    {
+      id: 20,
+      category: 'beauty',
+      title: 'Depilar rostro entero',
+      description: 'Tratamiento completo para eliminar el vello facial de forma profesional.',
+      duration: '30 min',
+      price: '14,90€',
+      image: 'Full face waxing service',
+      features: ['Tratamiento integral', 'Técnica suave', 'Resultados uniformes', 'Piel radiante'],
       popular: false
     }
   ];
@@ -255,15 +378,27 @@ const Services = () => {
                     ))}
                   </div>
 
-                  <Button 
-                    asChild
-                    className="w-full mt-auto bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium transition-all duration-300 group"
-                  >
-                    <Link to="/reservas">
-                      <span>Reservar Servicio</span>
-                      <ArrowRight className="h-4 w-4 ml-2 group-hover:translate-x-1 transition-transform duration-300" />
-                    </Link>
-                  </Button>
+                  <div className="flex gap-2 mt-auto">
+                    <Button 
+                      onClick={() => setSelectedService(service)}
+                      className="flex-1 bg-white border border-pink-500 text-pink-500 hover:bg-pink-50 rounded-full font-medium transition-all duration-300"
+                    >
+                      <span>Ver Detalles</span>
+                    </Button>
+                    <Button 
+                      onClick={() => {
+                        addService(service);
+                        toast({
+                          title: "Servicio añadido",
+                          description: `${service.title} añadido a tu reserva`,
+                        });
+                      }}
+                      className="flex-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium transition-all duration-300 group"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      <span>Añadir</span>
+                    </Button>
+                  </div>
                 </div>
               </motion.div>
             ))}
@@ -319,6 +454,71 @@ const Services = () => {
           </div>
         </div>
       </section>
+
+      {/* Modal de detalles del servicio */}
+      <Dialog open={!!selectedService} onOpenChange={(open) => !open && setSelectedService(null)}>
+        <DialogContent className="max-w-3xl">
+          {selectedService && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold gradient-text">{selectedService.title}</DialogTitle>
+                <DialogDescription className="text-base text-gray-600 mt-2">
+                  {selectedService.description}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                <div>
+                  <img  
+                    className="w-full h-64 object-cover rounded-lg" 
+                    alt={selectedService.title} 
+                    src="https://images.unsplash.com/photo-1595872018818-97555653a011" 
+                  />
+                  
+                  <div className="mt-4 flex justify-between items-center">
+                    <div className="flex items-center text-gray-600">
+                      <Clock className="h-5 w-5 mr-2 text-pink-500" />
+                      <span>{selectedService.duration}</span>
+                    </div>
+                    <div className="text-2xl font-bold gradient-text">
+                      {selectedService.price}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-800">Características</h3>
+                  <div className="space-y-2">
+                    {selectedService.features.map((feature, idx) => (
+                      <div key={idx} className="flex items-center text-gray-600">
+                        <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="pt-4">
+                    <Button 
+                      onClick={() => {
+                        addService(selectedService);
+                        toast({
+                          title: "Servicio añadido",
+                          description: `${selectedService.title} añadido a tu reserva`,
+                        });
+                        setSelectedService(null);
+                      }}
+                      className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium transition-all duration-300 group"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      <span>Añadir a mi Reserva</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };

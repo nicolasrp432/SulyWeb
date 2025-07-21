@@ -1,0 +1,5 @@
+# Configuración de Supabase para Suly Pretty Nails
+
+[functions]
+  [functions.send-booking-confirmation]
+    verify_jwt = false

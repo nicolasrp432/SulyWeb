@@ -1,10 +1,9 @@
 import React from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
   Sparkles, 
-  Star, 
   Calendar, 
   Award, 
   Heart,
@@ -48,48 +47,29 @@ const Home = () => {
       title: 'Manicuras',
       description: 'Gel, semipermanente y diseños únicos.',
       image: 'A close up of a woman\'s hands with a fresh pink manicure',
-      price: 'Desde 25€'
+      price: 'Desde 9,90€'
     },
     {
       title: 'Pedicuras',
       description: 'Relajantes pedicuras spa y tratamientos.',
       image: 'A woman receiving a relaxing pedicure treatment',
-      price: 'Desde 30€'
+      price: 'Desde 14,90€'
     },
     {
       title: 'Lifting de Pestañas',
       description: 'Realza tu mirada de forma natural.',
       image: 'A close up of an eye with long, curled eyelashes after a lifting treatment',
-      price: 'Desde 40€'
+      price: '30€'
     },
     {
-      title: 'Depilación y Henna',
-      description: 'Cejas perfectas y definidas.',
-      image: 'A woman getting her eyebrows shaped and tinted with henna',
-      price: 'Desde 15€'
+      title: 'Depilación',
+      description: 'Cejas, bigote, axilas y rostro.',
+      image: 'A woman getting her eyebrows shaped professionally',
+      price: 'Desde 5€'
     }
   ];
 
-  const testimonials = [
-    {
-      name: 'María García',
-      rating: 5,
-      comment: '¡El mejor sitio de Basauri! Siempre salgo encantada. El equipo es muy profesional y el ambiente es genial.',
-      service: 'Manicura Gel'
-    },
-    {
-      name: 'Ana López',
-      rating: 5,
-      comment: 'Los diseños que hacen son obras de arte. Fui a la sede de Galdakao y el trato fue espectacular.',
-      service: 'Diseños Personalizados'
-    },
-    {
-      name: 'Carmen Ruiz',
-      rating: 5,
-      comment: 'El lifting de pestañas cambió mi mirada. ¡Súper recomendado, volveré sin duda!',
-      service: 'Lifting de Pestañas'
-    }
-  ];
+  // Se eliminó el array de testimonials
 
   const handleServiceClick = () => {
     toast({
@@ -110,7 +90,7 @@ const Home = () => {
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
           <img  
-            class="w-full h-full object-cover" 
+            className="w-full h-full object-cover" 
             alt="Elegant nail salon interior with modern pink and gold decor" src="https://images.unsplash.com/photo-1460980445968-0a5d622f295b" />
           <div className="absolute inset-0 hero-gradient"></div>
         </div>
@@ -279,7 +259,7 @@ const Home = () => {
                 <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg group-hover:shadow-2xl transition-all duration-300">
                   <div className="aspect-w-4 aspect-h-3 relative">
                     <img  
-                      class="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
                       alt={service.description} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
@@ -348,43 +328,7 @@ const Home = () => {
             <CommonNinjaReviews />
           </motion.div>
 
-          {/* Testimonios destacados */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            viewport={{ once: true }}
-            className="mt-16"
-          >
-            <h3 className="text-2xl font-bold text-center mb-8">Testimonios Destacados</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {testimonials.map((testimonial, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 50 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
-                >
-                  <div className="flex items-center mb-4">
-                    {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} className="h-5 w-5 text-yellow-400 fill-current" />
-                    ))}
-                  </div>
-                  
-                  <p className="text-gray-600 mb-6 italic leading-relaxed">
-                    "{testimonial.comment}"
-                  </p>
-                  
-                  <div className="border-t pt-4">
-                    <p className="font-semibold text-gray-800">{testimonial.name}</p>
-                    <p className="text-sm text-pink-600">{testimonial.service}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+          {/* Se eliminó la sección de Testimonios Destacados */}
         </div>
       </section>
 

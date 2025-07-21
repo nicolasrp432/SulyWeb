@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
   MapPin, 
@@ -124,14 +124,15 @@ const Contact = () => {
                 <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4"><Clock className="h-8 w-8 text-pink-500"/></div>
                     <h3 className="text-lg font-semibold mb-2">Horarios</h3>
-                    <p className="text-gray-600">Lun-Vie: 9:00 - 20:00</p>
-                    <p className="text-gray-600">Sáb: 9:00 - 18:00</p>
+                    <p className="text-gray-600">Lunes: 10:00 - 17:00</p>
+                    <p className="text-gray-600">Martes a Viernes: 10:00 - 20:00</p>
+                    <p className="text-gray-600">Sábados: 09:00 - 14:00</p>
                 </div>
                  <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4"><Phone className="h-8 w-8 text-pink-500"/></div>
                     <h3 className="text-lg font-semibold mb-2">Teléfono</h3>
-                    <a href="https://wa.link/f3tn6z" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-pink-600">631 119 686</a>
-                    <p className="text-sm text-gray-500">(Solo WhatsApp)</p>
+                    <a href="tel:631925725" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-pink-600">631 92 57 25</a>
+                    <a href="tel:631119686" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-pink-600 mt-1">631 11 96 86</a>
                 </div>
                  <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4"><Mail className="h-8 w-8 text-pink-500"/></div>

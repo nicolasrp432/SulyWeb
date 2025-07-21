@@ -1,58 +1,101 @@
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
-import { Helmet } from 'react-helmet';
+import React, { useReducer, useMemo, useEffect, useCallback, memo } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
-  Calendar, 
-  Clock, 
-  User, 
-  Phone, 
-  Mail, 
-  MessageSquare,
   CheckCircle,
   ArrowLeft,
   ArrowRight,
-  MapPin,
-  Sparkles,
-  Loader2
 } from 'lucide-react';
+import { sendBookingConfirmationEmail } from '@/lib/emailService';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useBookingCart } from '@/contexts/BookingCartContext';
+import { CONFIG, MESSAGES } from '@/constants';
+import { 
+  LocationStep, 
+  ServicesStep, 
+  DateTimeStep, 
+  PersonalDataStep, 
+  ConfirmationStep 
+} from '@/components/BookingSteps';
 
-const Booking = () => {
-  const { toast } = useToast();
-  const [currentStep, setCurrentStep] = useState(1);
-  const [bookingData, setBookingData] = useState({
+// Reducer para el estado del booking
+const bookingReducer = (state, action) => {
+  switch (action.type) {
+    case 'SET_STEP':
+      return { ...state, currentStep: action.payload };
+    case 'SET_BOOKING_DATA':
+      return { ...state, bookingData: { ...state.bookingData, ...action.payload } };
+    case 'SET_LOCATIONS':
+      return { ...state, locations: action.payload };
+    case 'SET_SERVICES':
+      return { ...state, services: action.payload };
+    case 'SET_BLOCKED_SLOTS':
+      return { ...state, blockedSlots: action.payload };
+    case 'SET_LOADING':
+      return { ...state, loading: { ...state.loading, ...action.payload } };
+    case 'RESET_BOOKING':
+      return {
+        ...state,
+        currentStep: CONFIG.BOOKING.STEPS.LOCATION,
+        bookingData: {
+          location: '',
+          services: [],
+          date: '',
+          time: '',
+          name: '',
+          phone: '',
+          email: '',
+          notes: ''
+        },
+        blockedSlots: []
+      };
+    default:
+      return state;
+  }
+};
+
+const initialState = {
+  currentStep: CONFIG.BOOKING.STEPS.LOCATION,
+  bookingData: {
     location: '',
-    service: '',
+    services: [],
     date: '',
     time: '',
     name: '',
     phone: '',
     email: '',
     notes: ''
-  });
-  const [locations, setLocations] = useState([]);
-  const [services, setServices] = useState([]);
-  const [blockedSlots, setBlockedSlots] = useState([]);
-  const [loading, setLoading] = useState({
+  },
+  locations: [],
+  services: [],
+  blockedSlots: [],
+  loading: {
     locations: true,
     services: true,
-    slots: false
-  });
+    slots: false,
+    submit: false
+  }
+};
 
-  const timeSlots = [
-    '09:00', '10:00', '11:00', '12:00', '15:00', '16:00', '17:00', '18:00', '19:00'
-  ];
+const Booking = () => {
+  const { toast } = useToast();
+  const { selectedServices, removeService, clearServices } = useBookingCart();
+  const [state, dispatch] = useReducer(bookingReducer, initialState);
+  const { currentStep, bookingData, locations, services, blockedSlots, loading } = state;
 
-  const generateAvailableDates = () => {
+  // Usar constantes para time slots
+  const timeSlots = CONFIG.BOOKING.TIME_SLOTS;
+
+  const generateAvailableDates = useCallback(() => {
     const dates = [];
     const today = new Date();
-    for (let i = 1; i <= 30; i++) {
+    for (let i = 1; i <= CONFIG.BOOKING.MAX_ADVANCE_DAYS; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      if (date.getDay() !== 0) { // Skip Sundays
+      if (!CONFIG.BOOKING.EXCLUDED_DAYS.includes(date.getDay())) {
         dates.push({
           date: date.toISOString().split('T')[0],
           display: date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -60,31 +103,63 @@ const Booking = () => {
       }
     }
     return dates;
-  };
+  }, []);
 
-  const availableDates = useMemo(() => generateAvailableDates(), []);
+  const availableDates = useMemo(() => generateAvailableDates(), [generateAvailableDates]);
 
   const fetchLocations = useCallback(async () => {
-    setLoading(prev => ({ ...prev, locations: true }));
-    const { data, error } = await supabase.from('locations').select('*');
-    if (error) {
-      toast({ title: "Error", description: "No se pudieron cargar las sedes." });
-    } else {
-      setLocations(data);
+    dispatch({ type: 'SET_LOADING', payload: { locations: true } });
+    try {
+      const { data, error } = await supabase.from('locations').select('*');
+      if (error) throw error;
+      dispatch({ type: 'SET_LOCATIONS', payload: data });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: MESSAGES.ERRORS.LOAD_LOCATIONS,
+        variant: "destructive",
+        duration: CONFIG.TOAST.ERROR_DURATION
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: { locations: false } });
     }
-    setLoading(prev => ({ ...prev, locations: false }));
   }, [toast]);
 
   const fetchServices = useCallback(async () => {
-    setLoading(prev => ({ ...prev, services: true }));
-    const { data, error } = await supabase.from('services').select('*');
-    if (error) {
-      toast({ title: "Error", description: "No se pudieron cargar los servicios." });
-    } else {
-      setServices(data);
+    dispatch({ type: 'SET_LOADING', payload: { services: true } });
+    try {
+      // Asegurarse de obtener todos los servicios sin filtros
+      const { data, error } = await supabase
+        .from('services')
+        .select('*')
+        .order('id', { ascending: true });
+        
+      if (error) throw error;
+      
+      // Verificar si todos los servicios del esquema están presentes
+      console.log('Servicios cargados:', data.length);
+      
+      dispatch({ type: 'SET_SERVICES', payload: data });
+      
+      // Si hay servicios seleccionados en el carrito, usarlos
+      if (selectedServices.length > 0) {
+        dispatch({ 
+          type: 'SET_BOOKING_DATA', 
+          payload: { services: selectedServices.map(service => service.id) }
+        });
+      }
+    } catch (error) {
+      console.error('Error al cargar servicios:', error);
+      toast({ 
+        title: "Error", 
+        description: MESSAGES.ERRORS.LOAD_SERVICES,
+        variant: "destructive",
+        duration: CONFIG.TOAST.ERROR_DURATION
+      });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: { services: false } });
     }
-    setLoading(prev => ({ ...prev, services: false }));
-  }, [toast]);
+  }, [toast, selectedServices]);
 
   useEffect(() => {
     fetchLocations();
@@ -93,109 +168,277 @@ const Booking = () => {
 
   const getBlockedSlots = useCallback(async (locationId, date) => {
     if (!locationId || !date) return;
-    setLoading(prev => ({ ...prev, slots: true }));
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('booking_time')
-      .eq('location_id', locationId)
-      .eq('booking_date', date);
-    
-    if (error) {
-      toast({ title: "Error", description: "No se pudieron verificar los horarios." });
-      setBlockedSlots([]);
-    } else {
-      setBlockedSlots(data.map(b => b.booking_time));
+    dispatch({ type: 'SET_LOADING', payload: { slots: true } });
+    try {
+      const { data, error } = await supabase
+        .from('bookings')
+        .select('booking_time')
+        .eq('location_id', locationId)
+        .eq('booking_date', date);
+      
+      if (error) throw error;
+      dispatch({ type: 'SET_BLOCKED_SLOTS', payload: data.map(b => b.booking_time) });
+    } catch (error) {
+      toast({ 
+        title: "Error", 
+        description: MESSAGES.ERRORS.VERIFY_SLOTS,
+        variant: "destructive",
+        duration: CONFIG.TOAST.ERROR_DURATION
+      });
+      dispatch({ type: 'SET_BLOCKED_SLOTS', payload: [] });
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: { slots: false } });
     }
-    setLoading(prev => ({ ...prev, slots: false }));
   }, [toast]);
 
-  const handleInputChange = (field, value) => {
-    const newData = { ...bookingData, [field]: value };
+  const handleInputChange = useCallback((field, value) => {
+    const updates = { [field]: value };
     
     if (field === 'date') {
-      getBlockedSlots(newData.location, value);
-      newData.time = '';
+      getBlockedSlots(bookingData.location, value);
+      updates.time = '';
     }
     if (field === 'location') {
-        newData.service = '';
-        newData.date = '';
-        newData.time = '';
-        setBlockedSlots([]);
+      updates.date = '';
+      updates.time = '';
+      dispatch({ type: 'SET_BLOCKED_SLOTS', payload: [] });
+    }
+    if (field === 'service') {
+      // Para servicios individuales desde la página de reserva
+      const currentServices = bookingData.services;
+      if (!currentServices.includes(value)) {
+        updates.services = [...currentServices, value];
+      } else {
+        updates.services = currentServices.filter(id => id !== value);
+      }
     }
 
-    setBookingData(newData);
-  };
+    dispatch({ type: 'SET_BOOKING_DATA', payload: updates });
+  }, [bookingData.location, bookingData.services, getBlockedSlots]);
+  
+  const handleRemoveService = useCallback((serviceId) => {
+    dispatch({ 
+      type: 'SET_BOOKING_DATA', 
+      payload: { services: bookingData.services.filter(id => id !== serviceId) }
+    });
+    // También eliminar del contexto global si existe
+    removeService(serviceId);
+  }, [bookingData.services, removeService]);
 
-  const handleNextStep = () => {
+  const isStepValid = useCallback(() => {
+    switch (currentStep) {
+      case CONFIG.BOOKING.STEPS.LOCATION: return !!bookingData.location;
+      case CONFIG.BOOKING.STEPS.SERVICES: return bookingData.services.length > 0;
+      case CONFIG.BOOKING.STEPS.DATETIME: return !!bookingData.date && !!bookingData.time;
+      case CONFIG.BOOKING.STEPS.PERSONAL_DATA: return !!bookingData.name && !!bookingData.phone && !!bookingData.email;
+      default: return false;
+    }
+  }, [currentStep, bookingData]);
+
+  const handleNextStep = useCallback(() => {
     if (isStepValid()) {
-      setCurrentStep(currentStep + 1);
+      dispatch({ type: 'SET_STEP', payload: currentStep + 1 });
     }
-  };
+  }, [currentStep, isStepValid]);
 
-  const handlePrevStep = () => {
-    if (currentStep > 1) setCurrentStep(currentStep - 1);
-  };
+  const handlePrevStep = useCallback(() => {
+    if (currentStep > 1) {
+      dispatch({ type: 'SET_STEP', payload: currentStep - 1 });
+    }
+  }, [currentStep]);
 
-  const handleSubmitBooking = async () => {
-    setLoading(prev => ({ ...prev, submit: true }));
-    const { error } = await supabase.from('bookings').insert([
-      {
+  const handleSubmitBooking = useCallback(async () => {
+    dispatch({ type: 'SET_LOADING', payload: { submit: true } });
+    
+    try {
+      console.log('Iniciando proceso de reserva...');
+      console.log('Datos de reserva:', {
+        location: bookingData.location,
+        date: bookingData.date,
+        time: bookingData.time,
+        services: bookingData.services,
+        name: bookingData.name,
+        email: bookingData.email,
+        phone: bookingData.phone
+      });
+      
+      // Crear una reserva principal
+      const { data: newBooking, error: bookingError } = await supabase.from('bookings').insert([{
         location_id: bookingData.location,
-        service_id: bookingData.service,
         booking_date: bookingData.date,
         booking_time: bookingData.time,
         client_name: bookingData.name,
         client_phone: bookingData.phone,
         client_email: bookingData.email,
-        notes: bookingData.notes,
-      },
-    ]);
-    setLoading(prev => ({ ...prev, submit: false }));
-
-    if (error) {
+        notes: bookingData.notes
+      }]).select();
+      
+      if (bookingError) {
+        console.error('Error al crear reserva:', bookingError);
+        toast({
+          variant: "destructive",
+          title: "¡Error en la reserva!",
+          description: bookingError.message || MESSAGES.ERRORS.BOOKING_UNAVAILABLE,
+          duration: CONFIG.TOAST.ERROR_DURATION
+        });
+        getBlockedSlots(bookingData.location, bookingData.date);
+        dispatch({ type: 'SET_BOOKING_DATA', payload: { time: '' } });
+        dispatch({ type: 'SET_STEP', payload: CONFIG.BOOKING.STEPS.DATETIME });
+        return;
+      }
+      
+      console.log('Reserva creada exitosamente:', newBooking);
+      
+      // Insertar los servicios en la tabla booking_services
+      if (bookingData.services.length > 0 && newBooking && newBooking.length > 0) {
+        const bookingId = newBooking[0].id;
+        const serviceEntries = bookingData.services.map(serviceId => ({
+          booking_id: bookingId,
+          service_id: serviceId
+        }));
+        
+        console.log('Guardando servicios para la reserva:', serviceEntries);
+        
+        const { error: servicesError } = await supabase
+          .from('booking_services')
+          .insert(serviceEntries);
+          
+        if (servicesError) {
+          console.error('Error al guardar servicios:', servicesError);
+          // Continuamos aunque haya error en los servicios, ya que la reserva principal se creó
+        } else {
+          console.log('Servicios guardados correctamente');
+        }
+      }
+      
+      // Enviar correo de confirmación
+      try {
+        console.log('Preparando envío de correo de confirmación...');
+        
+        // Obtener información de los servicios seleccionados
+        const { data: selectedServicesData, error: servicesDataError } = await supabase
+          .from('services')
+          .select('name, price')
+          .in('id', bookingData.services);
+          
+        if (servicesDataError) {
+          console.error('Error al obtener detalles de servicios:', servicesDataError);
+        }
+        
+        // Obtener información de la ubicación
+        const { data: locationData, error: locationDataError } = await supabase
+          .from('locations')
+          .select('name')
+          .eq('id', bookingData.location)
+          .single();
+          
+        if (locationDataError) {
+          console.error('Error al obtener detalles de ubicación:', locationDataError);
+        }
+        
+        // Crear el cuerpo del correo
+        const emailBody = {
+          to: bookingData.email,
+          subject: 'Confirmación de Reserva - Suly Pretty Nails',
+          booking: {
+            name: bookingData.name,
+            date: bookingData.date,
+            time: bookingData.time,
+            location: locationData?.name || '',
+            services: selectedServicesData || [],
+            phone: bookingData.phone,
+            email: bookingData.email,
+            notes: bookingData.notes
+          }
+        };
+        
+        console.log('Enviando correo de confirmación:', emailBody);
+        
+        // Enviar correo usando una función de Supabase Edge o un servicio alternativo
+        // Primero intentamos con la función Edge de Supabase
+        let emailSent = false;
+        
+        try {
+          const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
+            body: emailBody
+          });
+          
+          if (emailError) {
+            console.error('Error al enviar correo con función Edge:', emailError);
+            // La función Edge falló, intentamos con el método alternativo
+            emailSent = false;
+          } else {
+            console.log('Correo enviado exitosamente con función Edge');
+            emailSent = true;
+          }
+        } catch (edgeFunctionError) {
+          console.error('Error al invocar función Edge:', edgeFunctionError);
+          emailSent = false;
+        }
+        
+        // Si la función Edge falló, intentamos con EmailJS
+        if (!emailSent) {
+          try {
+            console.log('Intentando enviar correo con EmailJS...');
+            const emailResult = await sendBookingConfirmationEmail(
+              bookingData,
+              selectedServicesData || [],
+              locationData
+            );
+            
+            if (emailResult.success) {
+              console.log('Correo enviado exitosamente con EmailJS');
+              emailSent = true;
+            } else {
+              console.error('Error al enviar correo con EmailJS:', emailResult.error);
+            }
+          } catch (emailJsError) {
+            console.error('Error al usar servicio alternativo de correo:', emailJsError);
+          }
+        }
+      } catch (emailError) {
+        console.error('Error en proceso de correo:', emailError);
+        // Continuamos aunque haya error en el envío de correo
+      }
+      
+      // Reserva creada exitosamente
+      toast({
+        title: MESSAGES.SUCCESS.BOOKING_CONFIRMED,
+        description: MESSAGES.INFO.BOOKING_DESCRIPTION.replace('{name}', bookingData.name),
+        duration: CONFIG.TOAST.SUCCESS_DURATION,
+      });
+      
+      clearServices(); // Limpiar el carrito
+      dispatch({ type: 'SET_STEP', payload: CONFIG.BOOKING.STEPS.CONFIRMATION });
+      
+    } catch (error) {
+      console.error('Unexpected error:', error);
       toast({
         variant: "destructive",
-        title: "¡Error en la reserva!",
-        description: "El horario seleccionado ya no está disponible. Por favor, elige otro.",
+        title: "Error inesperado",
+        description: error.message || MESSAGES.ERRORS.GENERIC,
+        duration: CONFIG.TOAST.ERROR_DURATION
       });
-      getBlockedSlots(bookingData.location, bookingData.date);
-      setBookingData(prev => ({ ...prev, time: '' }));
-      setCurrentStep(3);
-    } else {
-      toast({
-        title: "¡Reserva confirmada!",
-        description: `Gracias ${bookingData.name}, hemos recibido tu solicitud. Te contactaremos pronto.`,
-        duration: 5000,
-      });
-      setCurrentStep(5);
+    } finally {
+      dispatch({ type: 'SET_LOADING', payload: { submit: false } });
     }
-  };
+  }, [bookingData, toast, getBlockedSlots, clearServices]);
 
-  const getStepTitle = () => {
-    switch (currentStep) {
-      case 1: return 'Elige tu Sede';
-      case 2: return 'Selecciona tu Servicio';
-      case 3: return 'Elige Fecha y Hora';
-      case 4: return 'Tus Datos Personales';
-      case 5: return '¡Reserva Realizada!';
-      default: return '';
-    }
-  };
+  const getStepTitle = useMemo(() => {
+    const titles = {
+      [CONFIG.BOOKING.STEPS.LOCATION]: 'Elige tu Sede',
+      [CONFIG.BOOKING.STEPS.SERVICES]: 'Selecciona tu Servicio',
+      [CONFIG.BOOKING.STEPS.DATETIME]: 'Elige Fecha y Hora',
+      [CONFIG.BOOKING.STEPS.PERSONAL_DATA]: 'Tus Datos Personales',
+      [CONFIG.BOOKING.STEPS.CONFIRMATION]: '¡Reserva Realizada!'
+    };
+    return titles[currentStep] || '';
+  }, [currentStep]);
 
-  const isStepValid = () => {
-    switch (currentStep) {
-      case 1: return !!bookingData.location;
-      case 2: return !!bookingData.service;
-      case 3: return !!bookingData.date && !!bookingData.time;
-      case 4: return !!bookingData.name && !!bookingData.phone && !!bookingData.email;
-      default: return false;
-    }
-  };
-
-  const resetBooking = () => {
-    setBookingData({ location: '', service: '', date: '', time: '', name: '', phone: '', email: '', notes: '' });
-    setCurrentStep(1);
-  }
+  const resetBooking = useCallback(() => {
+    dispatch({ type: 'RESET_BOOKING' });
+    clearServices(); // Limpiar el carrito global
+  }, [clearServices]);
 
   return (
     <>
@@ -207,14 +450,14 @@ const Booking = () => {
       <section className="relative pt-20 pb-16 bg-gradient-to-br from-pink-50 to-rose-100 overflow-hidden">
          <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold gradient-text">{getStepTitle()}</h1>
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold gradient-text">{getStepTitle}</h1>
             </motion.div>
          </div>
       </section>
 
       <section className="py-16 bg-white">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          {currentStep <= 4 && (
+          {currentStep <= CONFIG.BOOKING.STEPS.PERSONAL_DATA && (
             <div className="w-full bg-gray-200 rounded-full h-2 mb-12">
               <div
                 className="bg-gradient-to-r from-pink-500 to-rose-500 h-2 rounded-full transition-all duration-300"
@@ -224,110 +467,57 @@ const Booking = () => {
           )}
 
           <motion.div key={currentStep} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.5 }} className="bg-gray-50 rounded-2xl p-8">
-            {currentStep === 1 && (
-              loading.locations ? <Loader2 className="mx-auto h-12 w-12 animate-spin text-pink-500" /> :
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {locations.map((loc) => (
-                  <motion.div key={loc.id} whileHover={{ scale: 1.02 }} onClick={() => handleInputChange('location', loc.id)} className={`p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 ${bookingData.location === loc.id ? 'border-pink-500 bg-pink-50 shadow-lg' : 'border-gray-200 bg-white hover:border-pink-300'}`}>
-                    <MapPin className="h-8 w-8 text-pink-500 mb-4" />
-                    <h3 className="font-semibold text-xl text-gray-800 mb-2">{loc.name}</h3>
-                    <p className="text-gray-600">{loc.address}</p>
-                  </motion.div>
-                ))}
-              </div>
+            {currentStep === CONFIG.BOOKING.STEPS.LOCATION && (
+              <LocationStep
+                locations={locations}
+                loading={loading.locations}
+                selectedLocation={bookingData.location}
+                onLocationSelect={(locationId) => handleInputChange('location', locationId)}
+              />
             )}
-            {currentStep === 2 && (
-              loading.services ? <Loader2 className="mx-auto h-12 w-12 animate-spin text-pink-500" /> :
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {services.map((service) => (
-                  <motion.div key={service.id} whileHover={{ scale: 1.02 }} onClick={() => handleInputChange('service', service.id)} className={`p-6 rounded-xl border-2 cursor-pointer transition-all duration-300 ${bookingData.service === service.id ? 'border-pink-500 bg-pink-50 shadow-lg' : 'border-gray-200 bg-white hover:border-pink-300'}`}>
-                    <Sparkles className="h-6 w-6 text-pink-500 mb-2" />
-                    <h3 className="font-semibold text-gray-800 mb-2">{service.name}</h3>
-                    <div className="flex justify-between items-center text-sm text-gray-600">
-                      <span><Clock className="h-4 w-4 inline mr-1" />{service.duration}</span>
-                      <span className="font-bold text-pink-600">{service.price}</span>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
+            {currentStep === CONFIG.BOOKING.STEPS.SERVICES && (
+              <ServicesStep
+                services={services}
+                selectedServices={selectedServices}
+                selectedServiceIds={bookingData.services}
+                loading={loading.services}
+                onServiceSelect={(serviceId) => handleInputChange('service', serviceId)}
+                onServiceRemove={handleRemoveService}
+              />
             )}
-            {currentStep === 3 && (
-              <div className="space-y-8">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center"><Calendar className="h-5 w-5 mr-2 text-pink-500" />Selecciona una Fecha</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-64 overflow-y-auto pr-2">
-                    {availableDates.map((d) => (
-                      <motion.button key={d.date} whileHover={{ scale: 1.02 }} onClick={() => handleInputChange('date', d.date)} className={`p-3 rounded-lg text-left transition-all duration-300 ${bookingData.date === d.date ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg' : 'bg-white border'}`}>
-                        <div className="text-sm font-medium capitalize">{d.display}</div>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-                {bookingData.date && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center"><Clock className="h-5 w-5 mr-2 text-pink-500" />Selecciona una Hora</h3>
-                    {loading.slots ? <Loader2 className="mx-auto h-8 w-8 animate-spin text-pink-500" /> :
-                    <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
-                      {timeSlots.map((time) => {
-                          const isBlocked = blockedSlots.includes(time);
-                          return (
-                            <motion.button key={time} whileHover={{ scale: 1.05 }} onClick={() => !isBlocked && handleInputChange('time', time)} disabled={isBlocked} className={`p-3 rounded-lg font-medium transition-all duration-300 ${isBlocked ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : bookingData.time === time ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg' : 'bg-white border'}`}>
-                              {time}
-                            </motion.button>
-                          )
-                        })}
-                    </div>}
-                  </div>
-                )}
-              </div>
+            {currentStep === CONFIG.BOOKING.STEPS.DATETIME && (
+              <DateTimeStep
+                availableDates={availableDates}
+                timeSlots={timeSlots}
+                selectedDate={bookingData.date}
+                selectedTime={bookingData.time}
+                blockedSlots={blockedSlots}
+                loading={loading.slots}
+                onDateSelect={(date) => handleInputChange('date', date)}
+                onTimeSelect={(time) => handleInputChange('time', time)}
+              />
             )}
-            {currentStep === 4 && (
-              <div className="space-y-6">
-                 <div className="bg-white rounded-xl p-6 border-2 border-pink-200">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-4">Resumen de tu Reserva</h3>
-                  <div className="space-y-3">
-                    <p><strong>Sede:</strong> {locations.find(l => l.id === bookingData.location)?.name}</p>
-                    <p><strong>Servicio:</strong> {services.find(s => s.id === bookingData.service)?.name}</p>
-                    <p><strong>Fecha:</strong> {availableDates.find(d => d.date === bookingData.date)?.display} a las {bookingData.time}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2"><User className="h-4 w-4 inline mr-2" />Nombre *</label>
-                    <input type="text" value={bookingData.name} onChange={(e) => handleInputChange('name', e.target.value)} className="w-full px-4 py-3 border rounded-lg" placeholder="Tu nombre" required/>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2"><Phone className="h-4 w-4 inline mr-2" />Teléfono *</label>
-                    <input type="tel" value={bookingData.phone} onChange={(e) => handleInputChange('phone', e.target.value)} className="w-full px-4 py-3 border rounded-lg" placeholder="Tu teléfono" required/>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2"><Mail className="h-4 w-4 inline mr-2" />Email *</label>
-                  <input type="email" value={bookingData.email} onChange={(e) => handleInputChange('email', e.target.value)} className="w-full px-4 py-3 border rounded-lg" placeholder="tu@email.com" required/>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2"><MessageSquare className="h-4 w-4 inline mr-2" />Notas</label>
-                  <textarea value={bookingData.notes} onChange={(e) => handleInputChange('notes', e.target.value)} rows={3} className="w-full px-4 py-3 border rounded-lg" placeholder="Alergias, preferencias..."/>
-                </div>
-              </div>
+            {currentStep === CONFIG.BOOKING.STEPS.PERSONAL_DATA && (
+              <PersonalDataStep
+                bookingData={bookingData}
+                locations={locations}
+                services={services}
+                selectedServices={selectedServices}
+                availableDates={availableDates}
+                onInputChange={handleInputChange}
+              />
             )}
-            {currentStep === 5 && (
-                <div className="text-center">
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-                    <p className="text-gray-600 mb-8 max-w-md mx-auto">Tu solicitud de reserva ha sido enviada. Recibirás una confirmación por WhatsApp en breve. ¡Gracias por confiar en nosotras!</p>
-                    <Button onClick={resetBooking} className="bg-gradient-to-r from-pink-500 to-rose-500 text-white">
-                        Hacer Otra Reserva
-                    </Button>
-                </div>
+            {currentStep === CONFIG.BOOKING.STEPS.CONFIRMATION && (
+              <ConfirmationStep onNewBooking={resetBooking} />
             )}
           </motion.div>
 
-          {currentStep <= 4 && (
+          {currentStep <= CONFIG.BOOKING.STEPS.PERSONAL_DATA && (
             <div className="flex justify-between mt-8">
-              <Button onClick={handlePrevStep} variant="outline" disabled={currentStep === 1} className="flex items-center space-x-2">
+              <Button onClick={handlePrevStep} variant="outline" disabled={currentStep === CONFIG.BOOKING.STEPS.LOCATION} className="flex items-center space-x-2">
                 <ArrowLeft className="h-4 w-4" /><span>Anterior</span>
               </Button>
-              {currentStep < 4 ? (
+              {currentStep < CONFIG.BOOKING.STEPS.PERSONAL_DATA ? (
                 <Button onClick={handleNextStep} disabled={!isStepValid()} className="bg-gradient-to-r from-pink-500 to-rose-500 text-white flex items-center space-x-2">
                   <span>Siguiente</span><ArrowRight className="h-4 w-4" />
                 </Button>
