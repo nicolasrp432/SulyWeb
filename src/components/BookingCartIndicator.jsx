@@ -26,7 +26,13 @@ const BookingCartIndicator = () => {
         <motion.div 
           initial={{ scale: 0.8, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="fixed bottom-24 right-6 z-40 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full p-4 shadow-lg flex items-center space-x-2 min-w-[120px] justify-center"
+          className="sticky bottom-24 right-6 z-[50] bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-full p-4 shadow-lg flex items-center space-x-2 min-w-[120px] justify-center transform-gpu will-change-transform"
+          style={{
+            position: 'sticky',
+            bottom: '96px',
+            right: '24px',
+            zIndex: 50
+          }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           key={selectedServices.length}
@@ -48,7 +54,13 @@ const BookingCartIndicator = () => {
             initial={{ opacity: 0, y: 50, scale: 0.8 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.8 }}
-            className="fixed bottom-40 right-6 z-50 bg-green-500 text-white rounded-lg p-3 shadow-xl flex items-center space-x-2"
+            className="sticky bottom-40 right-6 z-[70] bg-green-500 text-white rounded-lg p-3 shadow-xl flex items-center space-x-2 transform-gpu will-change-transform"
+            style={{
+              position: 'sticky',
+              bottom: '160px',
+              right: '24px',
+              zIndex: 70
+            }}
           >
             <motion.div
               animate={{ rotate: [0, 180, 360] }}

@@ -7,7 +7,14 @@ const WhatsAppButton = ({ phoneNumber }) => {
       href={phoneNumber}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-6 right-6 z-50 w-16 h-16 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg text-white"
+      className="sticky bottom-6 right-6 z-[60] w-16 h-16 bg-gradient-to-r from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-lg text-white transform-gpu will-change-transform"
+      style={{
+        position: 'sticky',
+        bottom: '24px',
+        right: '24px',
+        zIndex: 60,
+        marginLeft: 'auto'
+      }}
       whileHover={{ scale: 1.1, rotate: 10 }}
       whileTap={{ scale: 0.9 }}
       transition={{ type: 'spring', stiffness: 300 }}

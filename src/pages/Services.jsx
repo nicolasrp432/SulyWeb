@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
@@ -49,12 +49,25 @@ const ServiceCard = React.memo(({ service, index, onSelect, onAddService }) => {
       onClick={handleSelect}
     >
       <div className="relative">
-        <img  
-          className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
-          alt={service.title} 
-          src={service.image}
-          loading="lazy"
-        />
+        <div className="w-full h-64 bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center overflow-hidden rounded-t-2xl">
+          <img  
+            className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+            alt={service.title} 
+            src={service.image}
+            loading="lazy"
+            onError={(e) => {
+              e.target.style.display = 'none';
+              e.target.parentElement.innerHTML = `
+                <div class="w-full h-64 bg-gradient-to-br from-pink-100 to-rose-100 flex items-center justify-center">
+                  <div class="text-center text-pink-600">
+                    <div class="text-4xl mb-2">💅</div>
+                    <div class="text-sm font-medium">${service.title}</div>
+                  </div>
+                </div>
+              `;
+            }}
+          />
+        </div>
         
         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
           <div className="bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 text-gray-800 font-medium text-sm">
@@ -147,7 +160,7 @@ const Services = () => {
       description: 'Servicio básico para mantener tus uñas en perfecto estado.',
       duration: '30 min',
       price: '9,90€',
-      image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=500&h=300&fit=crop&crop=center',
+      image: '/serviciosimg/cortar-limar.jpg',
       features: ['Corte profesional', 'Limado perfecto', 'Acabado uniforme', 'Servicio rápido'],
       popular: false
     },
@@ -158,7 +171,7 @@ const Services = () => {
       description: 'Servicio rápido para lucir uñas perfectas en poco tiempo.',
       duration: '30 min',
       price: '11,90€',
-      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&h=300&fit=crop&crop=center',
+      image: '/serviciosimg/manicura-expres.jpg',
       features: ['Servicio rápido', 'Limado profesional', 'Cutículas perfectas', 'Esmaltado básico'],
       popular: false
     },
@@ -169,7 +182,7 @@ const Services = () => {
       description: 'Manicura con esmalte semipermanente en tiempo reducido.',
       duration: '40 min',
       price: '14,90€',
-      image: 'https://images.unsplash.com/photo-1595872018818-97555653a011?w=500&h=300&fit=crop&crop=center',
+      image: '/serviciosimg/manicura-semi-expres.jpg',
       features: ['Esmalte semipermanente', 'Duración extendida', 'Acabado brillante', 'Servicio eficiente'],
       popular: true
     },
@@ -180,7 +193,7 @@ const Services = () => {
       description: 'Servicio completo de manicura con tratamientos adicionales.',
       duration: '45 min',
       price: '16,90€',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/manicura-adicional.jpg',
       features: ['Tratamiento completo', 'Hidratación profunda', 'Masaje de manos', 'Acabado perfecto'],
       popular: false
     },
@@ -235,7 +248,7 @@ const Services = () => {
       description: 'Mantenimiento para tus uñas acrílicas, conservando su belleza y durabilidad.',
       duration: '60 min',
       price: '25,00€',
-      image: 'https://images.unsplash.com/photo-1599948128020-9a44d1f0824c?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/relleno-acrilico.jpg',
       features: ['Mantenimiento profesional', 'Corrección de crecimiento', 'Refuerzo estructural', 'Acabado renovado'],
       popular: false
     },
@@ -246,7 +259,7 @@ const Services = () => {
       description: 'Solución rápida para uñas dañadas o rotas.',
       duration: '15 min',
       price: '3,00€',
-      image: 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/repara-uña.jpg',
       features: ['Reparación rápida', 'Refuerzo estructural', 'Igualación de longitud', 'Acabado natural'],
       popular: false
     },
@@ -257,7 +270,7 @@ const Services = () => {
       description: 'Eliminación segura y profesional de uñas acrílicas.',
       duration: '30 min',
       price: '10,00€',
-      image: 'https://images.unsplash.com/photo-1560472354-b33ff0c44a43?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/quitar-acrilico.jpg',
       features: ['Remoción segura', 'Cuidado de la uña natural', 'Técnica profesional', 'Hidratación posterior'],
       popular: false
     },
@@ -268,7 +281,7 @@ const Services = () => {
       description: 'Eliminación de esmalte semipermanente sin dañar la uña natural.',
       duration: '20 min',
       price: '5,00€',
-      image: 'https://images.unsplash.com/photo-1607779097040-26e80aa78e66?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/retirar-semi.jpg',
       features: ['Remoción cuidadosa', 'Protección de la uña', 'Técnica profesional', 'Servicio rápido'],
       popular: false
     },
@@ -279,7 +292,7 @@ const Services = () => {
       description: 'Servicio de esmaltado para lucir unos pies perfectos.',
       duration: '30 min',
       price: '14,90€',
-      image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/esmaltar-pies.jpg',
       features: ['Esmaltado profesional', 'Colores duraderos', 'Acabado brillante', 'Secado rápido'],
       popular: false
     },
@@ -290,7 +303,7 @@ const Services = () => {
       description: 'Tratamiento integral para pies, incluyendo exfoliación, hidratación y esmaltado.',
       duration: '60 min',
       price: '25,90€',
-      image: 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/pedicura-completa.jpg',
       features: ['Exfoliación profunda', 'Tratamiento de durezas', 'Hidratación intensiva', 'Esmaltado perfecto'],
       popular: true
     },
@@ -301,7 +314,7 @@ const Services = () => {
       description: 'Pedicura integral con opción de esmalte semipermanente o tradicional.',
       duration: '60 min',
       price: '25,90€',
-      image: 'https://images.unsplash.com/photo-1519014816548-bf5fe059798b?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/pedicura-completa-semi-tradicional.jpg',
       features: ['Tratamiento completo', 'Opción de acabado', 'Larga duración', 'Resultados profesionales'],
       popular: true
     },
@@ -312,7 +325,7 @@ const Services = () => {
       description: 'Curvatura natural y duradera que eleva y alarga tus pestañas sin extensiones.',
       duration: '60 min',
       price: '30,00€',
-      image: 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/lifting-pestañas.jpg',
       features: ['Curvatura natural', 'Efecto rímel', 'Duración 6-8 semanas', 'Incluye tinte de pestañas'],
       popular: true
     },
@@ -323,7 +336,7 @@ const Services = () => {
       description: 'Perfilado profesional para realzar tu mirada.',
       duration: '15 min',
       price: '5,00€',
-      image: 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/depilar-cejas.jpg',
       features: ['Diseño personalizado', 'Técnica precisa', 'Acabado natural', 'Realza la mirada'],
       popular: false
     },
@@ -334,7 +347,7 @@ const Services = () => {
       description: 'Depilación suave y efectiva del vello facial superior.',
       duration: '10 min',
       price: '5,00€',
-      image: 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/depilar-bigote.jpg',
       features: ['Técnica suave', 'Resultados precisos', 'Piel cuidada', 'Acabado perfecto'],
       popular: false
     },
@@ -345,7 +358,7 @@ const Services = () => {
       description: 'Depilación profesional para axilas suaves y sin irritación.',
       duration: '15 min',
       price: '9,90€',
-      image: 'https://images.unsplash.com/photo-1515377905703-c4788e51af15?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/depilar-axilas.jpg',
       features: ['Técnica profesional', 'Mínima irritación', 'Resultados duraderos', 'Piel cuidada'],
       popular: false
     },
@@ -356,7 +369,7 @@ const Services = () => {
       description: 'Tratamiento completo para eliminar el vello facial de forma profesional.',
       duration: '30 min',
       price: '14,90€',
-      image: 'https://images.unsplash.com/photo-1588681664899-f142ff2dc9b1?w=500&h=300&fit=crop&crop=center',
+      image: '/public/serviciosimg/depilar-rostro-entero.jpg',
       features: ['Tratamiento integral', 'Técnica suave', 'Resultados uniformes', 'Piel radiante'],
       popular: false
     }
@@ -414,7 +427,7 @@ const Services = () => {
         </div>
       </section>
 
-      <section className="py-8 bg-white border-b sticky top-[64px] lg:top-[80px] z-40">
+      <section className="py-8 bg-white border-b">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap justify-center gap-4">
             {categories.map((category) => (
@@ -626,7 +639,7 @@ const Services = () => {
 
       {/* Modal de detalles del servicio */}
       <Dialog open={!!selectedService} onOpenChange={(open) => !open && setSelectedService(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto z-[60] animate-in fade-in-0 zoom-in-95 duration-200">
           {selectedService && (
             <>
               <DialogHeader>
@@ -639,12 +652,25 @@ const Services = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
                 {/* Imagen y precio */}
                 <div className="lg:col-span-2">
-                  <img  
-                    className="w-full h-64 object-cover rounded-lg" 
-                    alt={selectedService.title} 
-                    src={selectedService.image}
-                    loading="lazy"
-                  />
+                  <div className="w-full h-64 bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg flex items-center justify-center">
+                    <img  
+                      className="w-full h-64 object-cover rounded-lg" 
+                      alt={selectedService.title} 
+                      src={selectedService.image}
+                      loading="eager"
+                      onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.parentElement.innerHTML = `
+                          <div class="w-full h-64 bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg flex items-center justify-center">
+                            <div class="text-center text-pink-600">
+                              <div class="text-4xl mb-2">💅</div>
+                              <div class="text-sm font-medium">${selectedService.title}</div>
+                            </div>
+                          </div>
+                        `;
+                      }}
+                    />
+                  </div>
                   
                   <div className="mt-4 flex justify-between items-center">
                     <div className="flex items-center text-gray-600">
@@ -778,12 +804,18 @@ const Services = () => {
       <motion.div
         initial={{ scale: 0 }}
         animate={{ scale: 1 }}
-        className="fixed bottom-6 left-6 z-40"
+        className="sticky bottom-6 left-6 z-[50] transform-gpu will-change-transform"
+        style={{
+          position: 'sticky',
+          bottom: '24px',
+          left: '24px',
+          zIndex: 50
+        }}
       >
         <div className="relative group">
           <Button
             asChild
-            className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 group"
+            className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full p-4 m-2.5 shadow-lg hover:shadow-xl transition-all duration-300 group"
           >
             <Link to="/reservas" className="flex items-center space-x-2">
               <div className="relative">

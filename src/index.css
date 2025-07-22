@@ -30,9 +30,7 @@
 *,
 *::before,
 *::after {
-  transform-style: preserve-3d;
   backface-visibility: hidden;
-  perspective: 1000px;
 }
 
 /* Optimize font rendering */
@@ -41,23 +39,20 @@ body {
   line-height: 1.6;
   color: var(--neutral-dark);
   background-color: #ffffff;
-  overflow-x: hidden;
   
   /* Performance optimizations */
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeSpeed;
-  font-display: swap;
+  text-rendering: optimizeLegibility;
   
   /* Reduce layout thrashing */
-  contain: layout style paint;
+  contain: layout;
 }
 
 /* Optimize images for performance */
 img {
   max-width: 100%;
   height: auto;
-  image-rendering: -webkit-optimize-contrast;
   image-rendering: crisp-edges;
 }
 
@@ -146,7 +141,7 @@ h1, h2, h3, h4, h5, h6 {
 @media (min-width: 1024px) {
     .lg\:text-5xl {
         font-size: 3rem;
-        line-height: 2;
+        line-height: 1.2;
     }
 }
 
@@ -223,7 +218,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .contain-strict {
-  contain: strict;
+  contain: layout style;
 }
 
 .will-change-transform {

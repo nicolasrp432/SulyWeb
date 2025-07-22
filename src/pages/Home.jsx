@@ -203,12 +203,21 @@ const Home = () => {
             className="space-y-8"
           >
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+              initial={{ opacity: 0, y: -20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ 
+                duration: 0.8, 
+                delay: 0.3,
+                ease: [0.25, 0.46, 0.45, 0.94]
+              }}
               className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-3 text-white"
             >
-              <Sparkles className="h-5 w-5" />
+              <motion.div
+                animate={{ rotate: [0, 360] }}
+                transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+              >
+                <Sparkles className="h-5 w-5" />
+              </motion.div>
               <span className="text-sm font-medium">Salón de Belleza Premium</span>
             </motion.div>
 

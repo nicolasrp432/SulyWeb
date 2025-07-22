@@ -10,7 +10,7 @@ const Layout = ({ children }) => {
       <Header />
       <main className="flex-grow">{children}</main>
       <BookingCartIndicator />
-      <WhatsAppButton />
+      <WhatsAppButton phoneNumber="https://wa.me/34123456789" />
       <Footer />
     </div>
   );
