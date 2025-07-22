@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 800" width="1200" height="800">
+  <!-- Decoración floral superior -->
+  <path d="M180 240 Q 400 50 600 130 Q 800 50 1020 240" fill="none" stroke="#e91e63" stroke-width="8"/>
+  <path d="M180 240 Q 400 100 600 180 Q 800 100 1020 240" fill="none" stroke="#e91e63" stroke-width="8"/>
+  <path d="M180 240 Q 400 150 600 230 Q 800 150 1020 240" fill="none" stroke="#e91e63" stroke-width="8"/>
+  
+  <!-- Rosas y elementos florales superiores -->
+  <circle cx="180" cy="240" r="40" fill="#e91e63"/>
+  <circle cx="300" cy="180" r="35" fill="#e91e63"/>
+  <circle cx="420" cy="150" r="30" fill="#e91e63"/>
+  <circle cx="600" cy="130" r="45" fill="#e91e63"/>
+  <circle cx="780" cy="150" r="30" fill="#e91e63"/>
+  <circle cx="900" cy="180" r="35" fill="#e91e63"/>
+  <circle cx="1020" cy="240" r="40" fill="#e91e63"/>
+  
+  <!-- Fondo para el texto SULY -->
+  <rect x="60" y="290" width="380" height="150" rx="20" ry="20" fill="#e91e63"/>
+  
+  <!-- Texto SULY -->
+  <text x="100" y="400" font-family="Arial, sans-serif" font-size="120" font-weight="bold" fill="white">SULY</text>
+  
+  <!-- Texto Pretty Nails en script -->
+  <text x="450" y="400" font-family="Brush Script MT, cursive" font-size="120" font-style="italic" fill="#000">Pretty Nails</text>
+  
+  <!-- Texto del slogan -->
+  <text x="60" y="500" font-family="Arial, sans-serif" font-size="40" font-weight="bold" fill="#000">SI LO PUEDES SOÑAR, LO PUEDES LOGRAR!</text>
+  
+  <!-- Línea decorativa debajo del slogan -->
+  <line x1="60" y1="520" x2="1140" y2="520" stroke="#e91e63" stroke-width="4"/>
+  
+  <!-- Decoración floral inferior -->
+  <path d="M150 580 Q 400 650 600 600 Q 800 650 1050 580" fill="none" stroke="#e91e63" stroke-width="8"/>
+  <path d="M150 580 Q 400 700 600 650 Q 800 700 1050 580" fill="none" stroke="#e91e63" stroke-width="8"/>
+  
+  <!-- Elementos florales inferiores -->
+  <circle cx="150" cy="580" r="30" fill="#e91e63"/>
+  <circle cx="300" cy="620" r="25" fill="#e91e63"/>
+  <circle cx="450" cy="640" r="20" fill="#e91e63"/>
+  <circle cx="600" cy="650" r="35" fill="#e91e63"/>
+  <circle cx="750" cy="640" r="20" fill="#e91e63"/>
+  <circle cx="900" cy="620" r="25" fill="#e91e63"/>
+  <circle cx="1050" cy="580" r="30" fill="#e91e63"/>
+  <circle cx="600" cy="730" r="40" fill="#e91e63"/>
+</svg>

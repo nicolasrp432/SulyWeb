@@ -204,7 +204,8 @@ export default defineConfig({
 		VitePWA({
 			registerType: 'autoUpdate',
 			workbox: {
-				globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg,jpeg,webp}'],
+				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'], // Removido jpg,jpeg
+				globIgnores: ['**/logosuly.jpeg'], // Ignorar archivo problemático
 				runtimeCaching: [
 					{
 						urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
@@ -229,7 +230,7 @@ export default defineConfig({
 						}
 					},
 					{
-						urlPattern: /\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+						urlPattern: /\.(?:png|svg|gif|webp)$/, // Removido jpg,jpeg
 						handler: 'CacheFirst',
 						options: {
 							cacheName: 'images-cache',
@@ -297,18 +298,15 @@ export default defineConfig({
 				'@babel/traverse',
 				'@babel/generator',
 				'@babel/types'
-			],
-			output: {
-				// Manual chunk splitting for better caching
-				manualChunks: {
-					// Vendor chunk for React and related libraries
-					react: ['react', 'react-dom', 'react-router-dom'],
-					// UI libraries chunk
-					ui: ['framer-motion', 'lucide-react'],
-					// Utility libraries chunk
-					utils: ['date-fns', 'clsx']
-				}
-			}
+			]
+			// Comentar manualChunks temporalmente para evitar problemas
+			// output: {
+			//   manualChunks: {
+			//     react: ['react', 'react-dom', 'react-router-dom'],
+			//     ui: ['framer-motion', 'lucide-react'],
+			//     utils: ['date-fns', 'clsx']
+			//   }
+			// }
 		}
 	},
 	// Optimize dependencies
