@@ -19,7 +19,7 @@ const ServicesPage = () => {
         <title>Servicios - Suly Pretty Nails</title>
         <meta name="description" content="Explora nuestra gama de servicios, desde manicura y pedicura hasta depilación y tratamientos de pestañas." />
       </Helmet>
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center min-h-screen flex flex-col justify-center">
         <h1 className="text-4xl md:text-5xl font-sans font-bold mb-4">Nuestros Servicios</h1>
         <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
           Estamos preparando una lista completa de todos los tratamientos que ofrecemos para cuidarte.

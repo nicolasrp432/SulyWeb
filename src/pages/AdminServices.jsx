@@ -12,7 +12,30 @@ const AdminServices = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
-  const [editableServices, setEditableServices] = useState([...missingServices]);
+  
+  // Paquetes especiales para añadir a la base de datos
+  const packageServices = [
+    {
+      name: 'Paquete Básico',
+      duration: '60 min',
+      price: '35,00€',
+      category: 'paquetes'
+    },
+    {
+      name: 'Paquete Premium',
+      duration: '180 min',
+      price: '70,00€',
+      category: 'paquetes'
+    },
+    {
+      name: 'Paquete Deluxe',
+      duration: '165 min',
+      price: '95,00€',
+      category: 'paquetes'
+    }
+  ];
+  
+  const [editableServices, setEditableServices] = useState([...missingServices, ...packageServices]);
   const [showEditor, setShowEditor] = useState(false);
   
   // Nuevo servicio para añadir
@@ -151,9 +174,10 @@ const AdminServices = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="nails">Uñas</SelectItem>
-                      <SelectItem value="beauty">Belleza</SelectItem>
-                    </SelectContent>
+                        <SelectItem value="nails">Uñas</SelectItem>
+                        <SelectItem value="beauty">Belleza</SelectItem>
+                        <SelectItem value="paquetes">Paquetes</SelectItem>
+                      </SelectContent>
                   </Select>
                 </div>
                 <div className="md:col-span-4">
@@ -198,6 +222,7 @@ const AdminServices = () => {
                         <SelectContent>
                           <SelectItem value="nails">Uñas</SelectItem>
                           <SelectItem value="beauty">Belleza</SelectItem>
+                          <SelectItem value="paquetes">Paquetes</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
