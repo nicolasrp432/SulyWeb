@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
@@ -29,6 +29,103 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+
+// Memoized service card component
+const ServiceCard = React.memo(({ service, index, onSelect, onAddService }) => {
+  const handleSelect = useCallback(() => onSelect(service), [service, onSelect]);
+  const handleAddService = useCallback((e) => {
+    e.stopPropagation();
+    onAddService(service);
+  }, [service, onAddService]);
+
+  return (
+    <motion.div
+      key={service.id}
+      layout
+      initial={{ opacity: 0, y: 50 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group service-card-hover cursor-pointer h-full flex flex-col"
+      onClick={handleSelect}
+    >
+      <div className="relative">
+        <img  
+          className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+          alt={service.title} 
+          src={service.image}
+          loading="lazy"
+        />
+        
+        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+          <div className="bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 text-gray-800 font-medium text-sm">
+            Click para ver detalles
+          </div>
+        </div>
+        
+        {service.popular && (
+          <div className="absolute top-4 left-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 z-10">
+            <Star className="h-4 w-4 fill-current" />
+            <span>Popular</span>
+          </div>
+        )}
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+      </div>
+
+      <div className="p-6 flex flex-col flex-grow">
+        <div className="flex justify-between items-start mb-4">
+          <h3 className="text-xl font-semibold text-gray-800 group-hover:text-pink-600 transition-colors">
+            {service.title}
+          </h3>
+          <div className="text-right flex-shrink-0 ml-4">
+            <div className="text-2xl font-bold gradient-text">
+              {service.price}
+            </div>
+            <div className="flex items-center text-sm text-gray-500 justify-end">
+              <Clock className="h-4 w-4 mr-1" />
+              {service.duration}
+            </div>
+          </div>
+        </div>
+
+        <p className="text-gray-600 mb-4 leading-relaxed flex-grow">
+          {service.description}
+        </p>
+
+        <div className="space-y-2 mb-6">
+          {service.features.map((feature, idx) => (
+            <div key={idx} className="flex items-center text-sm text-gray-600">
+              <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
+              {feature}
+            </div>
+          ))}
+        </div>
+
+        <div className="flex gap-2 mt-auto pt-4">
+          <Button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect(service);
+            }}
+            className="flex-1 bg-white border border-pink-500 text-pink-500 hover:bg-pink-50 rounded-full font-medium transition-all duration-300 h-10"
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            <span>Ver Detalles</span>
+          </Button>
+          <Button 
+            onClick={handleAddService}
+            className="flex-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium transition-all duration-300 group shadow-lg hover:shadow-xl h-10"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            <span>Añadir</span>
+          </Button>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+ServiceCard.displayName = 'ServiceCard';
 
 const Services = () => {
   const { toast } = useToast();
@@ -265,9 +362,29 @@ const Services = () => {
     }
   ];
 
-  const filteredServices = selectedCategory === 'all' 
-    ? services 
-    : services.filter(service => service.category === selectedCategory);
+  // Memoize filtered services to prevent unnecessary recalculations
+  const filteredServices = useMemo(() => {
+    return selectedCategory === 'all' 
+      ? services 
+      : services.filter(service => service.category === selectedCategory);
+  }, [selectedCategory]);
+
+  // Memoize event handlers
+  const handleServiceSelect = useCallback((service) => {
+    setSelectedService(service);
+  }, []);
+
+  const handleAddService = useCallback((service) => {
+    addService(service);
+    toast({
+      title: "Servicio añadido",
+      description: `${service.title} añadido a tu reserva`,
+    });
+  }, [addService, toast]);
+
+  const handleCategoryChange = useCallback((categoryId) => {
+    setSelectedCategory(categoryId);
+  }, []);
 
   return (
     <>
@@ -305,7 +422,7 @@ const Services = () => {
                 key={category.id}
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setSelectedCategory(category.id)}
+                onClick={() => handleCategoryChange(category.id)}
                 className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 ${
                   selectedCategory === category.id
                     ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg'
@@ -327,95 +444,13 @@ const Services = () => {
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr"
           >
             {filteredServices.map((service, index) => (
-              <motion.div
+              <ServiceCard
                 key={service.id}
-                layout
-                initial={{ opacity: 0, y: 50 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group service-card-hover cursor-pointer h-full flex flex-col"
-                onClick={() => setSelectedService(service)}
-              >
-                <div className="relative">
-                  <img  
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
-                    alt={service.title} 
-                    src={service.image} />
-                  
-                  {/* Overlay con texto para indicar que es clickeable */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 text-gray-800 font-medium text-sm">
-                      Click para ver detalles
-                    </div>
-                  </div>
-                  
-                  {service.popular && (
-                    <div className="absolute top-4 left-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 z-10">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span>Popular</span>
-                    </div>
-                  )}
-                  
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                </div>
-
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-semibold text-gray-800 group-hover:text-pink-600 transition-colors">
-                      {service.title}
-                    </h3>
-                    <div className="text-right flex-shrink-0 ml-4">
-                      <div className="text-2xl font-bold gradient-text">
-                        {service.price}
-                      </div>
-                      <div className="flex items-center text-sm text-gray-500 justify-end">
-                        <Clock className="h-4 w-4 mr-1" />
-                        {service.duration}
-                      </div>
-                    </div>
-                  </div>
-
-                  <p className="text-gray-600 mb-4 leading-relaxed flex-grow">
-                    {service.description}
-                  </p>
-
-                  <div className="space-y-2 mb-6">
-                    {service.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-center text-sm text-gray-600">
-                        <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
-                        {feature}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="flex gap-2 mt-auto pt-4">
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedService(service);
-                      }}
-                      className="flex-1 bg-white border border-pink-500 text-pink-500 hover:bg-pink-50 rounded-full font-medium transition-all duration-300 h-10"
-                    >
-                      <Eye className="h-4 w-4 mr-2" />
-                      <span>Ver Detalles</span>
-                    </Button>
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        addService(service);
-                        toast({
-                          title: "Servicio añadido",
-                          description: `${service.title} añadido a tu reserva`,
-                        });
-                      }}
-                      className="flex-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium transition-all duration-300 group shadow-lg hover:shadow-xl h-10"
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      <span>Añadir</span>
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
+                service={service}
+                index={index}
+                onSelect={handleServiceSelect}
+                onAddService={handleAddService}
+              />
             ))}
           </motion.div>
         </div>
@@ -607,7 +642,8 @@ const Services = () => {
                   <img  
                     className="w-full h-64 object-cover rounded-lg" 
                     alt={selectedService.title} 
-                    src={selectedService.image} 
+                    src={selectedService.image}
+                    loading="lazy"
                   />
                   
                   <div className="mt-4 flex justify-between items-center">

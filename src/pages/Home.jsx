@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -15,11 +15,93 @@ import CommonNinjaReviews from "../components/CommonNinjaReviews";
 import CommonNinjaMap from "../components/CommonNinjaMap";
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import LazyImage from '../components/LazyImage';
+import { SkeletonLoader } from '../components/LoadingSpinner';
+
+// Memoized feature item component
+const FeatureItem = React.memo(({ feature, index }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 50 }}
+    whileInView={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.6, delay: index * 0.1 }}
+    viewport={{ once: true }}
+    className="text-center group"
+  >
+    <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300">
+      <feature.icon className="h-10 w-10 text-white" />
+      <div className="absolute inset-0 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-300"></div>
+    </div>
+    <h3 className="text-xl font-semibold text-gray-800 mb-3">
+      {feature.title}
+    </h3>
+    <p className="text-gray-600 leading-relaxed">
+      {feature.description}
+    </p>
+  </motion.div>
+));
+
+FeatureItem.displayName = 'FeatureItem';
+
+// Memoized service item component
+const ServiceItem = React.memo(({ service, index, onServiceClick }) => {
+  const handleClick = useCallback(() => onServiceClick(), [onServiceClick]);
+  
+  // Memoize image URL mapping
+  const imageUrl = useMemo(() => {
+    const imageMap = {
+      'A close up of a woman\'s hands with a fresh pink manicure': 'https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
+      'A woman receiving a relaxing pedicure treatment': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      'A close up of an eye with long, curled eyelashes after a lifting treatment': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+    };
+    return imageMap[service.image] || 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80';
+  }, [service.image]);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: index * 0.1 }}
+      viewport={{ once: true }}
+      className="group cursor-pointer service-card-hover"
+      onClick={handleClick}
+    >
+      <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg group-hover:shadow-2xl transition-all duration-300">
+        <div className="aspect-w-4 aspect-h-3 relative">
+          <LazyImage
+            src={imageUrl}
+            alt={service.description}
+            className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500"
+            placeholder={<SkeletonLoader className="w-full h-64" />}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+        </div>
+        
+        <div className="p-6">
+          <h3 className="text-xl font-semibold text-gray-800 mb-2 group-hover:text-pink-600 transition-colors">
+            {service.title}
+          </h3>
+          <p className="text-gray-600 mb-4">
+            {service.description}
+          </p>
+          <div className="flex justify-between items-center">
+            <span className="text-2xl font-bold gradient-text">
+              {service.price}
+            </span>
+            <ArrowRight className="h-5 w-5 text-pink-500 group-hover:translate-x-2 transition-transform duration-300" />
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+});
+
+ServiceItem.displayName = 'ServiceItem';
 
 const Home = () => {
   const { toast } = useToast();
 
-  const features = [
+  // Memoize static data
+  const features = useMemo(() => [
     {
       icon: Award,
       title: 'Profesionales Certificadas',
@@ -40,9 +122,9 @@ const Home = () => {
       title: 'Dos Sedes para Ti',
       description: 'Encuéntranos en Basauri y Galdakao para tu comodidad.'
     }
-  ];
+  ], []);
 
-  const services = [
+  const services = useMemo(() => [
     {
       title: 'Manicuras',
       description: 'Gel, semipermanente y diseños únicos.',
@@ -67,17 +149,16 @@ const Home = () => {
       image: 'A woman getting her eyebrows shaped professionally',
       price: 'Desde 5€'
     }
-  ];
+  ], []);
 
-  // Se eliminó el array de testimonials
-
-  const handleServiceClick = () => {
+  // Memoize event handlers
+  const handleServiceClick = useCallback(() => {
     toast({
       title: "🚧 Redirigiendo a Servicios",
       description: "Explora todos nuestros tratamientos y elige el tuyo. 🚀",
       duration: 3000,
     });
-  };
+  }, [toast]);
 
   return (
     <>
@@ -89,9 +170,13 @@ const Home = () => {
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <img  
-            className="w-full h-full object-cover" 
-            alt="Elegant nail salon interior with modern pink and gold decor" src="https://images.unsplash.com/photo-1633681926019-03bd9325ec20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" />
+          <LazyImage
+            src="https://images.unsplash.com/photo-1633681926019-03bd9325ec20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
+            alt="Elegant nail salon interior with modern pink and gold decor"
+            className="w-full h-full object-cover"
+            placeholder={<SkeletonLoader className="w-full h-full" />}
+            priority
+          />
           <div className="absolute inset-0 hero-gradient"></div>
         </div>
 
@@ -204,25 +289,7 @@ const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="text-center group"
-              >
-                <div className="relative inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl mb-6 group-hover:scale-110 transition-transform duration-300">
-                  <feature.icon className="h-10 w-10 text-white" />
-                  <div className="absolute inset-0 bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity duration-300"></div>
-                </div>
-                <h3 className="text-xl font-semibold text-gray-800 mb-3">
-                  {feature.title}
-                </h3>
-                <p className="text-gray-600 leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
+              <FeatureItem key={index} feature={feature} index={index} />
             ))}
           </div>
         </div>
@@ -247,39 +314,12 @@ const Home = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {services.map((service, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="group cursor-pointer service-card-hover"
-                onClick={handleServiceClick}
-              >
-                <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg group-hover:shadow-2xl transition-all duration-300">
-                  <div className="aspect-w-4 aspect-h-3 relative">
-                    <img  
-                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
-                      alt={service.description} src={service.image === 'A close up of a woman\'s hands with a fresh pink manicure' ? 'https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80' : service.image === 'A woman receiving a relaxing pedicure treatment' ? 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80' : service.image === 'A close up of an eye with long, curled eyelashes after a lifting treatment' ? 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80' : 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80'} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </div>
-                  
-                  <div className="p-6">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2 group-hover:text-pink-600 transition-colors">
-                      {service.title}
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      {service.description}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-2xl font-bold gradient-text">
-                        {service.price}
-                      </span>
-                      <ArrowRight className="h-5 w-5 text-pink-500 group-hover:translate-x-2 transition-transform duration-300" />
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
+              <ServiceItem 
+                key={index} 
+                service={service} 
+                index={index} 
+                onServiceClick={handleServiceClick}
+              />
             ))}
           </div>
 

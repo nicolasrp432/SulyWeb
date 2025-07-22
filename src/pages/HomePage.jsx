@@ -1,10 +1,10 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { useToast } from '@/components/ui/use-toast';
 import { ArrowRight, Sparkles, Brush, Gem } from 'lucide-react';
+import SEOHead from '@/components/SEOHead';
 
 const HomePage = () => {
   const { toast } = useToast();
@@ -25,10 +25,7 @@ const HomePage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Suly Pretty Nails - Salón de Manicura y Pedicura Profesional</title>
-        <meta name="description" content="Descubre el arte en tus uñas. En Suly Pretty Nails ofrecemos servicios de manicura, pedicura, diseños personalizados y mucho más. ¡Reserva tu cita hoy!" />
-      </Helmet>
+      <SEOHead />
       <div className="overflow-x-hidden">
         {/* Hero Section */}
         <section className="relative min-h-[80vh] flex items-center bg-pink-50">

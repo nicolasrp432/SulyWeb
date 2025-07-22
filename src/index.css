@@ -10,20 +10,62 @@
   --accent-purple: #8b5a8c;
   --neutral-dark: #2d2d2d;
   --neutral-light: #f5f5f5;
+  
+  /* Performance optimization variables */
+  --animation-duration-fast: 0.15s;
+  --animation-duration-normal: 0.3s;
+  --animation-duration-slow: 0.6s;
+  --animation-easing: cubic-bezier(0.4, 0, 0.2, 1);
+  --animation-easing-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
 }
 
+/* Performance optimizations */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+/* Enable hardware acceleration for better performance */
+*,
+*::before,
+*::after {
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  perspective: 1000px;
+}
+
+/* Optimize font rendering */
 body {
   font-family: 'Poppins', sans-serif;
   line-height: 1.6;
   color: var(--neutral-dark);
   background-color: #ffffff;
   overflow-x: hidden;
+  
+  /* Performance optimizations */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeSpeed;
+  font-display: swap;
+  
+  /* Reduce layout thrashing */
+  contain: layout style paint;
+}
+
+/* Optimize images for performance */
+img {
+  max-width: 100%;
+  height: auto;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
+
+/* Optimize video elements */
+video {
+  max-width: 100%;
+  height: auto;
+  object-fit: cover;
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -107,6 +149,135 @@ h1, h2, h3, h4, h5, h6 {
         line-height: 2;
     }
 }
+
+/* Performance-optimized animations */
+.animate-fade-in {
+  animation: fadeIn var(--animation-duration-normal) var(--animation-easing) forwards;
+}
+
+.animate-slide-up {
+  animation: slideUp var(--animation-duration-normal) var(--animation-easing) forwards;
+}
+
+.animate-scale-in {
+  animation: scaleIn var(--animation-duration-normal) var(--animation-easing) forwards;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translate3d(0, 30px, 0);
+  }
+  to { 
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes scaleIn {
+  from { 
+    opacity: 0;
+    transform: scale3d(0.9, 0.9, 1);
+  }
+  to { 
+    opacity: 1;
+    transform: scale3d(1, 1, 1);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* GPU-accelerated transforms */
+.gpu-accelerated {
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.gpu-accelerated-opacity {
+  will-change: opacity;
+}
+
+.gpu-accelerated-scale {
+  will-change: transform;
+}
+
+/* Performance utility classes */
+.contain-layout {
+  contain: layout;
+}
+
+.contain-paint {
+  contain: paint;
+}
+
+.contain-strict {
+  contain: strict;
+}
+
+.will-change-transform {
+  will-change: transform;
+}
+
+.will-change-opacity {
+  will-change: opacity;
+}
+
+.will-change-auto {
+  will-change: auto;
+}
+
+/* Optimized loading states */
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Reduced motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  
+  .floating-animation,
+  .pulse-glow {
+    animation: none !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .gradient-text {
+    background: none;
+    -webkit-background-clip: unset;
+    -webkit-text-fill-color: unset;
+    background-clip: unset;
+    color: var(--neutral-dark);
+  }
+}
+
 /* Mobile optimizations */
 @media (max-width: 768px) {
   .hero-gradient {
@@ -114,4 +285,78 @@ h1, h2, h3, h4, h5, h6 {
       rgba(248, 180, 196, 0.95) 0%, 
       rgba(233, 30, 99, 0.9) 100%);
   }
+  
+  /* Reduce animations on mobile for better performance */
+  .service-card-hover {
+    transition: transform var(--animation-duration-fast) var(--animation-easing);
+  }
+  
+  .service-card-hover:hover {
+    transform: translateY(-4px);
+  }
+  
+  /* Optimize touch interactions */
+  .touch-optimized {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Low-end device optimizations */
+@media (max-width: 480px) {
+  /* Disable expensive effects on very small screens */
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: none;
+  }
+  
+  .floating-animation {
+    animation: none;
+  }
+  
+  .pulse-glow {
+    animation: none;
+    box-shadow: 0 0 10px rgba(233, 30, 99, 0.3);
+  }
+}
+
+/* Print optimizations */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  * {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}
+
+/* Focus management for accessibility */
+.focus-visible:focus {
+  outline: 2px solid var(--primary-rose);
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling with performance consideration */
+@supports (scroll-behavior: smooth) {
+  .scroll-smooth {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Critical CSS for above-the-fold content */
+.critical-content {
+  contain: layout style;
+  will-change: auto;
+}
+
+/* Lazy loading placeholder */
+.lazy-placeholder {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  min-height: 200px;
 }

@@ -1,0 +1,21 @@
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://sulyprettynails.com/sitemap.xml
+
+# Disallow admin areas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /.env
+Disallow: /node_modules/
+
+# Allow important pages
+Allow: /
+Allow: /servicios
+Allow: /galeria
+Allow: /contacto
+Allow: /reservas
+
+# Crawl delay
+Crawl-delay: 1

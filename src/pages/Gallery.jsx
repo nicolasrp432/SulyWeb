@@ -1,10 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Heart, Share2, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { Link } from 'react-router-dom';
+import LazyImage from '@/components/LazyImage';
+import { SkeletonLoader } from '@/components/LoadingSpinner';
 
 const Gallery = () => {
   const { toast } = useToast();
@@ -128,22 +130,88 @@ const Gallery = () => {
     }
   ];
 
-  const filteredItems = selectedCategory === 'all' 
-    ? galleryItems 
-    : galleryItems.filter(item => item.category === selectedCategory);
+  // Memoizar elementos filtrados para evitar re-cálculos innecesarios
+  const filteredItems = useMemo(() => {
+    return selectedCategory === 'all' 
+      ? galleryItems 
+      : galleryItems.filter(item => item.category === selectedCategory);
+  }, [selectedCategory]);
 
-  const handleImageClick = (item) => {
+  // Memoizar handlers para evitar re-renders innecesarios
+  const handleImageClick = useCallback((item) => {
     setSelectedImage(item);
-  };
+  }, []);
 
-  const handleActionClick = (e) => {
+  const handleActionClick = useCallback((e) => {
     e.stopPropagation();
     toast({
       title: "🚧 ¡Función en desarrollo!",
       description: "Esta interacción estará disponible muy pronto. 🚀",
       duration: 3000,
     });
-  };
+  }, [toast]);
+
+  // Componente optimizado para cada item de la galería
+  const GalleryItem = React.memo(({ item, onImageClick }) => (
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.8 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.8 }}
+      transition={{ duration: 0.3 }}
+      className="group relative bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-2xl transition-all duration-300 cursor-pointer"
+      onClick={() => onImageClick(item)}
+    >
+      <div className="aspect-square relative overflow-hidden">
+        <LazyImage
+          src={getImageForGalleryItem(item)}
+          alt={item.title}
+          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+          placeholder={<SkeletonLoader className="w-full h-full" />}
+        />
+        
+        {item.featured && (
+          <div className="absolute top-4 left-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1 rounded-full text-sm font-medium">
+            Destacado
+          </div>
+        )}
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+        
+        <div className="absolute bottom-4 left-4 right-4 text-white transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 opacity-0 group-hover:opacity-100">
+          <h3 className="text-lg font-semibold mb-1">{item.title}</h3>
+          <p className="text-sm text-gray-200 line-clamp-2">{item.description}</p>
+        </div>
+        
+        <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+          <button
+            onClick={handleActionClick}
+            className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors"
+          >
+            <Heart className="h-4 w-4 text-white" />
+          </button>
+          <button
+            onClick={handleActionClick}
+            className="p-2 bg-white/20 backdrop-blur-sm rounded-full hover:bg-white/30 transition-colors"
+          >
+            <Share2 className="h-4 w-4 text-white" />
+          </button>
+        </div>
+      </div>
+      
+      <div className="p-4">
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-500 capitalize">
+            {categories.find(cat => cat.id === item.category)?.name || item.category}
+          </span>
+          <div className="flex items-center space-x-1 text-gray-400">
+            <Heart className="h-4 w-4" />
+            <span className="text-sm">{item.likes}</span>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  ));
 
   return (
     <>
