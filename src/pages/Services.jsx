@@ -693,9 +693,9 @@ const Services = () => {
                         <span className="text-sm">+34 123 456 789</span>
                       </a>
                       
-                      <a href="mailto:info@sulyprettynails.com" className="flex items-center text-gray-600 hover:text-pink-600 transition-colors">
-                        <Mail className="h-4 w-4 mr-3 text-pink-500" />
-                        <span className="text-sm">info@sulyprettynails.com</span>
+                      <a href="mailto:sulyprettynails@gmail.com" className="flex items-center text-gray-600 hover:text-pink-600 transition-colors">
+                  <Mail className="h-4 w-4 mr-2" />
+                  <span className="text-sm">sulyprettynails@gmail.com</span>
                       </a>
                     </div>
                   </div>

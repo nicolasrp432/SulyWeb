@@ -33,7 +33,7 @@ const HomePage = () => {
         {/* Hero Section */}
         <section className="relative min-h-[80vh] flex items-center bg-pink-50">
           <div className="absolute inset-0 opacity-20">
-            <img  class="w-full h-full object-cover" alt="Fondo abstracto con texturas de esmalte de uñas en tonos pastel" src="https://images.unsplash.com/photo-1597773026935-df49538167e4" />
+            <img  class="w-full h-full object-cover" alt="Fondo abstracto con texturas de esmalte de uñas en tonos pastel" src="https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80" />
           </div>
           <div className="container mx-auto px-4 sm:px-6 lg:px-8 z-10">
             <motion.div
@@ -83,7 +83,7 @@ const HomePage = () => {
               </motion.div>
               <motion.div initial={{ opacity: 0, scale: 0.8 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, amount: 0.5 }} transition={{ duration: 0.7 }}>
                 <div className="rounded-lg overflow-hidden shadow-xl">
-                  <img  class="w-full h-full object-cover" alt="Interior del salón Suly Pretty Nails, con estaciones de manicura modernas y ambiente acogedor" src="https://images.unsplash.com/photo-1633681926019-03bd9325ec20" />
+                  <img  class="w-full h-full object-cover" alt="Interior del salón Suly Pretty Nails, con estaciones de manicura modernas y ambiente acogedor" src="https://images.unsplash.com/photo-1560472354-b33ff0c44a43?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1926&q=80" />
                 </div>
               </motion.div>
             </div>

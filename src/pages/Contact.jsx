@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import CommonNinjaMap from '@/components/CommonNinjaMap';
+import MapComponent from '@/components/MapComponent';
 
 const Contact = () => {
   const { toast } = useToast();
@@ -94,22 +94,51 @@ const Contact = () => {
             </motion.div>
 
             <motion.div initial={{ opacity: 0, x: 50 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} viewport={{ once: true }} className="space-y-8">
-              <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-                <div className="h-96 bg-gray-200">
-                  {/* Widget de mapa de CommonNinja */}
-                  {/* IMPORTANTE: Reemplazar 'pid-REEMPLAZAR-CON-TU-ID' con el ID proporcionado por CommonNinja */}
-                  <div className="commonninja_component pid-REEMPLAZAR-CON-TU-ID"></div>
+              <div className="grid gap-8">
+                {/* Mapa Basauri */}
+                <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2 flex items-center">
+                      <MapPin className="h-5 w-5 mr-2 text-pink-500" />
+                      Sede Basauri
+                    </h3>
+                    <p className="text-gray-600 mb-4">Kareaga Goikoa Kalea, 28, 48970 Basauri, Bizkaia</p>
+                  </div>
+                  <MapComponent
+                    latitude={43.3000}
+                    longitude={-2.9900}
+                    title="Suly Pretty Nails - Basauri"
+                    address="Kareaga Goikoa Kalea, 28, 48970 Basauri, Bizkaia"
+                    height="256px"
+                  />
+                  <div className="p-6">
+                    <Button asChild className="bg-gradient-to-r from-pink-500 to-rose-500 text-white w-full">
+                      <a href="https://www.google.com/maps/search/?api=1&query=Kareaga+Goikoa+Kalea,+28,+48970+Basauri,+Bizkaia" target="_blank" rel="noopener noreferrer">Ver en Google Maps</a>
+                    </Button>
+                  </div>
                 </div>
-                <div className="p-6 space-y-6">
-                  {locations.map(loc => (
-                    <div key={loc.name} className="border-b pb-4 last:border-b-0 last:pb-0">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2">{loc.name}</h3>
-                      <p className="text-gray-600 mb-4 flex items-start"><MapPin className="h-5 w-5 mr-2 mt-1 flex-shrink-0 text-pink-500" />{loc.address}</p>
-                      <Button asChild className="bg-gradient-to-r from-pink-500 to-rose-500 text-white">
-                        <a href={loc.mapLink} target="_blank" rel="noopener noreferrer">Ver en Mapa</a>
-                      </Button>
-                    </div>
-                  ))}
+
+                {/* Mapa Galdakao */}
+                <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold text-gray-800 mb-2 flex items-center">
+                      <MapPin className="h-5 w-5 mr-2 text-pink-500" />
+                      Sede Galdakao
+                    </h3>
+                    <p className="text-gray-600 mb-4">Juan Bautista Uriarte Kalea, 27, 48960 Galdakao, Bizkaia</p>
+                  </div>
+                  <MapComponent
+                    latitude={43.2350}
+                    longitude={-2.9800}
+                    title="Suly Pretty Nails - Galdakao"
+                    address="Juan Bautista Uriarte Kalea, 27, 48960 Galdakao, Bizkaia"
+                    height="256px"
+                  />
+                  <div className="p-6">
+                    <Button asChild className="bg-gradient-to-r from-pink-500 to-rose-500 text-white w-full">
+                      <a href="https://www.google.com/maps/search/?api=1&query=Juan+Bautista+Uriarte+Kalea,+27,+48960+Galdakao,+Bizkaia" target="_blank" rel="noopener noreferrer">Ver en Google Maps</a>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -137,7 +166,7 @@ const Contact = () => {
                  <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-md mb-4"><Mail className="h-8 w-8 text-pink-500"/></div>
                     <h3 className="text-lg font-semibold mb-2">Email</h3>
-                    <p className="text-gray-600">info@sulyprettynails.com</p>
+                    <p className="text-gray-600">sulyprettynails@gmail.com</p>
                 </div>
              </div>
         </div>

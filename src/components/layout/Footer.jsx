@@ -124,7 +124,7 @@ const Footer = () => {
               
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-pink-400 flex-shrink-0" />
-                <p className="text-gray-300">info@sulyprettynails.com</p>
+                <p className="text-gray-300">sulyprettynails@gmail.com</p>
               </div>
               
               <div className="flex items-start space-x-3">
@@ -146,7 +146,6 @@ const Footer = () => {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <div className="flex items-center space-x-2 text-gray-400 text-sm text-center md:text-left">
               <span>© {currentYear}</span>
-              <Logo />
               <span>Todos los derechos reservados.</span>
             </div>
             <div className="flex items-center space-x-2 text-gray-400 text-sm">

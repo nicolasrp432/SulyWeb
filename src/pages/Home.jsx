@@ -91,7 +91,7 @@ const Home = () => {
         <div className="absolute inset-0 z-0">
           <img  
             className="w-full h-full object-cover" 
-            alt="Elegant nail salon interior with modern pink and gold decor" src="https://images.unsplash.com/photo-1460980445968-0a5d622f295b" />
+            alt="Elegant nail salon interior with modern pink and gold decor" src="https://images.unsplash.com/photo-1633681926019-03bd9325ec20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" />
           <div className="absolute inset-0 hero-gradient"></div>
         </div>
 
@@ -260,7 +260,7 @@ const Home = () => {
                   <div className="aspect-w-4 aspect-h-3 relative">
                     <img  
                       className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
-                      alt={service.description} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
+                      alt={service.description} src={service.image === 'A close up of a woman\'s hands with a fresh pink manicure' ? 'https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80' : service.image === 'A woman receiving a relaxing pedicure treatment' ? 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80' : service.image === 'A close up of an eye with long, curled eyelashes after a lifting treatment' ? 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80' : 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80'} />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                   </div>
                   

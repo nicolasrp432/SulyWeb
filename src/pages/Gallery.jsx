@@ -11,6 +11,22 @@ const Gallery = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedImage, setSelectedImage] = useState(null);
 
+  const getImageForGalleryItem = (item) => {
+    const imageMap = {
+      'Elegant pink gel manicure with a glossy finish on long nails': 'https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
+      'Delicate floral nail art with gold details and small flowers': 'https://images.unsplash.com/photo-1610992015732-2449b76344bc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
+      'Classic French manicure with perfect white tips on a natural base': 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      'Relaxing spa pedicure with red polish and moisturizing treatment': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      'Modern geometric nail art with nude and black patterns': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80',
+      'Natural result of an eyelash lifting treatment, showing curled lashes': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      'Beautiful ombré manicure with a sunset orange and pink gradient': 'https://images.unsplash.com/photo-1599948128020-9a44d1f0824c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
+      'Minimalist nail art with elegant thin lines and dots': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80',
+      'Vibrant tropical pedicure with bright summer colors on toes': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
+      'Perfectly shaped eyebrows tinted with natural henna for definition': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+    };
+    return imageMap[item.image] || 'https://images.unsplash.com/photo-1595872018818-97555653a011?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
+  };
+
   const categories = [
     { id: 'all', name: 'Todas' },
     { id: 'manicure', name: 'Manicura' },
@@ -140,7 +156,7 @@ const Gallery = () => {
         <div className="absolute inset-0 opacity-10">
           <img  
             class="w-full h-full object-cover" 
-            alt="Beautiful nail art gallery background" src="https://images.unsplash.com/photo-1676396841906-9999837b08fc" />
+            alt="Beautiful nail art gallery background" src="https://images.unsplash.com/photo-1595872018818-97555653a011?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80" />
         </div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
@@ -209,7 +225,7 @@ const Gallery = () => {
                   <div className="relative aspect-square overflow-hidden">
                     <img  
                       class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
-                      alt={item.title} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
+                      alt={item.title} src={getImageForGalleryItem(item)} />
                     
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <div className="absolute bottom-4 left-4 right-4">
@@ -270,7 +286,7 @@ const Gallery = () => {
               <div className="relative">
                 <img  
                   class="w-full max-h-[70vh] object-contain" 
-                  alt={selectedImage.title} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
+                  alt={selectedImage.title} src={getImageForGalleryItem(selectedImage)} />
               </div>
 
               <div className="p-6">
