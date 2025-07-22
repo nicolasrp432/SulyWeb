@@ -5,7 +5,7 @@ Este es el sitio web oficial de Suly Pretty Nails, un salón de belleza especial
 ## Características
 
 - Diseño moderno y responsivo
-- Secciones para servicios, galería, reservas y contacto
+- Secciones para servicios, galería, reservas y contacto.
 - Integración con CommonNinja para mostrar reseñas de Google y mapas interactivos
 - Botón de WhatsApp para contacto directo
 - Animaciones suaves con Framer Motion
