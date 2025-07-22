@@ -4,9 +4,9 @@
  */
 
 // Constantes para EmailJS
-const EMAILJS_SERVICE_ID = 'service_sulyprettynails'; // Reemplazar con tu ID de servicio
-const EMAILJS_TEMPLATE_ID = 'template_booking_confirmation'; // Reemplazar con tu ID de plantilla
-const EMAILJS_PUBLIC_KEY = 'tu_clave_publica_emailjs'; // Reemplazar con tu clave pública
+const EMAILJS_SERVICE_ID = 'service_ljxqynf'; // Reemplazar con tu ID de servicio
+const EMAILJS_TEMPLATE_ID = 'service_ljxqynf'; // Reemplazar con tu ID de plantilla
+const EMAILJS_PUBLIC_KEY = '7cffOusu25bOzZ63l'; // Reemplazar con tu clave pública real
 
 /**
  * Envía un correo de confirmación de reserva usando EmailJS

@@ -9,6 +9,7 @@ import Services from '@/pages/Services';
 import Gallery from '@/pages/Gallery';
 import Booking from '@/pages/Booking';
 import Contact from '@/pages/Contact';
+import AdminServices from '@/pages/AdminServices';
 import WhatsAppButton from '@/components/WhatsAppButton';
 
 function App() {
@@ -24,6 +25,7 @@ function App() {
               <Route path="/galeria" element={<Gallery />} />
               <Route path="/reservas" element={<Booking />} />
               <Route path="/contacto" element={<Contact />} />
+              <Route path="/admin/servicios" element={<AdminServices />} />
             </Routes>
           </main>
           <Footer />

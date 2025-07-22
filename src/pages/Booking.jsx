@@ -6,6 +6,7 @@ import {
   CheckCircle,
   ArrowLeft,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import { sendBookingConfirmationEmail } from '@/lib/emailService';
 import { Button } from '@/components/ui/button';
@@ -134,15 +135,24 @@ const Booking = () => {
         .select('*')
         .order('id', { ascending: true });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error al cargar servicios (detalle):', error);
+        throw error;
+      }
       
       // Verificar si todos los servicios del esquema están presentes
-      console.log('Servicios cargados:', data.length);
+      console.log('Servicios cargados:', data?.length || 0);
+      console.log('Primeros 3 servicios:', data?.slice(0, 3));
       
-      dispatch({ type: 'SET_SERVICES', payload: data });
+      if (!data || data.length === 0) {
+        console.warn('No se encontraron servicios en la base de datos');
+      }
+      
+      dispatch({ type: 'SET_SERVICES', payload: data || [] });
       
       // Si hay servicios seleccionados en el carrito, usarlos
       if (selectedServices.length > 0) {
+        console.log('Usando servicios del carrito:', selectedServices.length);
         dispatch({ 
           type: 'SET_BOOKING_DATA', 
           payload: { services: selectedServices.map(service => service.id) }
@@ -252,17 +262,28 @@ const Booking = () => {
     
     try {
       console.log('Iniciando proceso de reserva...');
-      console.log('Datos de reserva:', {
-        location: bookingData.location,
-        date: bookingData.date,
-        time: bookingData.time,
-        services: bookingData.services,
-        name: bookingData.name,
-        email: bookingData.email,
-        phone: bookingData.phone
+      console.log('Datos de reserva:', JSON.stringify(bookingData));
+      
+      // Validar que todos los campos requeridos estén completos
+      const requiredFields = ['name', 'email', 'phone', 'location', 'date', 'time', 'services'];
+      const missingFields = requiredFields.filter(field => {
+        if (field === 'services') return !bookingData[field] || bookingData[field].length === 0;
+        return !bookingData[field];
       });
       
+      if (missingFields.length > 0) {
+        console.warn('Campos requeridos faltantes:', missingFields);
+        toast({
+          variant: "destructive",
+          title: MESSAGES.ERRORS.MISSING_FIELDS,
+          description: MESSAGES.ERRORS.COMPLETE_REQUIRED,
+          duration: CONFIG.TOAST.ERROR_DURATION
+        });
+        return;
+      }
+      
       // Crear una reserva principal
+      console.log('Creando reserva en la base de datos...');
       const { data: newBooking, error: bookingError } = await supabase.from('bookings').insert([{
         location_id: bookingData.location,
         booking_date: bookingData.date,
@@ -287,17 +308,23 @@ const Booking = () => {
         return;
       }
       
+      if (!newBooking || newBooking.length === 0) {
+        console.error('No se recibió ID de reserva');
+        throw new Error('No se pudo crear la reserva');
+      }
+      
       console.log('Reserva creada exitosamente:', newBooking);
       
       // Insertar los servicios en la tabla booking_services
       if (bookingData.services.length > 0 && newBooking && newBooking.length > 0) {
+        console.log('Guardando servicios para la reserva...');
         const bookingId = newBooking[0].id;
         const serviceEntries = bookingData.services.map(serviceId => ({
           booking_id: bookingId,
           service_id: serviceId
         }));
         
-        console.log('Guardando servicios para la reserva:', serviceEntries);
+        console.log('Servicios a guardar:', serviceEntries);
         
         const { error: servicesError } = await supabase
           .from('booking_services')
@@ -309,13 +336,17 @@ const Booking = () => {
         } else {
           console.log('Servicios guardados correctamente');
         }
+      } else {
+        console.warn('No hay servicios seleccionados para guardar');
       }
       
       // Enviar correo de confirmación
+      let emailSent = false;
       try {
         console.log('Preparando envío de correo de confirmación...');
         
         // Obtener información de los servicios seleccionados
+        console.log('Obteniendo detalles de servicios...');
         const { data: selectedServicesData, error: servicesDataError } = await supabase
           .from('services')
           .select('name, price')
@@ -326,6 +357,7 @@ const Booking = () => {
         }
         
         // Obtener información de la ubicación
+        console.log('Obteniendo detalles de ubicación...');
         const { data: locationData, error: locationDataError } = await supabase
           .from('locations')
           .select('name')
@@ -352,19 +384,26 @@ const Booking = () => {
           }
         };
         
-        console.log('Enviando correo de confirmación:', emailBody);
+        console.log('Datos para correo de confirmación preparados');
         
         // Enviar correo usando una función de Supabase Edge o un servicio alternativo
         // Primero intentamos con la función Edge de Supabase
-        let emailSent = false;
+        console.log('Intentando enviar correo con función Edge de Supabase...');
         
         try {
-          const { error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
+          console.log('Invocando función Edge con datos:', JSON.stringify(emailBody));
+          const { data: edgeFunctionData, error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
             body: emailBody
           });
           
+          console.log('Respuesta de función Edge:', edgeFunctionData);
+          
           if (emailError) {
             console.error('Error al enviar correo con función Edge:', emailError);
+            // Mostrar información detallada del error
+            console.error('Código de error:', emailError.code);
+            console.error('Mensaje de error:', emailError.message);
+            console.error('Detalles:', emailError.details || 'No hay detalles adicionales');
             // La función Edge falló, intentamos con el método alternativo
             emailSent = false;
           } else {
@@ -372,29 +411,48 @@ const Booking = () => {
             emailSent = true;
           }
         } catch (edgeFunctionError) {
-          console.error('Error al invocar función Edge:', edgeFunctionError);
+          console.error('Error al enviar correo con función Edge:', edgeFunctionError);
+          console.error('Tipo de error:', typeof edgeFunctionError);
+          console.error('Mensaje:', edgeFunctionError.message || 'No hay mensaje');
+          console.error('Stack:', edgeFunctionError.stack || 'No hay stack');
           emailSent = false;
         }
         
         // Si la función Edge falló, intentamos con EmailJS
         if (!emailSent) {
+          console.log('La función Edge falló, intentando con EmailJS...');
           try {
             console.log('Intentando enviar correo con EmailJS...');
+            console.log('Datos para EmailJS:', {
+              bookingData: JSON.stringify(bookingData),
+              servicios: selectedServicesData ? selectedServicesData.length : 0,
+              ubicacion: locationData?.name || 'No disponible'
+            });
+            
             const emailResult = await sendBookingConfirmationEmail(
               bookingData,
               selectedServicesData || [],
               locationData
             );
             
-            if (emailResult.success) {
+            if (emailResult && emailResult.success) {
               console.log('Correo enviado exitosamente con EmailJS');
               emailSent = true;
             } else {
-              console.error('Error al enviar correo con EmailJS:', emailResult.error);
+              console.error('Error al enviar correo con EmailJS:', emailResult?.error || 'Error desconocido');
+              console.error('Detalles del error EmailJS:', JSON.stringify(emailResult || {}));
             }
           } catch (emailJsError) {
             console.error('Error al usar servicio alternativo de correo:', emailJsError);
+            console.error('Tipo de error EmailJS:', typeof emailJsError);
+            console.error('Mensaje EmailJS:', emailJsError.message || 'No hay mensaje');
+            console.error('Stack EmailJS:', emailJsError.stack || 'No hay stack');
           }
+        }
+        
+        if (!emailSent) {
+          console.warn('No se pudo enviar el correo de confirmación por ningún método');
+          // Continuamos aunque no se haya podido enviar el correo
         }
       } catch (emailError) {
         console.error('Error en proceso de correo:', emailError);
@@ -402,6 +460,7 @@ const Booking = () => {
       }
       
       // Reserva creada exitosamente
+      console.log('Proceso de reserva completado con éxito');
       toast({
         title: MESSAGES.SUCCESS.BOOKING_CONFIRMED,
         description: MESSAGES.INFO.BOOKING_DESCRIPTION.replace('{name}', bookingData.name),
@@ -412,7 +471,7 @@ const Booking = () => {
       dispatch({ type: 'SET_STEP', payload: CONFIG.BOOKING.STEPS.CONFIRMATION });
       
     } catch (error) {
-      console.error('Unexpected error:', error);
+      console.error('Error inesperado en el proceso de reserva:', error);
       toast({
         variant: "destructive",
         title: "Error inesperado",
@@ -508,7 +567,10 @@ const Booking = () => {
               />
             )}
             {currentStep === CONFIG.BOOKING.STEPS.CONFIRMATION && (
-              <ConfirmationStep onNewBooking={resetBooking} />
+              <ConfirmationStep onResetBooking={() => {
+                dispatch({ type: 'RESET_BOOKING' });
+                clearServices();
+              }} />
             )}
           </motion.div>
 

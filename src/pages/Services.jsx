@@ -336,7 +336,7 @@ const Services = () => {
               >
                 <div className="relative">
                   <img  
-                    class="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
                     alt={service.title} src="https://images.unsplash.com/photo-1595872018818-97555653a011" />
                   
                   {service.popular && (
