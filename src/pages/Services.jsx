@@ -276,7 +276,7 @@ const Services = () => {
         <meta name="description" content="Descubre nuestros servicios de belleza: manicura, pedicura, diseños, lifting de pestañas, depilación y henna. Calidad profesional en Basauri y Galdakao." />
       </Helmet>
 
-      <section className="relative pt-20 pb-16 bg-gradient-to-br from-pink-50 to-rose-100 overflow-hidden">
+      <section className="relative pt-32 pb-16 bg-gradient-to-br from-pink-50 to-rose-100 overflow-hidden">
 
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">

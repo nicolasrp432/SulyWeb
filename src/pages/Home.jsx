@@ -46,25 +46,25 @@ const Home = () => {
     {
       title: 'Manicuras',
       description: 'Gel, semipermanente y diseños únicos.',
-      image: 'A close up of a woman\'s hands with a fresh pink manicure',
+      image: '/serviciosimg/manicura-expres.jpg',
       price: 'Desde 9,90€'
     },
     {
       title: 'Pedicuras',
       description: 'Relajantes pedicuras spa y tratamientos.',
-      image: 'A woman receiving a relaxing pedicure treatment',
+      image: '/serviciosimg/pedicura-completa.jpg',
       price: 'Desde 14,90€'
     },
     {
       title: 'Lifting de Pestañas',
       description: 'Realza tu mirada de forma natural.',
-      image: 'A close up of an eye with long, curled eyelashes after a lifting treatment',
+      image: '/serviciosimg/lifting-pestañas.jpg',
       price: '30€'
     },
     {
       title: 'Depilación',
-      description: 'Cejas, bigote, axilas y rostro.',
-      image: 'A woman getting her eyebrows shaped professionally',
+      description: 'Tenemos para cejas, bigote, axilas y rostro.',
+      image: '/serviciosimg/depilar-cejas.jpg',
       price: 'Desde 5€'
     }
   ];
@@ -72,11 +72,7 @@ const Home = () => {
   // Se eliminó el array de testimonials
 
   const handleServiceClick = () => {
-    toast({
-      title: "🚧 Redirigiendo a Servicios",
-      description: "Explora todos nuestros tratamientos y elige el tuyo. 🚀",
-      duration: 3000,
-    });
+    // Redirección manejada por el Link component
   };
 
   return (
@@ -254,31 +250,34 @@ const Home = () => {
                 transition={{ duration: 0.6, delay: index * 0.1 }}
                 viewport={{ once: true }}
                 className="group cursor-pointer service-card-hover"
-                onClick={handleServiceClick}
               >
-                <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg group-hover:shadow-2xl transition-all duration-300">
-                  <div className="aspect-w-4 aspect-h-3 relative">
-                    <img  
-                      className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
-                      alt={service.description} src={service.image === 'A close up of a woman\'s hands with a fresh pink manicure' ? 'https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80' : service.image === 'A woman receiving a relaxing pedicure treatment' ? 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80' : service.image === 'A close up of an eye with long, curled eyelashes after a lifting treatment' ? 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80' : 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80'} />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                  </div>
-                  
-                  <div className="p-6">
-                    <h3 className="text-xl font-semibold text-gray-800 mb-2 group-hover:text-pink-600 transition-colors">
-                      {service.title}
-                    </h3>
-                    <p className="text-gray-600 mb-4">
-                      {service.description}
-                    </p>
-                    <div className="flex justify-between items-center">
-                      <span className="text-2xl font-bold gradient-text">
-                        {service.price}
-                      </span>
-                      <ArrowRight className="h-5 w-5 text-pink-500 group-hover:translate-x-2 transition-transform duration-300" />
+                <Link to="/servicios" className="block">
+                  <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg group-hover:shadow-2xl transition-all duration-300">
+                    <div className="aspect-w-4 aspect-h-3 relative">
+                      <img  
+                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
+                        alt={service.description} 
+                        src={service.image} 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    </div>
+                    
+                    <div className="p-6">
+                      <h3 className="text-xl font-semibold text-gray-800 mb-2 group-hover:text-pink-600 transition-colors">
+                        {service.title}
+                      </h3>
+                      <p className="text-gray-600 mb-4">
+                        {service.description}
+                      </p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-2xl font-bold gradient-text">
+                          {service.price}
+                        </span>
+                        <ArrowRight className="h-5 w-5 text-pink-500 group-hover:translate-x-2 transition-transform duration-300" />
+                      </div>
                     </div>
                   </div>
-                </div>
+                </Link>
               </motion.div>
             ))}
           </div>

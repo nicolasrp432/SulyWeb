@@ -13,18 +13,12 @@ const Gallery = () => {
 
   const getImageForGalleryItem = (item) => {
     const imageMap = {
-      'Elegant pink gel manicure with a glossy finish on long nails': 'https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
-      'Delicate floral nail art with gold details and small flowers': 'https://images.unsplash.com/photo-1610992015732-2449b76344bc?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
-      'Classic French manicure with perfect white tips on a natural base': 'https://images.unsplash.com/photo-1632345031435-8727f6897d53?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-      'Relaxing spa pedicure with red polish and moisturizing treatment': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-      'Modern geometric nail art with nude and black patterns': 'https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80',
-      'Natural result of an eyelash lifting treatment, showing curled lashes': 'https://images.unsplash.com/photo-1616394584738-fc6e612e71b9?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-      'Beautiful ombré manicure with a sunset orange and pink gradient': 'https://images.unsplash.com/photo-1599948128020-9a44d1f0824c?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1887&q=80',
-      'Minimalist nail art with elegant thin lines and dots': 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2080&q=80',
-      'Vibrant tropical pedicure with bright summer colors on toes': 'https://images.unsplash.com/photo-1570172619644-dfd03ed5d881?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80',
-      'Perfectly shaped eyebrows tinted with natural henna for definition': 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80'
+      'manicura1': '/Gallery/manicura1.jpeg',
+      'manicura2': '/Gallery/Manicura2.jpeg',
+      'manicura3': '/Gallery/manicura3.jpeg',
+      'manicura4': '/Gallery/manicura4.jpeg'
     };
-    return imageMap[item.image] || 'https://images.unsplash.com/photo-1595872018818-97555653a011?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80';
+    return imageMap[item.image] || '/Gallery/manicura1.jpeg';
   };
 
   const categories = [
@@ -39,92 +33,38 @@ const Gallery = () => {
     {
       id: 1,
       category: 'manicure',
-      title: 'Manicura Gel Rosa',
-      description: 'Manicura gel en tonos rosa con acabado brillante.',
-      image: 'Elegant pink gel manicure with a glossy finish on long nails',
+      title: 'Manicura Elegante',
+      description: 'Manicura profesional con acabado perfecto.',
+      image: 'manicura1',
       likes: 124,
       featured: true
     },
     {
       id: 2,
-      category: 'nail-art',
-      title: 'Diseño Floral',
-      description: 'Arte floral delicado con detalles en dorado.',
-      image: 'Delicate floral nail art with gold details and small flowers',
+      category: 'manicure',
+      title: 'Diseño Especial',
+      description: 'Manicura con diseño único y personalizado.',
+      image: 'manicura2',
       likes: 89,
       featured: false
     },
     {
       id: 3,
       category: 'manicure',
-      title: 'French Manicure Clásica',
-      description: 'La elegancia de la manicura francesa tradicional.',
-      image: 'Classic French manicure with perfect white tips on a natural base',
+      title: 'Manicura Clásica',
+      description: 'La elegancia de la manicura tradicional.',
+      image: 'manicura3',
       likes: 156,
       featured: true
     },
     {
       id: 4,
-      category: 'pedicure',
-      title: 'Pedicura Spa Relajante',
-      description: 'Pedicura spa con tratamiento hidratante y esmalte rojo.',
-      image: 'Relaxing spa pedicure with red polish and moisturizing treatment',
+      category: 'manicure',
+      title: 'Manicura Premium',
+      description: 'Manicura de alta calidad con acabado profesional.',
+      image: 'manicura4',
       likes: 78,
       featured: false
-    },
-    {
-      id: 5,
-      category: 'nail-art',
-      title: 'Diseño Geométrico Moderno',
-      description: 'Patrones geométricos en tonos nude y negro.',
-      image: 'Modern geometric nail art with nude and black patterns',
-      likes: 203,
-      featured: true
-    },
-    {
-      id: 6,
-      category: 'treatments',
-      title: 'Lifting de Pestañas',
-      description: 'Resultado natural y duradero del lifting de pestañas.',
-      image: 'Natural result of an eyelash lifting treatment, showing curled lashes',
-      likes: 145,
-      featured: true
-    },
-    {
-      id: 7,
-      category: 'manicure',
-      title: 'Manicura Ombré',
-      description: 'Degradado suave en tonos naranjas y rosas.',
-      image: 'Beautiful ombré manicure with a sunset orange and pink gradient',
-      likes: 167,
-      featured: false
-    },
-    {
-      id: 8,
-      category: 'nail-art',
-      title: 'Arte Minimalista',
-      description: 'Diseños minimalistas con líneas finas y puntos.',
-      image: 'Minimalist nail art with elegant thin lines and dots',
-      likes: 134,
-      featured: false
-    },
-    {
-      id: 9,
-      category: 'pedicure',
-      title: 'Pedicura de Verano',
-      description: 'Colores vibrantes y divertidos, perfectos para el verano.',
-      image: 'Vibrant tropical pedicure with bright summer colors on toes',
-      likes: 92,
-      featured: false
-    },
-    {
-      id: 10,
-      category: 'treatments',
-      title: 'Cejas con Henna',
-      description: 'Resultado natural del tinte con henna para cejas definidas.',
-      image: 'Perfectly shaped eyebrows tinted with natural henna for definition',
-      likes: 76,
-      featured: true
     }
   ];
 
