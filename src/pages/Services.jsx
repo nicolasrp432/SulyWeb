@@ -83,7 +83,7 @@ const Services = () => {
       description: 'Servicio completo de manicura con tratamientos adicionales.',
       duration: '45 min',
       price: '16,90€',
-      image: '/public/serviciosimg/manicura-adicional.jpg',
+      image: '/serviciosimg/manicura-adicional.jpg',
       features: ['Tratamiento completo', 'Hidratación profunda', 'Masaje de manos', 'Acabado perfecto'],
       popular: false
     },
@@ -138,7 +138,7 @@ const Services = () => {
       description: 'Mantenimiento para tus uñas acrílicas, conservando su belleza y durabilidad.',
       duration: '60 min',
       price: '25,00€',
-      image: '/public/serviciosimg/relleno-acrilico.jpg',
+      image: '/serviciosimg/relleno-acrilico.jpg',
       features: ['Mantenimiento profesional', 'Corrección de crecimiento', 'Refuerzo estructural', 'Acabado renovado'],
       popular: false
     },
@@ -149,7 +149,7 @@ const Services = () => {
       description: 'Solución rápida para uñas dañadas o rotas.',
       duration: '15 min',
       price: '3,00€',
-      image: '/public/serviciosimg/repara-uña.jpg',
+      image: '/serviciosimg/repara-uña.jpg',
       features: ['Reparación rápida', 'Refuerzo estructural', 'Igualación de longitud', 'Acabado natural'],
       popular: false
     },
@@ -160,7 +160,7 @@ const Services = () => {
       description: 'Eliminación segura y profesional de uñas acrílicas.',
       duration: '30 min',
       price: '10,00€',
-      image: '/public/serviciosimg/quitar-acrilico.jpg',
+      image: '/serviciosimg/quitar-acrilico.jpg',
       features: ['Remoción segura', 'Cuidado de la uña natural', 'Técnica profesional', 'Hidratación posterior'],
       popular: false
     },
@@ -171,7 +171,7 @@ const Services = () => {
       description: 'Eliminación de esmalte semipermanente sin dañar la uña natural.',
       duration: '20 min',
       price: '5,00€',
-      image: '/public/serviciosimg/retirar-semi.jpg',
+      image: '/serviciosimg/retirar-semi.jpg',
       features: ['Remoción cuidadosa', 'Protección de la uña', 'Técnica profesional', 'Servicio rápido'],
       popular: false
     },
@@ -182,7 +182,7 @@ const Services = () => {
       description: 'Servicio de esmaltado para lucir unos pies perfectos.',
       duration: '30 min',
       price: '14,90€',
-      image: '/public/serviciosimg/esmaltar-pies.jpg',
+      image: '/serviciosimg/esmaltar-pies.jpg',
       features: ['Esmaltado profesional', 'Colores duraderos', 'Acabado brillante', 'Secado rápido'],
       popular: false
     },
@@ -193,7 +193,7 @@ const Services = () => {
       description: 'Tratamiento integral para pies, incluyendo exfoliación, hidratación y esmaltado.',
       duration: '60 min',
       price: '25,90€',
-      image: '/public/serviciosimg/pedicura-completa.jpg',
+      image: '/serviciosimg/pedicura-completa.jpg',
       features: ['Exfoliación profunda', 'Tratamiento de durezas', 'Hidratación intensiva', 'Esmaltado perfecto'],
       popular: true
     },
@@ -204,7 +204,7 @@ const Services = () => {
       description: 'Pedicura integral con opción de esmalte semipermanente o tradicional.',
       duration: '60 min',
       price: '25,90€',
-      image: '/public/serviciosimg/pedicura-completa-semi-tradicional.jpg',
+      image: '/serviciosimg/pedicura-completa-semi-tradicional.jpg',
       features: ['Tratamiento completo', 'Opción de acabado', 'Larga duración', 'Resultados profesionales'],
       popular: true
     },
@@ -215,7 +215,7 @@ const Services = () => {
       description: 'Curvatura natural y duradera que eleva y alarga tus pestañas sin extensiones.',
       duration: '60 min',
       price: '30,00€',
-      image: '/public/serviciosimg/lifting-pestañas.jpg',
+      image: '/serviciosimg/lifting-pestañas.jpg',
       features: ['Curvatura natural', 'Efecto rímel', 'Duración 6-8 semanas', 'Incluye tinte de pestañas'],
       popular: true
     },
@@ -226,7 +226,7 @@ const Services = () => {
       description: 'Perfilado profesional para realzar tu mirada.',
       duration: '15 min',
       price: '5,00€',
-      image: '/public/serviciosimg/depilar-cejas.jpg',
+      image: '/serviciosimg/depilar-cejas.jpg',
       features: ['Diseño personalizado', 'Técnica precisa', 'Acabado natural', 'Realza la mirada'],
       popular: false
     },
@@ -237,7 +237,7 @@ const Services = () => {
       description: 'Depilación suave y efectiva del vello facial superior.',
       duration: '10 min',
       price: '5,00€',
-      image: '/public/serviciosimg/depilar-bigote.jpg',
+      image: '/serviciosimg/depilar-bigote.jpg',
       features: ['Técnica suave', 'Resultados precisos', 'Piel cuidada', 'Acabado perfecto'],
       popular: false
     },
@@ -248,7 +248,7 @@ const Services = () => {
       description: 'Depilación profesional para axilas suaves y sin irritación.',
       duration: '15 min',
       price: '9,90€',
-      image: '/public/serviciosimg/depilar-axilas.jpg',
+      image: '/serviciosimg/depilar-axilas.jpg',
       features: ['Técnica profesional', 'Mínima irritación', 'Resultados duraderos', 'Piel cuidada'],
       popular: false
     },
@@ -259,7 +259,7 @@ const Services = () => {
       description: 'Tratamiento completo para eliminar el vello facial de forma profesional.',
       duration: '30 min',
       price: '14,90€',
-      image: '/public/serviciosimg/depilar-rostro-entero.jpg',
+      image: '/serviciosimg/depilar-rostro-entero.jpg',
       features: ['Tratamiento integral', 'Técnica suave', 'Resultados uniformes', 'Piel radiante'],
       popular: false
     }
