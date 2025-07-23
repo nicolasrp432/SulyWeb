@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect, memo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/dialog';
 
 // Memoized service card component
-const ServiceCard = React.memo(({ service, index, onSelect, onAddService }) => {
+const ServiceCard = memo(({ service, index, onSelect, onAddService }) => {
   const handleSelect = useCallback(() => onSelect(service), [service, onSelect]);
   const handleAddService = useCallback((e) => {
     e.stopPropagation();

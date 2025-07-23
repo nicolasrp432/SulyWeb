@@ -1,4 +1,6 @@
 import * as Sentry from '@sentry/react';
+import { useEffect } from 'react';
+import { useLocation, useNavigationType, createRoutesFromChildren, matchRoutes } from 'react-router-dom';
 
 /**
  * Configuración de Sentry para monitoreo de errores
@@ -81,7 +83,7 @@ export const initSentry = () => {
       new Sentry.BrowserTracing({
         // Configuración de routing para React Router
         routingInstrumentation: Sentry.reactRouterV6Instrumentation(
-          React.useEffect,
+          useEffect,
           useLocation,
           useNavigationType,
           createRoutesFromChildren,

@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, Children } from 'react';
 import { motion, useReducedMotion, useInView, useAnimation } from 'framer-motion';
 import { usePerformance } from '@/hooks/usePerformance';
 
@@ -242,7 +242,7 @@ export const OptimizedMotionList = ({
       variants={containerVariants}
       {...props}
     >
-      {React.Children.map(children, (child, index) => (
+      {Children.map(children, (child, index) => (
         <motion.div key={index} variants={itemVariants}>
           {child}
         </motion.div>

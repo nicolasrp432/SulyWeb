@@ -1,7 +1,8 @@
 import React from 'react';
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
-import SEOHead from '@/components/SEOHead';
+import { SEOHead } from '@/components/SEOHead';
+import { handleRequestFeature } from '@/utils/uiHelpers';
 
 const GalleryPage = () => {
   const { toast } = useToast();

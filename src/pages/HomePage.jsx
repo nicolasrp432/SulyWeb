@@ -1,10 +1,11 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { ArrowRight, Calendar, Brush, Sparkles, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
+import { SEOHead } from '@/components/SEOHead';
 import { useToast } from '@/components/ui/use-toast';
-import { ArrowRight, Sparkles, Brush, Gem } from 'lucide-react';
-import SEOHead from '@/components/SEOHead';
+import { handleUnimplementedClick } from '@/utils/uiHelpers';
 
 const HomePage = () => {
   const { toast } = useToast();

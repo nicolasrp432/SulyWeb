@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Heart, Share2, Download } from 'lucide-react';
@@ -152,7 +152,7 @@ const Gallery = () => {
   }, [toast]);
 
   // Componente optimizado para cada item de la galería
-  const GalleryItem = React.memo(({ item, onImageClick }) => (
+  const GalleryItem = memo(({ item, onImageClick }) => (
     <motion.div
       layout
       initial={{ opacity: 0, scale: 0.8 }}

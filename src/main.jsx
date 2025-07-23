@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, StrictMode } from 'react';
 import ReactDOM from 'react-dom/client';
 import { HelmetProvider } from 'react-helmet-async';
 import App from '@/App';
@@ -74,7 +74,7 @@ const AppWithPreloader = () => {
 };
 
 ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
+  <StrictMode>
     <AppWithPreloader />
-  </React.StrictMode>
+  </StrictMode>
 );

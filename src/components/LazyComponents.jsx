@@ -1,4 +1,4 @@
-import { lazy } from 'react';
+import React, { lazy } from 'react';
 
 // Lazy loading de páginas principales
 export const LazyHome = lazy(() => import('@/pages/Home'));

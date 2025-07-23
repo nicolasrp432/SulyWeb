@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, forwardRef } from 'react';
 import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import { SkeletonLoader } from './LoadingSpinner';
 
@@ -87,7 +87,7 @@ const OptimizedImage = ({
   const shouldLoad = priority || isIntersecting;
 
   // Set current source when should load
-  React.useEffect(() => {
+  useEffect(() => {
     if (shouldLoad && !currentSrc && !hasError) {
       setCurrentSrc(imageUrls.webp);
     }
@@ -189,7 +189,7 @@ const OptimizedImage = ({
 
 // Higher-order component for image optimization
 export const withImageOptimization = (Component) => {
-  return React.forwardRef((props, ref) => {
+  return forwardRef((props, ref) => {
     const optimizedProps = {
       ...props,
       // Add default optimization settings

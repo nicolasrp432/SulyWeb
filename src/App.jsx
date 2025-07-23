@@ -1,4 +1,4 @@
-import React, { Suspense } from 'react';
+import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async';
 import { Toaster } from '@/components/ui/toaster';
@@ -8,12 +8,13 @@ import WhatsAppButton from '@/components/WhatsAppButton';
 import LoadingSpinner from '@/components/LoadingSpinner';
 
 // Lazy loading de páginas para mejorar el rendimiento
-const Home = React.lazy(() => import('@/pages/Home'));
-const Services = React.lazy(() => import('@/pages/Services'));
-const Gallery = React.lazy(() => import('@/pages/Gallery'));
-const Booking = React.lazy(() => import('@/pages/Booking'));
-const Contact = React.lazy(() => import('@/pages/Contact'));
-const AdminServices = React.lazy(() => import('@/pages/AdminServices'));
+const Home = lazy(() => import('@/pages/Home'));
+const Services = lazy(() => import('@/pages/Services'));
+const Gallery = lazy(() => import('@/pages/Gallery'));
+const Booking = lazy(() => import('@/pages/Booking'));
+const Contact = lazy(() => import('@/pages/Contact'));
+const AdminServices = lazy(() => import('@/pages/AdminServices'));
+const ConsultoriaEmpresarial = lazy(() => import('@/pages/ConsultoriaEmpresarial'));
 
 // Componente de loading optimizado para rutas
 const RouteLoader = () => (
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/reservas" element={<Booking />} />
                 <Route path="/contacto" element={<Contact />} />
                 <Route path="/admin/servicios" element={<AdminServices />} />
+                <Route path="/consultoria-empresarial" element={<ConsultoriaEmpresarial />} />
               </Routes>
             </Suspense>
           </main>

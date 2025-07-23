@@ -1,4 +1,4 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, memo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
@@ -19,7 +19,7 @@ import LazyImage from '../components/LazyImage';
 import { SkeletonLoader } from '../components/LoadingSpinner';
 
 // Memoized feature item component
-const FeatureItem = React.memo(({ feature, index }) => (
+const FeatureItem = memo(({ feature, index }) => (
   <motion.div
     initial={{ opacity: 0, y: 50 }}
     whileInView={{ opacity: 1, y: 0 }}
@@ -43,7 +43,7 @@ const FeatureItem = React.memo(({ feature, index }) => (
 FeatureItem.displayName = 'FeatureItem';
 
 // Memoized service item component
-const ServiceItem = React.memo(({ service, index, onServiceClick }) => {
+const ServiceItem = memo(({ service, index, onServiceClick }) => {
   const handleClick = useCallback(() => onServiceClick(), [onServiceClick]);
   
   // Memoize image URL mapping

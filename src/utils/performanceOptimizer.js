@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useRef, useEffect } from 'react';
+import { useCallback, useMemo, useRef, useEffect, memo, lazy } from 'react';
 
 /**
  * Performance optimization utilities
@@ -79,7 +79,7 @@ export class MemoCache {
  * Performance-aware component wrapper
  */
 export const withPerformanceOptimization = (Component) => {
-  return React.memo(Component, (prevProps, nextProps) => {
+  return memo(Component, (prevProps, nextProps) => {
     // Custom comparison logic
     const prevKeys = Object.keys(prevProps);
     const nextKeys = Object.keys(nextProps);
@@ -333,12 +333,16 @@ export class PerformanceMonitor {
  * Lazy loading utilities
  */
 export const createLazyComponent = (importFn, fallback = null) => {
-  return React.lazy(() => {
+  return lazy(() => {
     return importFn().catch(error => {
       console.error('Failed to load component:', error);
       // Return a fallback component
       return {
-        default: () => fallback || React.createElement('div', null, 'Failed to load component')
+        default: () => fallback || (() => {
+          const div = document.createElement('div');
+          div.textContent = 'Failed to load component';
+          return div;
+        })()
       };
     });
   });
