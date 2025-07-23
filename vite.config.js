@@ -197,8 +197,8 @@ export default defineConfig({
 		react({
 			// Enable React Fast Refresh in development
 			fastRefresh: isDev,
-			// Use classic JSX runtime for better compatibility
-			jsxRuntime: 'classic'
+			// Use automatic JSX runtime (React 17+)
+			jsxRuntime: 'automatic'
 		}),
 		...(isDev ? [addTransformIndexHtml] : []),
 		VitePWA({
