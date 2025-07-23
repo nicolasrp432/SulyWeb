@@ -1,0 +1,75 @@
+# Configurar MIME types correctos
+AddType application/javascript .js
+AddType application/javascript .mjs
+AddType text/javascript .js
+AddType application/json .json
+AddType image/svg+xml .svg
+AddType text/css .css
+AddType application/woff2 .woff2
+AddType application/woff .woff
+AddType application/font-woff2 .woff2
+AddType application/font-woff .woff
+AddType image/jpeg .jpg .jpeg
+AddType image/png .png
+AddType image/gif .gif
+AddType image/webp .webp
+
+# Configuración para SPA (Single Page Application)
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+  
+  # Manejar archivos estáticos - IMPORTANTE: debe ir primero
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+  
+  # Excluir archivos de API si los tienes
+  RewriteCond %{REQUEST_URI} !^/api/
+  
+  # Redirigir todo lo demás a index.html para SPA routing
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# Configurar headers de seguridad y cache
+<IfModule mod_headers.c>
+  # Cache para archivos estáticos
+  <FilesMatch "\.(css|js|mjs|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
+    Header set Cache-Control "max-age=31536000, public"
+    Header set Content-Type "application/javascript" env=js_file
+  </FilesMatch>
+  
+  # Específicamente para archivos JS
+  <FilesMatch "\.js$">
+    Header set Content-Type "application/javascript"
+  </FilesMatch>
+  
+  # No cache para HTML
+  <FilesMatch "\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+
+# Comprimir archivos para mejor rendimiento
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/plain
+  AddOutputFilterByType DEFLATE text/html
+  AddOutputFilterByType DEFLATE text/xml
+  AddOutputFilterByType DEFLATE text/css
+  AddOutputFilterByType DEFLATE application/xml
+  AddOutputFilterByType DEFLATE application/xhtml+xml
+  AddOutputFilterByType DEFLATE application/rss+xml
+  AddOutputFilterByType DEFLATE application/javascript
+  AddOutputFilterByType DEFLATE application/x-javascript
+  AddOutputFilterByType DEFLATE text/javascript
+</IfModule>
+
+# Configuración adicional para módulos ES6
+<IfModule mod_mime.c>
+  AddType application/javascript .js .mjs
+</IfModule>
+<IfModule mod_headers.c>
+  Header set X-Powered-By "Hostinger Horizons"
+</IfModule>
