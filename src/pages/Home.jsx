@@ -114,13 +114,52 @@ const Home = () => {
             className="space-y-8"
           >
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-              className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-3 text-white"
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ 
+                scale: 1, 
+                opacity: 1,
+                y: [0, -5, 0]
+              }}
+              transition={{ 
+                delay: 0.2, 
+                type: "spring", 
+                stiffness: 200,
+                y: {
+                  duration: 3,
+                  repeat: Infinity,
+                  ease: "easeInOut"
+                }
+              }}
+              className="inline-flex items-center space-x-2 bg-white/20 backdrop-blur-sm rounded-full px-6 py-3 text-white shadow-lg hover:shadow-xl transition-all duration-300 group"
             >
-              <Sparkles className="h-5 w-5" />
-              <span className="text-sm font-medium">Salón de Belleza Premium</span>
+              <motion.div
+                animate={{ 
+                  rotate: [0, 360],
+                  scale: [1, 1.2, 1]
+                }}
+                transition={{
+                  rotate: {
+                    duration: 8,
+                    repeat: Infinity,
+                    ease: "linear"
+                  },
+                  scale: {
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }
+                }}
+              >
+                <Sparkles className="h-5 w-5 group-hover:text-yellow-300 transition-colors duration-300" />
+              </motion.div>
+              <motion.span 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.5, duration: 0.6 }}
+                className="text-sm font-medium group-hover:text-yellow-100 transition-colors duration-300"
+              >
+                Salón de Belleza Premium
+              </motion.span>
             </motion.div>
 
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
