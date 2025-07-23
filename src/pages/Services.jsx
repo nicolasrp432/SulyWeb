@@ -638,30 +638,31 @@ const Services = () => {
       </section>
 
       {/* Modal de detalles del servicio */}
-      <Dialog open={!!selectedService} onOpenChange={(open) => !open && setSelectedService(null)}>
-        <DialogContent className="max-w-4xl w-[90vw] max-h-[90vh] overflow-y-auto z-[60] animate-in fade-in-0 zoom-in-95 duration-200">
+      <Dialog open={!!selectedService} onOpenChange={() => setSelectedService(null)} modal={false}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           {selectedService && (
             <>
               <DialogHeader>
-                <DialogTitle className="text-2xl font-bold gradient-text">{selectedService.title}</DialogTitle>
-                <DialogDescription className="text-base text-gray-600 mt-2">
+                <DialogTitle className="text-2xl font-bold gradient-text">
+                  {selectedService.title}
+                </DialogTitle>
+                <DialogDescription className="text-gray-600 mt-2">
                   {selectedService.description}
                 </DialogDescription>
               </DialogHeader>
               
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
-                {/* Imagen y precio */}
-                <div className="lg:col-span-2">
-                  <div className="w-full h-64 bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg flex items-center justify-center">
-                    <img  
-                      className="w-full h-64 object-cover rounded-lg" 
-                      alt={selectedService.title} 
-                      src={selectedService.image}
-                      loading="eager"
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                {/* Imagen y detalles del servicio */}
+                <div className="space-y-4">
+                  <div className="relative overflow-hidden rounded-xl">
+                    <img 
+                      src={selectedService.image} 
+                      alt={selectedService.title}
+                      className="w-full h-64 object-cover"
                       onError={(e) => {
                         e.target.style.display = 'none';
                         e.target.parentElement.innerHTML = `
-                          <div class="w-full h-64 bg-gradient-to-br from-pink-100 to-rose-100 rounded-lg flex items-center justify-center">
+                          <div class="w-full h-64 bg-gradient-to-br from-pink-100 to-rose-100 rounded-xl flex items-center justify-center">
                             <div class="text-center text-pink-600">
                               <div class="text-4xl mb-2">💅</div>
                               <div class="text-sm font-medium">${selectedService.title}</div>
@@ -672,17 +673,21 @@ const Services = () => {
                     />
                   </div>
                   
-                  <div className="mt-4 flex justify-between items-center">
-                    <div className="flex items-center text-gray-600">
-                      <Clock className="h-5 w-5 mr-2 text-pink-500" />
-                      <span>{selectedService.duration}</span>
-                    </div>
-                    <div className="text-3xl font-bold gradient-text">
-                      {selectedService.price}
+                  <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="text-center">
+                        <Clock className="h-6 w-6 text-pink-500 mx-auto mb-2" />
+                        <p className="text-sm text-gray-600">Duración</p>
+                        <p className="font-semibold text-gray-800">{selectedService.duration}</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="h-6 w-6 text-pink-500 mx-auto mb-2 flex items-center justify-center text-lg font-bold">€</div>
+                        <p className="text-sm text-gray-600">Precio</p>
+                        <p className="font-bold text-xl gradient-text">{selectedService.price}</p>
+                      </div>
                     </div>
                   </div>
-
-                  {/* Características del servicio */}
+                  
                   <div className="mt-6">
                     <h3 className="text-lg font-semibold text-gray-800 mb-4">Características del Servicio</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -756,8 +761,8 @@ const Services = () => {
                       </a>
                       
                       <a href="mailto:sulyprettynails@gmail.com" className="flex items-center text-gray-600 hover:text-pink-600 transition-colors">
-                  <Mail className="h-4 w-4 mr-2" />
-                  <span className="text-sm">sulyprettynails@gmail.com</span>
+                        <Mail className="h-4 w-4 mr-2 text-pink-500" />
+                        <span className="text-sm">sulyprettynails@gmail.com</span>
                       </a>
                     </div>
                   </div>
