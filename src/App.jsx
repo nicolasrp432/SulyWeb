@@ -14,7 +14,6 @@ const Gallery = lazy(() => import('@/pages/Gallery'));
 const Booking = lazy(() => import('@/pages/Booking'));
 const Contact = lazy(() => import('@/pages/Contact'));
 const AdminServices = lazy(() => import('@/pages/AdminServices'));
-const ConsultoriaEmpresarial = lazy(() => import('@/pages/ConsultoriaEmpresarial'));
 
 // Componente de loading optimizado para rutas
 const RouteLoader = () => (
@@ -38,7 +37,6 @@ function App() {
                 <Route path="/reservas" element={<Booking />} />
                 <Route path="/contacto" element={<Contact />} />
                 <Route path="/admin/servicios" element={<AdminServices />} />
-                <Route path="/consultoria-empresarial" element={<ConsultoriaEmpresarial />} />
               </Routes>
             </Suspense>
           </main>

@@ -5,20 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useBookingCart } from '@/contexts/BookingCartContext';
 
 const BookingCartIndicator = () => {
-  const { selectedServices } = useBookingCart();
+  const { selecteds } = useBookingCart();
   const [showNotification, setShowNotification] = useState(false);
   const [prevCount, setPrevCount] = useState(0);
   
   useEffect(() => {
-    if (selectedServices.length > prevCount && prevCount > 0) {
+    if (selecteds.length > prevCount && prevCount > 0) {
       setShowNotification(true);
       const timer = setTimeout(() => setShowNotification(false), 2000);
       return () => clearTimeout(timer);
     }
-    setPrevCount(selectedServices.length);
-  }, [selectedServices.length, prevCount]);
+    setPrevCount(selecteds.length);
+  }, [selecteds.length, prevCount]);
   
-  if (selectedServices.length === 0) return null;
+  if (selecteds.length === 0) return null;
   
   return (
     <>
@@ -35,7 +35,7 @@ const BookingCartIndicator = () => {
           }}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
-          key={selectedServices.length}
+          key={selecteds.length}
         >
           <motion.div
             animate={showNotification ? { scale: [1, 1.3, 1] } : {}}
@@ -43,7 +43,7 @@ const BookingCartIndicator = () => {
           >
             <ShoppingBag className="h-5 w-5" />
           </motion.div>
-          <span className="font-medium text-sm">Reservar ({selectedServices.length})</span>
+          <span className="font-medium text-sm">Reservar ({selecteds.length})</span>
         </motion.div>
       </Link>
       
