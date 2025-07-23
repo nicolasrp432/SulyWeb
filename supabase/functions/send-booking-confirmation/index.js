@@ -3,8 +3,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { SmtpClient } from 'https://esm.sh/smtp-client@0.4.0';
 
 // Configuración de Supabase
-const supabaseUrl = Deno.env.get('SUPABASE_URL');
-const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+const supabaseUrl = Deno.env.get('VITE_SUPABASE_URL');
+const supabaseServiceKey = Deno.env.get('VITE_SUPABASE_SERVICE_ROLE_KEY');
 
 // Configuración de correo
 const SMTP_HOST = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com';

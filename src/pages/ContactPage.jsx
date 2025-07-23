@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { useToast } from '@/components/ui/use-toast';
+import SEOHead from '@/components/SEOHead';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -73,10 +73,7 @@ const ContactPage = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Contacto - Suly Pretty Nails</title>
-        <meta name="description" content="¿Tienes preguntas? Ponte en contacto con Suly Pretty Nails. Encuentra nuestra ubicación y datos de contacto." />
-      </Helmet>
+      <SEOHead />
       
       <div className="min-h-screen bg-gradient-to-br from-pink-50 to-purple-50">
         {/* Hero Section */}

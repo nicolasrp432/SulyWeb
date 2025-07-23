@@ -1,76 +1,129 @@
-
-
-
-          
-# 📋 Resumen Completo del Trabajo Realizado
-
-## 🎯 **Problema Original Identificado:**
-- Error: "new row violates row-level security policy for table 'services'"
-- Función `prompt()` no soportada en el navegador
-- Error: "null value in column 'slug' violates not-null constraint"
-- Falta de interfaz editable para gestionar servicios
-
-## ✅ **Soluciones Implementadas:**
-
-### 1. **Bypass de RLS (Row Level Security)**
-- **Archivo modificado:** <mcfile name="addMissingServices.js" path="src/scripts/addMissingServices.js"></mcfile>
-- **Función creada:** `createAdminClient()` - Crea cliente Supabase con service role key
-- **Función creada:** `getServiceRoleKey()` - Solicita la clave de servicio al usuario
-- **Resultado:** Bypass completo de las políticas RLS para inserción de servicios
-
-### 2. **Solución del Campo Slug Faltante**
-- **Función agregada:** `generateSlug()` - Convierte nombres a slugs URL-friendly
-- **Implementación:** Generación automática de slug para cada servicio
-- **Resultado:** Eliminación del error de constraint de slug
-
-### 3. **Interfaz de Edición Completa**
-- **Archivo transformado:** <mcfile name="AdminServices.jsx" path="src/pages/AdminServices.jsx"></mcfile>
-- **Funcionalidades agregadas:**
-  - ✏️ **Editor de servicios existentes** (nombre, duración, precio, categoría)
-  - ➕ **Formulario para nuevos servicios**
-  - 🗑️ **Eliminación de servicios de la lista**
-  - 👁️ **Vista previa en tiempo real**
-  - 🔄 **Toggle para mostrar/ocultar editor**
-
-### 4. **Componentes UI Creados**
-- **<mcfile name="input.jsx" path="src/components/ui/input.jsx"></mcfile>** - Campo de entrada de texto
-- **<mcfile name="label.jsx" path="src/components/ui/label.jsx"></mcfile>** - Etiquetas para formularios
-- **<mcfile name="select.jsx" path="src/components/ui/select.jsx"></mcfile>** - Menú desplegable de selección
-- **Dependencia instalada:** `@radix-ui/react-select`
-
-### 5. **Corrección de Problemas de Servidor**
-- **Problema resuelto:** Errores 404 por puerto incorrecto (5173 vs 5175)
-- **Estado actual:** Servidor funcionando en `http://localhost:5175/`
-
-## 🚀 **Estado Actual del Sistema:**
-
-### ✅ **Completamente Funcional:**
-- Página `/admin/servicios` carga sin errores
-- Interfaz de edición totalmente operativa
-- Inserción de servicios sin errores de RLS
-- Generación automática de slugs
-- Componentes UI disponibles y funcionales
-
-### 📝 **Servicios Predefinidos Listos:**
-10 servicios configurados para inserción:
-1. Manicura Clásica (30 min, $25)
-2. Pedicura Spa (45 min, $35)
-3. Uñas Acrílicas (90 min, $50)
-4. Uñas de Gel (60 min, $40)
-5. Nail Art Personalizado (75 min, $45)
-6. Manicura Francesa (45 min, $30)
-7. Pedicura Médica (60 min, $40)
-8. Extensiones de Uñas (120 min, $60)
-9. Tratamiento Fortalecedor (30 min, $20)
-10. Diseño de Temporada (90 min, $55)
-
-## 🎮 **Cómo Usar el Sistema:**
-1. Ir a `/admin/servicios`
-2. Hacer clic en "Mostrar Editor de Servicios"
-3. Editar servicios existentes o agregar nuevos
-4. Hacer clic en "Agregar Servicios Seleccionados"
-5. Proporcionar Service Role Key cuando se solicite
-6. ¡Servicios insertados exitosamente!
-
-**🎉 El sistema está 100% operativo y listo para usar sin necesidad de modificaciones adicionales.**
-        
+# Plan de Optimización SEO y Rendimiento para Producción
+## 📊 Análisis Inicial del Proyecto
+### Estructura Actual Identificada
+- Framework : React + Vite
+- Styling : Tailwind CSS
+- Routing : React Router
+- Backend : Supabase
+- Tipo : SPA (Single Page Application) - Salón de uñas
+- Páginas principales : Home, Servicios, Galería, Contacto, Reservas
+## 🎯 Plan de Optimización SEO
+### 1. Meta Tags y Estructura HTML
+- Implementar React Helmet Async para meta tags dinámicos
+- Añadir meta descriptions únicas por página (150-160 caracteres)
+- Configurar Open Graph tags para redes sociales
+- Implementar Twitter Cards
+- Añadir meta tags de geolocalización (Basauri/Galdakao)
+- Configurar canonical URLs
+- Implementar hreflang si hay múltiples idiomas
+### 2. Contenido y Palabras Clave
+- Investigación de keywords locales: "uñas Basauri", "manicura Galdakao", "nail art Bizkaia"
+- Optimizar títulos H1, H2, H3 con keywords objetivo
+- Crear contenido único para cada servicio
+- Añadir schema markup para negocio local
+- Implementar breadcrumbs
+- Optimizar alt text de imágenes
+### 3. SEO Técnico
+- Generar sitemap.xml automático
+- Configurar robots.txt
+- Implementar SSR/SSG con Next.js o Vite SSR
+- Configurar redirects 301 si es necesario
+- Implementar lazy loading para imágenes
+- Optimizar URLs (slug amigables)
+### 4. SEO Local
+- Configurar Google My Business
+- Implementar datos estructurados LocalBusiness
+- Añadir información de contacto consistente
+- Optimizar para búsquedas "cerca de mí"
+- Implementar reseñas de clientes
+## ⚡ Plan de Optimización de Rendimiento
+### 1. Optimización de Imágenes
+- Convertir imágenes a formatos modernos (WebP, AVIF)
+- Implementar responsive images con srcset
+- Comprimir imágenes sin pérdida de calidad
+- Lazy loading para galería de imágenes
+- Optimizar imágenes de servicios y trabajos
+### 2. Optimización de Código
+- Code splitting por rutas
+- Tree shaking para eliminar código no usado
+- Minificación de CSS y JavaScript
+- Eliminar dependencias innecesarias
+- Implementar dynamic imports
+- Optimizar bundle size de Leaflet
+### 3. Optimización de Carga
+- Implementar Service Worker para cache
+- Configurar cache headers apropiados
+- Preload de recursos críticos
+- Prefetch de rutas importantes
+- Optimizar Critical Rendering Path
+- Implementar resource hints
+### 4. Optimización de Base de Datos
+- Optimizar queries de Supabase
+- Implementar paginación en galería
+- Cache de datos frecuentes
+- Optimizar imágenes en Supabase Storage
+## 🔧 Optimizaciones Técnicas Específicas
+### 1. Configuración de Build
+- Optimizar configuración de Vite
+- Configurar compression (Gzip/Brotli)
+- Implementar análisis de bundle
+- Configurar source maps para producción
+### 2. Monitoreo y Analytics
+- Implementar Google Analytics 4
+- Configurar Google Search Console
+- Implementar Core Web Vitals monitoring
+- Configurar error tracking (Sentry)
+### 3. Seguridad
+- Configurar Content Security Policy
+- Implementar HTTPS
+- Configurar headers de seguridad
+- Validación de formularios del lado servidor
+## 📱 Optimización Mobile
+- Mejorar experiencia táctil
+- Optimizar tamaños de botones
+- Implementar gestos móviles en galería
+- Optimizar formulario de reservas para móvil
+- Mejorar navegación móvil
+## 🎨 Optimización UX/UI
+- Implementar skeleton loading
+- Mejorar estados de carga
+- Optimizar animaciones (60fps)
+- Implementar feedback visual
+- Mejorar accesibilidad (WCAG 2.1)
+## 📈 Métricas Objetivo
+### Core Web Vitals
+- LCP : < 2.5s
+- FID : < 100ms
+- CLS : < 0.1
+### Lighthouse Scores
+- Performance : > 90
+- SEO : > 95
+- Accessibility : > 90
+- Best Practices : > 90
+### Otras Métricas
+- Time to Interactive : < 3s
+- Bundle Size : < 500KB
+- Image Optimization : > 80%
+## 🚀 Fases de Implementación
+### Fase 1: SEO Básico (1-2 días)
+- Meta tags y estructura HTML
+- Contenido y keywords
+- Schema markup básico
+### Fase 2: Rendimiento Core (2-3 días)
+- Optimización de imágenes
+- Code splitting
+- Lazy loading
+### Fase 3: SEO Avanzado (1-2 días)
+- SSR/SSG implementation
+- Sitemap y robots.txt
+- SEO local avanzado
+### Fase 4: Optimización Final (1-2 días)
+- Service Workers
+- Monitoreo y analytics
+- Testing y ajustes finales
+## 🛠️ Herramientas Necesarias
+- SEO : React Helmet Async, react-router-sitemap
+- Performance : Workbox, sharp, vite-plugin-pwa
+- Analytics : Google Analytics, Google Tag Manager
+- Testing : Lighthouse CI, WebPageTest
+- Monitoring : Sentry, Google Search Console

@@ -1,6 +1,7 @@
 import path from 'node:path';
 import react from '@vitejs/plugin-react';
 import { createLogger, defineConfig } from 'vite';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const isDev = process.env.NODE_ENV !== 'production';
 let inlineEditPlugin, editModeDevPlugin;
@@ -193,8 +194,77 @@ export default defineConfig({
 	customLogger: logger,
 	plugins: [
 		...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
-		react(),
-		addTransformIndexHtml
+		react({
+			// Enable React Fast Refresh in development
+			fastRefresh: isDev,
+			// Optimize JSX runtime
+			jsxRuntime: 'automatic'
+		}),
+		addTransformIndexHtml,
+		VitePWA({
+			registerType: 'autoUpdate',
+			workbox: {
+				globPatterns: ['**/*.{js,css,html,ico,png,svg,webp}'], // Removido jpg,jpeg
+				globIgnores: ['**/logosuly.jpeg'], // Ignorar archivo problemático
+				runtimeCaching: [
+					{
+						urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'google-fonts-cache',
+							expiration: {
+								maxEntries: 10,
+								maxAgeSeconds: 60 * 60 * 24 * 365 // 1 año
+							}
+						}
+					},
+					{
+						urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'gstatic-fonts-cache',
+							expiration: {
+								maxEntries: 10,
+								maxAgeSeconds: 60 * 60 * 24 * 365 // 1 año
+							}
+						}
+					},
+					{
+						urlPattern: /\.(?:png|svg|gif|webp)$/, // Removido jpg,jpeg
+						handler: 'CacheFirst',
+						options: {
+							cacheName: 'images-cache',
+							expiration: {
+								maxEntries: 50,
+								maxAgeSeconds: 60 * 60 * 24 * 30 // 30 días
+							}
+						}
+					}
+				]
+			},
+			manifest: {
+				name: 'Suly Pretty Nails',
+				short_name: 'SulyNails',
+				description: 'Salón de belleza especializado en uñas y cuidado personal en Medellín',
+				theme_color: '#ec4899',
+				background_color: '#ffffff',
+				display: 'standalone',
+				start_url: '/',
+				scope: '/',
+				icons: [
+					{
+						src: '/icon-192x192.svg',
+						sizes: '192x192',
+						type: 'image/svg+xml'
+					},
+					{
+						src: '/icon-512x512.svg',
+						sizes: '512x512',
+						type: 'image/svg+xml'
+					}
+				]
+			}
+		})
 	],
 	server: {
 		cors: true,
@@ -210,6 +280,18 @@ export default defineConfig({
 		},
 	},
 	build: {
+		// Enable source maps for better debugging in production
+		sourcemap: false,
+		// Optimize chunk size
+		chunkSizeWarningLimit: 1000,
+		// Enable minification
+		minify: 'terser',
+		terserOptions: {
+			compress: {
+				drop_console: !isDev,
+				drop_debugger: !isDev
+			}
+		},
 		rollupOptions: {
 			external: [
 				'@babel/parser',
@@ -217,6 +299,35 @@ export default defineConfig({
 				'@babel/generator',
 				'@babel/types'
 			]
+			// Comentar manualChunks temporalmente para evitar problemas
+			// output: {
+			//   manualChunks: {
+			//     react: ['react', 'react-dom', 'react-router-dom'],
+			//     ui: ['framer-motion', 'lucide-react'],
+			//     utils: ['date-fns', 'clsx']
+			//   }
+			// }
 		}
+	},
+	// Optimize dependencies
+	optimizeDeps: {
+		include: [
+			'react',
+			'react-dom',
+			'react-router-dom',
+			'framer-motion',
+			'lucide-react'
+		],
+		exclude: [
+			'@babel/parser',
+			'@babel/traverse',
+			'@babel/generator',
+			'@babel/types'
+		]
+	},
+	// Performance optimizations
+	define: {
+		// Remove development-only code in production
+		__DEV__: isDev
 	}
 });
