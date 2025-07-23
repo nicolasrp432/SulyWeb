@@ -92,7 +92,7 @@ const Gallery = () => {
         <meta name="description" content="Explora nuestra galería de manicuras, pedicuras, diseños de uñas y tratamientos. Inspiración para tu próxima cita en Basauri o Galdakao." />
       </Helmet>
 
-      <section className="relative pt-20 pb-16 bg-gradient-to-br from-pink-50 to-rose-100 overflow-hidden">
+      <section className="relative pt-32 pb-16 bg-gradient-to-br from-pink-50 to-rose-100 overflow-hidden">
         <div className="absolute inset-0 opacity-10">
           <img  
             class="w-full h-full object-cover" 

@@ -7,6 +7,10 @@ import Logo from '@/components/Logo';
 const Footer = () => {
   const { toast } = useToast();
 
+  const handleInstagramClick = () => {
+    window.open('https://www.instagram.com/suly_prettynails/', '_blank');
+  };
+
   const handleSocialClick = (e) => {
     e.preventDefault();
     toast({
@@ -39,7 +43,7 @@ const Footer = () => {
             <p className="font-semibold text-foreground">Síguenos</p>
             <div className="flex mt-4 space-x-4">
               <a href="#" onClick={handleSocialClick} className="text-muted-foreground hover:text-primary"><Facebook /></a>
-              <a href="#" onClick={handleSocialClick} className="text-muted-foreground hover:text-primary"><Instagram /></a>
+              <a href="#" onClick={handleInstagramClick} className="text-muted-foreground hover:text-primary"><Instagram /></a>
               <a href="#" onClick={handleSocialClick} className="text-muted-foreground hover:text-primary"><Youtube /></a>
             </div>
           </div>

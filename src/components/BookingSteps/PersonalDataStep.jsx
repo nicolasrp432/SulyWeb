@@ -1,5 +1,6 @@
-import React, { memo } from 'react';
+import React, { memo, useEffect } from 'react';
 import { User, Phone, Mail, MessageSquare } from 'lucide-react';
+import { useBookingForm } from '@/hooks/useFormValidation';
 
 const PersonalDataStep = memo(({ 
   bookingData, 
@@ -9,6 +10,41 @@ const PersonalDataStep = memo(({
   availableDates, 
   onInputChange 
 }) => {
+  const {
+    register,
+    handleSubmit,
+    getFieldError,
+    hasFieldError,
+    reset,
+    errors,
+    setValue,
+    watch
+  } = useBookingForm();
+
+  // Sincronizar valores del formulario con bookingData
+  useEffect(() => {
+    setValue('name', bookingData.name || '');
+    setValue('phone', bookingData.phone || '');
+    setValue('email', bookingData.email || '');
+    setValue('notes', bookingData.notes || '');
+  }, [bookingData, setValue]);
+
+  // Observar cambios en el formulario y propagarlos
+  const watchedValues = watch();
+  useEffect(() => {
+    if (watchedValues.name !== bookingData.name) {
+      onInputChange('name', watchedValues.name || '');
+    }
+    if (watchedValues.phone !== bookingData.phone) {
+      onInputChange('phone', watchedValues.phone || '');
+    }
+    if (watchedValues.email !== bookingData.email) {
+      onInputChange('email', watchedValues.email || '');
+    }
+    if (watchedValues.notes !== bookingData.notes) {
+      onInputChange('notes', watchedValues.notes || '');
+    }
+  }, [watchedValues, bookingData, onInputChange]);
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-xl p-6 border-2 border-pink-200">
@@ -43,12 +79,15 @@ const PersonalDataStep = memo(({
           </label>
           <input 
             type="text" 
-            value={bookingData.name} 
-            onChange={(e) => onInputChange('name', e.target.value)} 
-            className="w-full px-4 py-3 border rounded-lg" 
+            {...register('name')}
+            className={`w-full px-4 py-3 border rounded-lg ${
+              hasFieldError('name') ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-pink-500'
+            }`}
             placeholder="Tu nombre" 
-            required
           />
+          {hasFieldError('name') && (
+            <p className="mt-1 text-sm text-red-600">{getFieldError('name')}</p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -56,12 +95,15 @@ const PersonalDataStep = memo(({
           </label>
           <input 
             type="tel" 
-            value={bookingData.phone} 
-            onChange={(e) => onInputChange('phone', e.target.value)} 
-            className="w-full px-4 py-3 border rounded-lg" 
+            {...register('phone')}
+            className={`w-full px-4 py-3 border rounded-lg ${
+              hasFieldError('phone') ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-pink-500'
+            }`}
             placeholder="Tu teléfono" 
-            required
           />
+          {hasFieldError('phone') && (
+            <p className="mt-1 text-sm text-red-600">{getFieldError('phone')}</p>
+          )}
         </div>
       </div>
       
@@ -71,12 +113,15 @@ const PersonalDataStep = memo(({
         </label>
         <input 
           type="email" 
-          value={bookingData.email} 
-          onChange={(e) => onInputChange('email', e.target.value)} 
-          className="w-full px-4 py-3 border rounded-lg" 
+          {...register('email')}
+          className={`w-full px-4 py-3 border rounded-lg ${
+            hasFieldError('email') ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-pink-500'
+          }`}
           placeholder="tu@email.com" 
-          required
         />
+        {hasFieldError('email') && (
+          <p className="mt-1 text-sm text-red-600">{getFieldError('email')}</p>
+        )}
       </div>
       
       <div>
@@ -84,10 +129,9 @@ const PersonalDataStep = memo(({
           <MessageSquare className="h-4 w-4 inline mr-2" />Notas
         </label>
         <textarea 
-          value={bookingData.notes} 
-          onChange={(e) => onInputChange('notes', e.target.value)} 
+          {...register('notes')}
           rows={3} 
-          className="w-full px-4 py-3 border rounded-lg" 
+          className="w-full px-4 py-3 border rounded-lg border-gray-300 focus:border-pink-500" 
           placeholder="Alergias, preferencias..."
         />
       </div>

@@ -47,16 +47,21 @@ export const contactSchema = z.object({
   name: z
     .string()
     .min(VALIDATION.NAME_MIN_LENGTH, `El nombre debe tener al menos ${VALIDATION.NAME_MIN_LENGTH} caracteres`)
-    .max(VALIDATION.NAME_MAX_LENGTH, `El nombre no puede exceder ${VALIDATION.NAME_MAX_LENGTH} caracteres`),
+    .max(VALIDATION.NAME_MAX_LENGTH, `El nombre no puede exceder ${VALIDATION.NAME_MAX_LENGTH} caracteres`)
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'El nombre solo puede contener letras y espacios'),
   
   email: z
     .string()
-    .email('Por favor, introduce un email válido'),
+    .email('Por favor, introduce un email válido')
+    .regex(VALIDATION.EMAIL_REGEX, 'Formato de email inválido'),
   
-  subject: z
+  phone: z
     .string()
-    .min(5, 'El asunto debe tener al menos 5 caracteres')
-    .max(100, 'El asunto no puede exceder 100 caracteres'),
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true; // Campo opcional
+      return VALIDATION.PHONE_REGEX.test(val);
+    }, 'Formato de teléfono inválido (mínimo 9 dígitos)'),
   
   message: z
     .string()

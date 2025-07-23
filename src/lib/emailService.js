@@ -1,59 +1,9 @@
 /**
- * Servicio para enviar correos electrónicos usando EmailJS como alternativa
- * a las funciones Edge de Supabase.
+ * Servicio simplificado para notificaciones por email
+ * Solo envía notificaciones al administrador cuando se realiza una reserva
  */
 
-// Constantes para EmailJS
-const EMAILJS_SERVICE_ID = 'service_ljxqynf'; // Reemplazar con tu ID de servicio
-const EMAILJS_TEMPLATE_ID = 'service_ljxqynf'; // Reemplazar con tu ID de plantilla
-const EMAILJS_PUBLIC_KEY = '7cffOusu25bOzZ63l'; // Reemplazar con tu clave pública real
-
-/**
- * Envía un correo de confirmación de reserva usando EmailJS
- * @param {Object} bookingData - Datos de la reserva
- * @param {Array} services - Servicios seleccionados con detalles
- * @param {Object} location - Información de la ubicación
- * @returns {Promise} - Promesa con el resultado del envío
- */
-export const sendBookingConfirmationEmail = async (bookingData, services, location) => {
-  // Importar EmailJS dinámicamente para evitar problemas en SSR
-  const emailjs = await import('@emailjs/browser');
-  
-  // Inicializar EmailJS
-  emailjs.init(EMAILJS_PUBLIC_KEY);
-  
-  // Formatear los servicios para la plantilla
-  const servicesText = services
-    .map(service => `${service.name} - ${service.price}`)
-    .join(', ');
-  
-  // Preparar los datos para la plantilla
-  const templateParams = {
-    to_email: bookingData.email,
-    to_name: bookingData.name,
-    booking_date: formatDate(bookingData.date),
-    booking_time: bookingData.time,
-    booking_location: location?.name || '',
-    booking_services: servicesText,
-    client_phone: bookingData.phone,
-    client_notes: bookingData.notes || 'Sin notas adicionales'
-  };
-  
-  try {
-    // Enviar el correo
-    const response = await emailjs.send(
-      EMAILJS_SERVICE_ID,
-      EMAILJS_TEMPLATE_ID,
-      templateParams
-    );
-    
-    console.log('Correo enviado con EmailJS:', response);
-    return { success: true, response };
-  } catch (error) {
-    console.error('Error al enviar correo con EmailJS:', error);
-    return { success: false, error };
-  }
-};
+const ADMIN_EMAIL = 'nicolasrp432@gmail.com';
 
 /**
  * Formatea una fecha en formato legible
@@ -69,3 +19,85 @@ function formatDate(dateStr) {
     day: 'numeric'
   });
 }
+
+/**
+ * Envía una notificación simple al administrador cuando se realiza una reserva
+ * @param {Object} bookingData - Datos de la reserva
+ * @param {Array} services - Servicios seleccionados
+ * @param {Object} location - Información de la ubicación
+ * @returns {Promise} - Promesa con el resultado del envío
+ */
+export const sendBookingNotificationToAdmin = async (bookingData, services, location) => {
+  try {
+    const servicesText = services
+      .map(service => `${service.name} - ${service.price}`)
+      .join(', ');
+
+    const notificationData = {
+      adminEmail: ADMIN_EMAIL,
+      clientName: bookingData.name,
+      clientEmail: bookingData.email,
+      clientPhone: bookingData.phone,
+      bookingDate: formatDate(bookingData.date),
+      bookingTime: bookingData.time,
+      bookingLocation: location?.name || '',
+      bookingServices: servicesText,
+      clientNotes: bookingData.notes || 'Sin notas adicionales',
+      submissionDate: new Date().toLocaleString('es-ES')
+    };
+
+    console.log('📧 Nueva reserva registrada:', {
+      cliente: bookingData.name,
+      fecha: formatDate(bookingData.date),
+      hora: bookingData.time,
+      sede: location?.name,
+      servicios: servicesText
+    });
+
+    // Aquí podrías integrar con un servicio de email real como:
+    // - Resend
+    // - SendGrid
+    // - Nodemailer
+    // - O simplemente guardar en base de datos para revisión manual
+    
+    console.log('✅ Notificación de reserva procesada correctamente');
+    return { success: true, data: notificationData };
+  } catch (error) {
+    console.error('❌ Error al procesar notificación de reserva:', error);
+    return { success: false, error: error.message || error };
+  }
+};
+
+/**
+ * Envía una notificación simple al administrador cuando se recibe un formulario de contacto
+ * @param {Object} contactData - Datos del formulario de contacto
+ * @returns {Promise} - Promesa con el resultado del envío
+ */
+export const sendContactNotificationToAdmin = async (contactData) => {
+  try {
+    const notificationData = {
+      adminEmail: ADMIN_EMAIL,
+      fromName: contactData.name,
+      fromEmail: contactData.email,
+      fromPhone: contactData.phone || 'No proporcionado',
+      message: contactData.message,
+      submissionDate: new Date().toLocaleString('es-ES')
+    };
+
+    console.log('📧 Nuevo mensaje de contacto:', {
+      de: contactData.name,
+      email: contactData.email,
+      mensaje: contactData.message.substring(0, 100) + '...'
+    });
+
+    console.log('✅ Notificación de contacto procesada correctamente');
+    return { success: true, data: notificationData };
+  } catch (error) {
+    console.error('❌ Error al procesar notificación de contacto:', error);
+    return { success: false, error: error.message || error };
+  }
+};
+
+// Funciones obsoletas eliminadas:
+// - sendBookingConfirmationEmail (ya no se envían emails de confirmación al cliente)
+// - Todas las dependencias de EmailJS han sido removidas

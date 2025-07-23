@@ -8,7 +8,7 @@ import {
   ArrowRight,
   Loader2,
 } from 'lucide-react';
-import { sendBookingConfirmationEmail } from '@/lib/emailService';
+import { sendBookingNotificationToAdmin } from '@/lib/emailService';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -340,125 +340,29 @@ const Booking = () => {
         console.warn('No hay servicios seleccionados para guardar');
       }
       
-      // Enviar correo de confirmación
-      let emailSent = false;
-      try {
-        console.log('Preparando envío de correo de confirmación...');
-        
-        // Obtener información de los servicios seleccionados
-        console.log('Obteniendo detalles de servicios...');
-        const { data: selectedServicesData, error: servicesDataError } = await supabase
-          .from('services')
-          .select('name, price')
-          .in('id', bookingData.services);
-          
-        if (servicesDataError) {
-          console.error('Error al obtener detalles de servicios:', servicesDataError);
-        }
-        
-        // Obtener información de la ubicación
-        console.log('Obteniendo detalles de ubicación...');
-        const { data: locationData, error: locationDataError } = await supabase
-          .from('locations')
-          .select('name')
-          .eq('id', bookingData.location)
-          .single();
-          
-        if (locationDataError) {
-          console.error('Error al obtener detalles de ubicación:', locationDataError);
-        }
-        
-        // Crear el cuerpo del correo
-        const emailBody = {
-          to: bookingData.email,
-          subject: 'Confirmación de Reserva - Suly Pretty Nails',
-          booking: {
-            name: bookingData.name,
-            date: bookingData.date,
-            time: bookingData.time,
-            location: locationData?.name || '',
-            services: selectedServicesData || [],
-            phone: bookingData.phone,
-            email: bookingData.email,
-            notes: bookingData.notes
-          }
-        };
-        
-        console.log('Datos para correo de confirmación preparados');
-        
-        // Enviar correo usando una función de Supabase Edge o un servicio alternativo
-        // Primero intentamos con la función Edge de Supabase
-        console.log('Intentando enviar correo con función Edge de Supabase...');
-        
-        try {
-          console.log('Invocando función Edge con datos:', JSON.stringify(emailBody));
-          const { data: edgeFunctionData, error: emailError } = await supabase.functions.invoke('send-booking-confirmation', {
-            body: emailBody
-          });
-          
-          console.log('Respuesta de función Edge:', edgeFunctionData);
-          
-          if (emailError) {
-            console.error('Error al enviar correo con función Edge:', emailError);
-            // Mostrar información detallada del error
-            console.error('Código de error:', emailError.code);
-            console.error('Mensaje de error:', emailError.message);
-            console.error('Detalles:', emailError.details || 'No hay detalles adicionales');
-            // La función Edge falló, intentamos con el método alternativo
-            emailSent = false;
-          } else {
-            console.log('Correo enviado exitosamente con función Edge');
-            emailSent = true;
-          }
-        } catch (edgeFunctionError) {
-          console.error('Error al enviar correo con función Edge:', edgeFunctionError);
-          console.error('Tipo de error:', typeof edgeFunctionError);
-          console.error('Mensaje:', edgeFunctionError.message || 'No hay mensaje');
-          console.error('Stack:', edgeFunctionError.stack || 'No hay stack');
-          emailSent = false;
-        }
-        
-        // Si la función Edge falló, intentamos con EmailJS
-        if (!emailSent) {
-          console.log('La función Edge falló, intentando con EmailJS...');
-          try {
-            console.log('Intentando enviar correo con EmailJS...');
-            console.log('Datos para EmailJS:', {
-              bookingData: JSON.stringify(bookingData),
-              servicios: selectedServicesData ? selectedServicesData.length : 0,
-              ubicacion: locationData?.name || 'No disponible'
-            });
-            
-            const emailResult = await sendBookingConfirmationEmail(
-              bookingData,
-              selectedServicesData || [],
-              locationData
-            );
-            
-            if (emailResult && emailResult.success) {
-              console.log('Correo enviado exitosamente con EmailJS');
-              emailSent = true;
-            } else {
-              console.error('Error al enviar correo con EmailJS:', emailResult?.error || 'Error desconocido');
-              console.error('Detalles del error EmailJS:', JSON.stringify(emailResult || {}));
-            }
-          } catch (emailJsError) {
-            console.error('Error al usar servicio alternativo de correo:', emailJsError);
-            console.error('Tipo de error EmailJS:', typeof emailJsError);
-            console.error('Mensaje EmailJS:', emailJsError.message || 'No hay mensaje');
-            console.error('Stack EmailJS:', emailJsError.stack || 'No hay stack');
-          }
-        }
-        
-        if (!emailSent) {
-          console.warn('No se pudo enviar el correo de confirmación por ningún método');
-          // Continuamos aunque no se haya podido enviar el correo
-        }
-      } catch (emailError) {
-        console.error('Error en proceso de correo:', emailError);
-        // Continuamos aunque haya error en el envío de correo
-      }
+      // Obtener datos de ubicación y servicios seleccionados
+      const locationData = locations.find(loc => loc.id === bookingData.location);
+      const selectedServicesData = services.filter(service => 
+        bookingData.services.includes(service.id)
+      );
       
+      // Enviar notificación al administrador sobre la nueva reserva
+      try {
+        const adminNotificationResult = await sendBookingNotificationToAdmin(
+          bookingData,
+          selectedServicesData || [],
+          locationData
+        );
+        
+        if (adminNotificationResult.success) {
+          console.log('✅ Notificación al administrador procesada correctamente');
+        } else {
+          console.error('❌ Error al procesar notificación al administrador:', adminNotificationResult.error);
+        }
+      } catch (adminEmailError) {
+        console.error('❌ Error al enviar notificación al administrador:', adminEmailError);
+      }
+
       // Reserva creada exitosamente
       console.log('Proceso de reserva completado con éxito');
       toast({

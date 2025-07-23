@@ -16,7 +16,7 @@ const Footer = () => {
   const currentYear = new Date().getFullYear();
 
   const socialLinks = [
-    { icon: Instagram, href: 'https://www.instagram.com/suly_nails_/', label: 'Instagram' },
+    { icon: Instagram, href: 'https://www.instagram.com/suly_prettynails/', label: 'Instagram' },
     { icon: Facebook, href: '#', label: 'Facebook' }
   ];
 

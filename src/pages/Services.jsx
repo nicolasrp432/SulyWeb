@@ -704,7 +704,7 @@ const Services = () => {
                   <div className="space-y-3">
                     <h4 className="font-semibold text-gray-800">Síguenos</h4>
                     <div className="flex space-x-3">
-                      <a href="#" className="bg-white p-2 rounded-full shadow-sm hover:shadow-md transition-shadow">
+                      <a href="https://www.instagram.com/suly_prettynails/" target="_blank" rel="noopener noreferrer" className="bg-white p-2 rounded-full shadow-sm hover:shadow-md transition-shadow">
                         <Instagram className="h-5 w-5 text-pink-500" />
                       </a>
                       <a href="#" className="bg-white p-2 rounded-full shadow-sm hover:shadow-md transition-shadow">

@@ -9,15 +9,31 @@ import {
   Send,
   Instagram,
   MessageCircle,
-  Star
+  ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
+import { sendContactNotificationToAdmin } from '../lib/emailService';
+import { useContactForm } from '@/hooks/useFormValidation';
 import MapComponent from '@/components/MapComponent';
 
 const Contact = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({ name: '', email: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Usar el hook de validación
+  const {
+    register,
+    handleSubmit,
+    getFieldError,
+    hasFieldError,
+    reset,
+    errors
+  } = useContactForm({
+    name: '',
+    email: '',
+    message: ''
+  });
 
   const locations = [
     { 
@@ -32,21 +48,41 @@ const Contact = () => {
     }
   ];
 
-  const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const onSubmit = async (formData) => {
+    setIsSubmitting(true);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!formData.name || !formData.email || !formData.message) {
-      toast({ title: "Campos requeridos", description: "Por favor completa todos los campos." });
-      return;
+    try {
+      // Guardar en localStorage (como antes)
+      const messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
+      messages.push({ id: Date.now(), ...formData, timestamp: new Date().toISOString() });
+      localStorage.setItem('contactMessages', JSON.stringify(messages));
+
+      // Enviar notificación al administrador
+      const emailResult = await sendContactNotificationToAdmin(formData);
+      
+      if (emailResult.success) {
+        toast({ 
+          title: "¡Mensaje enviado!", 
+          description: "Te responderemos lo antes posible. También hemos notificado a nuestro equipo." 
+        });
+      } else {
+        toast({ 
+          title: "¡Mensaje guardado!", 
+          description: "Tu mensaje se ha guardado correctamente. Te responderemos pronto." 
+        });
+      }
+
+      reset();
+    } catch (error) {
+      console.error('Error al procesar el formulario:', error);
+      toast({ 
+        title: "Error", 
+        description: "Hubo un problema al enviar tu mensaje. Inténtalo de nuevo.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsSubmitting(false);
     }
-    const messages = JSON.parse(localStorage.getItem('contactMessages') || '[]');
-    messages.push({ id: Date.now(), ...formData });
-    localStorage.setItem('contactMessages', JSON.stringify(messages));
-    toast({ title: "¡Mensaje enviado!", description: "Te responderemos lo antes posible." });
-    setFormData({ name: '', email: '', message: '' });
   };
 
   return (
@@ -56,7 +92,7 @@ const Contact = () => {
         <meta name="description" content="Contacta con Suly Pretty Nails en Basauri y Galdakao. Encuentra nuestras direcciones, horarios y teléfono." />
       </Helmet>
 
-      <section className="relative pt-20 pb-16 bg-gradient-to-br from-pink-50 to-rose-100">
+      <section className="relative pt-32 pb-16 bg-gradient-to-br from-pink-50 to-rose-100">
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div initial={{ opacity: 0, y: 50 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold gradient-text">Contáctanos</h1>
@@ -73,21 +109,67 @@ const Contact = () => {
             <motion.div initial={{ opacity: 0, x: -50 }} whileInView={{ opacity: 1, x: 0 }} transition={{ duration: 0.8 }} viewport={{ once: true }}>
               <div className="bg-white rounded-2xl shadow-lg p-8 h-full">
                 <h2 className="text-3xl font-bold gradient-text mb-6">Envíanos un Mensaje</h2>
-                <form onSubmit={handleSubmit} className="space-y-6">
+
+
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Nombre *</label>
-                    <input type="text" value={formData.name} onChange={(e) => handleInputChange('name', e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
+                    <input 
+                      type="text" 
+                      {...register('name')}
+                      className={`w-full px-4 py-3 border rounded-lg ${
+                        hasFieldError('name') 
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300 focus:ring-pink-500 focus:border-pink-500'
+                      }`}
+                      placeholder="Tu nombre completo"
+                    />
+                    {hasFieldError('name') && (
+                      <p className="mt-1 text-sm text-red-600">{getFieldError('name')}</p>
+                    )}
                   </div>
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
-                    <input type="email" value={formData.email} onChange={(e) => handleInputChange('email', e.target.value)} className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
+                    <input 
+                      type="email" 
+                      {...register('email')}
+                      className={`w-full px-4 py-3 border rounded-lg ${
+                        hasFieldError('email') 
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300 focus:ring-pink-500 focus:border-pink-500'
+                      }`}
+                      placeholder="tu@email.com"
+                    />
+                    {hasFieldError('email') && (
+                      <p className="mt-1 text-sm text-red-600">{getFieldError('email')}</p>
+                    )}
                   </div>
+                  
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Mensaje *</label>
-                    <textarea value={formData.message} onChange={(e) => handleInputChange('message', e.target.value)} rows={5} className="w-full px-4 py-3 border border-gray-300 rounded-lg" required />
+                    <textarea 
+                      {...register('message')}
+                      rows={5} 
+                      className={`w-full px-4 py-3 border rounded-lg ${
+                        hasFieldError('message') 
+                          ? 'border-red-500 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300 focus:ring-pink-500 focus:border-pink-500'
+                      }`}
+                      placeholder="Cuéntanos en qué podemos ayudarte..."
+                    />
+                    {hasFieldError('message') && (
+                      <p className="mt-1 text-sm text-red-600">{getFieldError('message')}</p>
+                    )}
                   </div>
-                  <Button type="submit" className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2">
-                    <Send className="h-5 w-5" /><span>Enviar</span>
+                  
+                  <Button 
+                    type="submit" 
+                    className="w-full bg-gradient-to-r from-pink-500 to-rose-500 text-white py-3 rounded-lg font-medium flex items-center justify-center space-x-2"
+                    disabled={isSubmitting}
+                  >
+                    <Send className="h-5 w-5" />
+                    <span>{isSubmitting ? 'Enviando...' : 'Enviar'}</span>
                   </Button>
                 </form>
               </div>

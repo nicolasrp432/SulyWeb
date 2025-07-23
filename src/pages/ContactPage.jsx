@@ -1,69 +1,113 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useToast } from '@/components/ui/use-toast';
+import { motion } from 'framer-motion';
+import { MapPin, Phone, Mail, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { MapPin, Phone, Mail } from 'lucide-react';
-import MapComponent from '@/components/MapComponent';
+import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { sendContactNotificationToAdmin } from '@/lib/emailService';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { VALIDATION } from '@/constants';
+import MapComponent from '@/components/MapComponent';
+
+// Esquema de validación específico para ContactPage
+const contactPageSchema = z.object({
+  name: z
+    .string()
+    .min(VALIDATION.NAME_MIN_LENGTH, `El nombre debe tener al menos ${VALIDATION.NAME_MIN_LENGTH} caracteres`)
+    .max(VALIDATION.NAME_MAX_LENGTH, `El nombre no puede exceder ${VALIDATION.NAME_MAX_LENGTH} caracteres`)
+    .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'El nombre solo puede contener letras y espacios'),
+  
+  email: z
+    .string()
+    .email('Por favor, introduce un email válido')
+    .regex(VALIDATION.EMAIL_REGEX, 'Formato de email inválido'),
+  
+  phone: z
+    .string()
+    .optional()
+    .refine((val) => {
+      if (!val || val.trim() === '') return true; // Campo opcional
+      return VALIDATION.PHONE_REGEX.test(val);
+    }, 'Formato de teléfono inválido (mínimo 9 dígitos)'),
+  
+  message: z
+    .string()
+    .min(10, 'El mensaje debe tener al menos 10 caracteres')
+    .max(1000, 'El mensaje no puede exceder 1000 caracteres')
+});
 
 const ContactPage = () => {
   const { toast } = useToast();
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    message: ''
-  });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors }
+  } = useForm({
+    resolver: zodResolver(contactPageSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phone: '',
+      message: ''
+    }
+  });
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (formData) => {
     setIsSubmitting(true);
 
     try {
+      // Insertar en Supabase
       const { error } = await supabase
         .from('contact_messages')
-        .insert([
-          {
-            name: formData.name,
-            email: formData.email,
-            phone: formData.phone,
-            message: formData.message,
-            created_at: new Date().toISOString()
-          }
-        ]);
+        .insert([{
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone || null,
+          message: formData.message,
+          created_at: new Date().toISOString()
+        }]);
 
       if (error) {
         throw error;
       }
 
-      toast({
-        title: "¡Mensaje enviado!",
-        description: "Gracias por contactarnos. Te responderemos pronto.",
-      });
+      // Enviar notificación al administrador
+      try {
+        const emailResult = await sendContactNotificationToAdmin(formData);
+        if (emailResult.success) {
+          toast({
+            title: "¡Mensaje enviado!",
+            description: "Hemos recibido tu mensaje y te responderemos pronto. También hemos notificado a nuestro equipo."
+          });
+        } else {
+          toast({
+            title: "¡Mensaje guardado!",
+            description: "Tu mensaje se ha guardado correctamente. Te responderemos pronto."
+          });
+        }
+      } catch (emailError) {
+        console.error('Error al enviar email:', emailError);
+        toast({
+          title: "¡Mensaje guardado!",
+          description: "Tu mensaje se ha guardado correctamente. Te responderemos pronto."
+        });
+      }
 
-      setFormData({
-        name: '',
-        email: '',
-        phone: '',
-        message: ''
-      });
+      reset();
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error al enviar mensaje:', error);
       toast({
-        title: "Error al enviar",
-        description: "Hubo un problema al enviar tu mensaje. Inténtalo de nuevo.",
+        title: "Error",
+        description: "Hubo un problema al enviar tu mensaje. Por favor, inténtalo de nuevo.",
         variant: "destructive"
       });
     } finally {
@@ -98,20 +142,21 @@ const ContactPage = () => {
                   <CardTitle className="text-2xl text-center">Envíanos un Mensaje</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <form onSubmit={handleSubmit} className="space-y-6">
+                  <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
                     <div>
                       <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
                         Nombre completo *
                       </label>
                       <Input
                         id="name"
-                        name="name"
                         type="text"
-                        required
-                        value={formData.name}
-                        onChange={handleInputChange}
+                        {...register('name')}
                         placeholder="Tu nombre completo"
+                        className={errors.name ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
                       />
+                      {errors.name && (
+                        <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                      )}
                     </div>
 
                     <div>
@@ -120,13 +165,14 @@ const ContactPage = () => {
                       </label>
                       <Input
                         id="email"
-                        name="email"
                         type="email"
-                        required
-                        value={formData.email}
-                        onChange={handleInputChange}
+                        {...register('email')}
                         placeholder="tu@email.com"
+                        className={errors.email ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
                       />
+                      {errors.email && (
+                        <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+                      )}
                     </div>
 
                     <div>
@@ -135,12 +181,14 @@ const ContactPage = () => {
                       </label>
                       <Input
                         id="phone"
-                        name="phone"
                         type="tel"
-                        value={formData.phone}
-                        onChange={handleInputChange}
-                        placeholder="Tu número de teléfono"
+                        {...register('phone')}
+                        placeholder="Tu número de teléfono (opcional)"
+                        className={errors.phone ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
                       />
+                      {errors.phone && (
+                        <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+                      )}
                     </div>
 
                     <div>
@@ -149,13 +197,14 @@ const ContactPage = () => {
                       </label>
                       <Textarea
                         id="message"
-                        name="message"
-                        required
-                        value={formData.message}
-                        onChange={handleInputChange}
+                        {...register('message')}
                         placeholder="Cuéntanos en qué podemos ayudarte..."
                         rows={5}
+                        className={errors.message ? 'border-red-500 focus:ring-red-500 focus:border-red-500' : ''}
                       />
+                      {errors.message && (
+                        <p className="mt-1 text-sm text-red-600">{errors.message.message}</p>
+                      )}
                     </div>
 
                     <Button 

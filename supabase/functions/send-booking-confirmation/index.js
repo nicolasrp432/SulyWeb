@@ -13,6 +13,9 @@ const SMTP_USER = Deno.env.get('SMTP_USER');
 const SMTP_PASSWORD = Deno.env.get('SMTP_PASSWORD');
 const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@sulyprettynails.com';
 
+// Configuración adicional
+const ADMIN_EMAIL = 'nicolasrp432@gmail.com';
+
 // Función para formatear la fecha
 function formatDate(dateStr) {
   const date = new Date(dateStr);
@@ -122,7 +125,56 @@ async function sendEmail(to, subject, htmlContent) {
   }
 }
 
-// Manejador principal de la función Edge
+// Función para enviar notificación al administrador
+async function sendAdminNotification(booking) {
+  const adminHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Nueva Reserva - Suly Pretty Nails</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #e11d48; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; }
+        .booking-details { background-color: white; padding: 15px; border-radius: 5px; margin: 10px 0; }
+        .highlight { color: #e11d48; font-weight: bold; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Nueva Reserva Recibida</h1>
+      </div>
+      
+      <div class="content">
+        <h2>Detalles de la Reserva</h2>
+        
+        <div class="booking-details">
+          <p><strong>Cliente:</strong> ${booking.name}</p>
+          <p><strong>Email:</strong> ${booking.email}</p>
+          <p><strong>Teléfono:</strong> ${booking.phone}</p>
+          <p><strong>Fecha:</strong> ${formatDate(booking.date)}</p>
+          <p><strong>Hora:</strong> ${booking.time}</p>
+          <p><strong>Ubicación:</strong> ${booking.location}</p>
+          
+          <p><strong>Servicios:</strong></p>
+          <ul>
+            ${booking.services.map(service => `<li>${service.name} - ${service.price}</li>`).join('')}
+          </ul>
+          
+          ${booking.notes ? `<p><strong>Notas:</strong> ${booking.notes}</p>` : ''}
+        </div>
+        
+        <p>Esta reserva fue realizada el ${new Date().toLocaleString('es-ES')}.</p>
+      </div>
+    </body>
+    </html>
+  `;
+
+  return await sendEmail(ADMIN_EMAIL, 'Nueva Reserva - Suly Pretty Nails', adminHtml);
+}
+
+// Manejador principal actualizado
 Deno.serve(async (req) => {
   // Verificar método
   if (req.method !== 'POST') {
@@ -157,6 +209,30 @@ Deno.serve(async (req) => {
       });
     } else {
       return new Response(JSON.stringify({ error: result.error }), {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Enviar correo de confirmación al cliente
+    const clientHtml = generateEmailHtml(booking);
+    const clientResult = await sendEmail(to, subject, clientHtml);
+    
+    // Enviar notificación al administrador
+    const adminResult = await sendAdminNotification(booking);
+    
+    if (clientResult.success) {
+      console.log('Correo enviado al cliente y notificación al admin');
+      return new Response(JSON.stringify({ 
+        success: true, 
+        clientEmail: clientResult.success,
+        adminEmail: adminResult.success 
+      }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } else {
+      return new Response(JSON.stringify({ error: clientResult.error }), {
         status: 500,
         headers: { 'Content-Type': 'application/json' }
       });
