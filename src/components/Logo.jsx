@@ -6,7 +6,7 @@ const Logo = () => {
   return (
     <Link to="/" className="flex items-center space-x-2 group">
         <div className="relative">
-             <img  className="h-12 w-auto" alt="Suly Pretty Nails Logo" src="/public/logosuly.jpeg" />
+             <img  className="h-12 w-auto" alt="Suly Pretty Nails Logo" src="/logosuly.jpeg" />
         </div>
     </Link>
   );
