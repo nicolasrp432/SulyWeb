@@ -4,7 +4,15 @@
 
 Esta aplicación React + Vite ha sido optimizada siguiendo las mejores prácticas de SEO y rendimiento web.
 
+<<<<<<< HEAD
 ### ✅ Optimizaciones SEO Implementadas
+=======
+- Diseño moderno y responsivo
+- Secciones para servicios, galería, reservas y contacto.
+- Integración con CommonNinja para mostrar reseñas de Google y mapas interactivos
+- Botón de WhatsApp para contacto directo
+- Animaciones suaves con Framer Motion
+>>>>>>> commit-funcional
 
 #### Meta Tags Dinámicos
 - **SEOHead Component**: Componente centralizado para gestión de meta tags
