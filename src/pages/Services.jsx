@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
+import SEOHead from '../components/SEO/SEOHead';
 import { 
   Sparkles, 
   Clock, 
@@ -271,10 +271,13 @@ const Services = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Servicios - Suly Pretty Nails | Manicura, Pedicura y Tratamientos de Belleza</title>
-        <meta name="description" content="Descubre nuestros servicios de belleza: manicura, pedicura, diseños, lifting de pestañas, depilación y henna. Calidad profesional en Basauri y Galdakao." />
-      </Helmet>
+      <SEOHead 
+        page="services"
+        customTitle="Servicios de Manicura y Pedicura en Bilbao | Precios desde 5€ | Suly Pretty Nails"
+        customDescription="🎨 Servicios profesionales de manicura, pedicura, uñas de gel, lifting de pestañas y depilación en Bilbao. Salón en Basauri y Galdakao. Precios desde 5€. ¡Reserva ya!"
+        customKeywords="servicios manicura Bilbao, precios pedicura Basauri, uñas gel Galdakao, lifting pestañas Bilbao, depilación cejas Vizcaya, manicura profesional precio"
+        canonicalUrl="/servicios"
+      />
 
       <section className="relative pt-32 pb-16 bg-gradient-to-br from-pink-50 to-rose-100 overflow-hidden">
 

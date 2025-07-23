@@ -1,5 +1,4 @@
 import React from 'react';
-import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
@@ -13,6 +12,7 @@ import {
 } from 'lucide-react';
 import CommonNinjaReviews from "../components/CommonNinjaReviews";
 import CommonNinjaMap from "../components/CommonNinjaMap";
+import SEOHead from '../components/SEO/SEOHead';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -77,10 +77,13 @@ const Home = () => {
 
   return (
     <>
-      <Helmet>
-        <title>Suly Pretty Nails - Salón de Manicura en Basauri y Galdakao</title>
-        <meta name="description" content="Salón de belleza en Basauri y Galdakao, especializado en manicura, pedicura, diseños, lifting de pestañas y depilación. Reserva tu cita online." />
-      </Helmet>
+      <SEOHead 
+        page="home"
+        customTitle="Suly Pretty Nails - Mejor Salón de Uñas en Bilbao | Manicura Basauri y Galdakao"
+        customDescription="✨ Salón de uñas líder en Bilbao. Manicura profesional, pedicura spa, uñas de gel y lifting de pestañas en Basauri y Galdakao. ¡Reserva tu cita online desde 9,90€!"
+        customKeywords="salón uñas Bilbao, manicura Basauri, pedicura Galdakao, uñas gel Bilbao, centro belleza Vizcaya, manicura profesional Bilbao, salón belleza Basauri"
+        canonicalUrl="/"
+      />
 
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
@@ -169,7 +172,7 @@ const Home = () => {
             </h1>
 
             <p className="text-xl md:text-2xl text-white/90 max-w-3xl mx-auto leading-relaxed">
-              Descubre la experiencia única en Suly Pretty Nails. Tus especialistas en Basauri y Galdakao.
+              Descubre la experiencia única en <strong>Suly Pretty Nails</strong>. El mejor salón de uñas en <strong>Bilbao</strong>, con sedes en <strong>Basauri</strong> y <strong>Galdakao</strong>.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">

@@ -11,11 +11,19 @@ import Booking from '@/pages/Booking';
 import Contact from '@/pages/Contact';
 import AdminServices from '@/pages/AdminServices';
 import WhatsAppButton from '@/components/WhatsAppButton';
+import Analytics from '@/components/SEO/Analytics';
 
 function App() {
   return (
     <HelmetProvider>
       <Router>
+        {/* Componente de Analytics para tracking SEO */}
+        <Analytics 
+          // googleAnalyticsId="G-XXXXXXXXXX" // Descomentar y añadir tu ID real
+          // googleTagManagerId="GTM-XXXXXXX" // Opcional
+          // facebookPixelId="XXXXXXXXXX" // Opcional
+        />
+        
         <div className="min-h-screen flex flex-col font-body">
           <Navbar />
           <main className="flex-1">
