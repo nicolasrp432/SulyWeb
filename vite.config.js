@@ -197,10 +197,10 @@ export default defineConfig({
 		react({
 			// Enable React Fast Refresh in development
 			fastRefresh: isDev,
-			// Optimize JSX runtime
-			jsxRuntime: 'automatic'
+			// Use classic JSX runtime for better compatibility
+			jsxRuntime: 'classic'
 		}),
-		addTransformIndexHtml,
+		...(isDev ? [addTransformIndexHtml] : []),
 		VitePWA({
 			registerType: 'autoUpdate',
 			workbox: {
@@ -293,20 +293,14 @@ export default defineConfig({
 			}
 		},
 		rollupOptions: {
-			external: [
-				'@babel/parser',
-				'@babel/traverse',
-				'@babel/generator',
-				'@babel/types'
-			]
-			// Comentar manualChunks temporalmente para evitar problemas
-			// output: {
-			//   manualChunks: {
-			//     react: ['react', 'react-dom', 'react-router-dom'],
-			//     ui: ['framer-motion', 'lucide-react'],
-			//     utils: ['date-fns', 'clsx']
-			//   }
-			// }
+			// Remover external que causa problemas en producción
+			output: {
+				manualChunks: {
+					react: ['react', 'react-dom', 'react-router-dom'],
+					ui: ['framer-motion', 'lucide-react'],
+					utils: ['date-fns', 'clsx']
+				}
+			}
 		}
 	},
 	// Optimize dependencies
@@ -317,12 +311,6 @@ export default defineConfig({
 			'react-router-dom',
 			'framer-motion',
 			'lucide-react'
-		],
-		exclude: [
-			'@babel/parser',
-			'@babel/traverse',
-			'@babel/generator',
-			'@babel/types'
 		]
 	},
 	// Performance optimizations
