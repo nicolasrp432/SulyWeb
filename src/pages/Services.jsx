@@ -267,9 +267,9 @@ const Services = () => {
       id: 20,
       category: 'beauty',
       title: 'Retirar pestaña',
-      description: 'Tratamiento completo para eliminar el vello facial de forma profesional.',
+      description: 'Retirado de pestañas pelo a pelo',
       duration: '30 min',
-      price: '14,90€',
+      price: '5,00€',
       image: '/serviciosimg/retiradodepestañas.jpg',
       features: ['Tratamiento integral', 'Técnica suave', 'Resultados uniformes', 'Piel radiante'],
       popular: false
