@@ -1,0 +1,1 @@
+import{j as a}from"./chunk-660a9970.js";import"./chunk-b06bd742.js";import{m as i}from"./chunk-fb64e05f.js";const c=()=>a.jsx("div",{className:"py-8",children:a.jsx(i.div,{initial:{opacity:0,y:20},animate:{opacity:1,y:0},transition:{duration:.5},className:"commonninja_component pid-d783d9b8-ae9c-473c-bd64-398bcc395750"})});export{c as default};

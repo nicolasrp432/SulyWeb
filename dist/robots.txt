@@ -1,0 +1,54 @@
+# Robots.txt para Suly Pretty Nails
+# Optimizado para SEO local en Bilbao, Basauri y Galdakao
+
+User-agent: *
+Allow: /
+
+# Permitir acceso a todas las páginas principales
+Allow: /servicios
+Allow: /galeria
+Allow: /reservas
+Allow: /contacto
+
+# Bloquear páginas administrativas
+Disallow: /admin/
+Disallow: /api/
+Disallow: /_next/
+Disallow: /node_modules/
+
+# Permitir acceso a recursos importantes
+Allow: /serviciosimg/
+Allow: /Gallery/
+Allow: /*.css
+Allow: /*.js
+Allow: /*.jpg
+Allow: /*.jpeg
+Allow: /*.png
+Allow: /*.svg
+Allow: /*.webp
+
+# Sitemap
+Sitemap: https://sulyprettynails.com/sitemap.xml
+
+# Crawl-delay para ser amigable con los servidores
+Crawl-delay: 1
+
+# Configuración específica para Google
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Configuración para Bing
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# Bloquear bots maliciosos comunes
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /

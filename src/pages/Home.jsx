@@ -59,7 +59,7 @@ const Home = () => {
       title: 'Lifting de Pestañas',
       description: 'Realza tu mirada de forma natural.',
       image: '/serviciosimg/lifting-pestañas.jpg',
-      price: 'Desde 15,90€'
+      price: 'Desde 35€'
     },
     {
       title: 'Depilación',

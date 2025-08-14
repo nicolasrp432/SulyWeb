@@ -60,7 +60,7 @@ const Services = () => {
       title: 'Manicura exprés',
       description: 'Servicio rápido para lucir uñas perfectas en poco tiempo.',
       duration: '30 min',
-      price: '11,90€',
+      price: '13,90€',
       image: '/serviciosimg/manicura-expres.jpg',
       features: ['Servicio rápido', 'Limado profesional', 'Cutículas perfectas', 'Esmaltado básico'],
       popular: false
@@ -79,7 +79,7 @@ const Services = () => {
     {
       id: 4,
       category: 'nails',
-      title: 'Manicura adicional',
+      title: 'Manicura tradicional',
       description: 'Servicio completo de manicura con tratamientos adicionales.',
       duration: '45 min',
       price: '16,90€',
@@ -115,7 +115,7 @@ const Services = () => {
       title: 'Uñas acrílicas / gel',
       description: 'Extensiones de uñas con materiales de alta calidad para un resultado natural y duradero.',
       duration: '90 min',
-      price: '35,90€',
+      price: '38,90€',
       image: 'https://images.unsplash.com/photo-1604654894610-df63bc536371?w=500&h=300&fit=crop&crop=center',
       features: ['Extensiones duraderas', 'Materiales premium', 'Diseño personalizado', 'Acabado natural'],
       popular: true
@@ -137,7 +137,7 @@ const Services = () => {
       title: 'Relleno de acrílico',
       description: 'Mantenimiento para tus uñas acrílicas, conservando su belleza y durabilidad.',
       duration: '60 min',
-      price: '25,00€',
+      price: '28,90€',
       image: '/serviciosimg/relleno-acrilico.jpg',
       features: ['Mantenimiento profesional', 'Corrección de crecimiento', 'Refuerzo estructural', 'Acabado renovado'],
       popular: false
@@ -148,7 +148,7 @@ const Services = () => {
       title: 'Reparar uña',
       description: 'Solución rápida para uñas dañadas o rotas.',
       duration: '15 min',
-      price: '3,00€',
+      price: '3,50€',
       image: '/serviciosimg/repara-uña.jpg',
       features: ['Reparación rápida', 'Refuerzo estructural', 'Igualación de longitud', 'Acabado natural'],
       popular: false
@@ -181,7 +181,7 @@ const Services = () => {
       title: 'Esmaltar pies',
       description: 'Servicio de esmaltado para lucir unos pies perfectos.',
       duration: '30 min',
-      price: '14,90€',
+      price: '16,90€',
       image: '/serviciosimg/esmaltar-pies.jpg',
       features: ['Esmaltado profesional', 'Colores duraderos', 'Acabado brillante', 'Secado rápido'],
       popular: false
@@ -203,7 +203,7 @@ const Services = () => {
       title: 'Pedicura completa semi / tradicional',
       description: 'Pedicura integral con opción de esmalte semipermanente o tradicional.',
       duration: '60 min',
-      price: '25,90€',
+      price: '29,90€',
       image: '/serviciosimg/pedicura-completa-semi-tradicional.jpg',
       features: ['Tratamiento completo', 'Opción de acabado', 'Larga duración', 'Resultados profesionales'],
       popular: true
@@ -214,7 +214,7 @@ const Services = () => {
       title: 'Lifting de Pestañas',
       description: 'Curvatura natural y duradera que eleva y alarga tus pestañas sin extensiones.',
       duration: '60 min',
-      price: '30,00€',
+      price: '35,00€',
       image: '/serviciosimg/lifting-pestañas.jpg',
       features: ['Curvatura natural', 'Efecto rímel', 'Duración 6-8 semanas', 'Incluye tinte de pestañas'],
       popular: true
@@ -260,6 +260,17 @@ const Services = () => {
       duration: '30 min',
       price: '14,90€',
       image: '/serviciosimg/depilar-rostro-entero.jpg',
+      features: ['Tratamiento integral', 'Técnica suave', 'Resultados uniformes', 'Piel radiante'],
+      popular: false
+    },
+        {
+      id: 20,
+      category: 'beauty',
+      title: 'Retirar pestaña',
+      description: 'Tratamiento completo para eliminar el vello facial de forma profesional.',
+      duration: '30 min',
+      price: '14,90€',
+      image: '/serviciosimg/retiradodepestañas.jpg',
       features: ['Tratamiento integral', 'Técnica suave', 'Resultados uniformes', 'Piel radiante'],
       popular: false
     }

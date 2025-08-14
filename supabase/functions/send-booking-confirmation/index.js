@@ -27,10 +27,10 @@ function formatDate(dateStr) {
   });
 }
 
-// Función para generar el HTML del correo
+// Función para generar el HTML del correo (reservas)
 function generateEmailHtml(booking) {
-  const formattedDate = formatDate(booking.date);
-  const servicesList = booking.services
+  const formattedDate = booking?.date ? formatDate(booking.date) : '';
+  const servicesList = (booking?.services || [])
     .map(service => `<li>${service.name} - ${service.price}</li>`)
     .join('');
 
@@ -57,15 +57,15 @@ function generateEmailHtml(booking) {
         <h1>Suly Pretty Nails</h1>
       </div>
       
-      <p>Hola <span class="highlight">${booking.name}</span>,</p>
+      <p>Hola <span class="highlight">${booking?.name || ''}</span>,</p>
       
       <p>¡Gracias por reservar con nosotros! Tu cita ha sido confirmada con los siguientes detalles:</p>
       
       <div class="booking-details">
         <h2>Detalles de tu Reserva</h2>
         <p><strong>Fecha:</strong> ${formattedDate}</p>
-        <p><strong>Hora:</strong> ${booking.time}</p>
-        <p><strong>Ubicación:</strong> ${booking.location}</p>
+        <p><strong>Hora:</strong> ${booking?.time || ''}</p>
+        <p><strong>Ubicación:</strong> ${booking?.location || ''}</p>
         
         <p><strong>Servicios:</strong></p>
         <ul>
@@ -81,6 +81,48 @@ function generateEmailHtml(booking) {
       
       <div class="footer">
         <p>Este es un correo automático, por favor no respondas a este mensaje.</p>
+        <p>© ${new Date().getFullYear()} Suly Pretty Nails. Todos los derechos reservados.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// NUEVO: Plantilla para emails del formulario de contacto
+function generateContactEmailHtml(contact) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Nuevo Mensaje de Contacto - Suly Pretty Nails</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #e11d48; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; }
+        .card { background-color: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .row { margin: 8px 0; }
+        .label { font-weight: bold; color: #be185d; }
+        .footer { text-align: center; font-size: 12px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+        pre { white-space: pre-wrap; word-wrap: break-word; background: #f3f4f6; padding: 12px; border-radius: 6px; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>Nuevo Mensaje de Contacto</h1>
+      </div>
+      <div class="content">
+        <div class="card">
+          <div class="row"><span class="label">Nombre:</span> ${contact?.name || 'Sin nombre'}</div>
+          <div class="row"><span class="label">Email:</span> ${contact?.email || 'Sin email'}</div>
+          <div class="row"><span class="label">Teléfono:</span> ${contact?.phone || 'No proporcionado'}</div>
+          <div class="row"><span class="label">Fecha de envío:</span> ${contact?.submissionDate || new Date().toLocaleString('es-ES')}</div>
+          <div class="row"><span class="label">Mensaje:</span></div>
+          <pre>${contact?.message || ''}</pre>
+        </div>
+      </div>
+      <div class="footer">
+        <p>Este es un correo automático enviado desde el formulario de contacto del sitio web.</p>
         <p>© ${new Date().getFullYear()} Suly Pretty Nails. Todos los derechos reservados.</p>
       </div>
     </body>
@@ -153,13 +195,13 @@ async function sendAdminNotification(booking) {
           <p><strong>Cliente:</strong> ${booking.name}</p>
           <p><strong>Email:</strong> ${booking.email}</p>
           <p><strong>Teléfono:</strong> ${booking.phone}</p>
-          <p><strong>Fecha:</strong> ${formatDate(booking.date)}</p>
-          <p><strong>Hora:</strong> ${booking.time}</p>
-          <p><strong>Ubicación:</strong> ${booking.location}</p>
+          <p><strong>Fecha:</strong> ${booking.date ? formatDate(booking.date) : ''}</p>
+          <p><strong>Hora:</strong> ${booking.time || ''}</p>
+          <p><strong>Ubicación:</strong> ${booking.location || ''}</p>
           
           <p><strong>Servicios:</strong></p>
           <ul>
-            ${booking.services.map(service => `<li>${service.name} - ${service.price}</li>`).join('')}
+            ${(booking?.services || []).map(service => `<li>${service.name} - ${service.price}</li>`).join('')}
           </ul>
           
           ${booking.notes ? `<p><strong>Notas:</strong> ${booking.notes}</p>` : ''}
@@ -196,8 +238,10 @@ Deno.serve(async (req) => {
       });
     }
     
-    // Generar HTML del correo
-    const htmlContent = generateEmailHtml(booking);
+    // Generar HTML del correo según el tipo de payload
+    const htmlContent = booking?.isContact
+      ? generateContactEmailHtml(booking)
+      : generateEmailHtml(booking);
     
     // Enviar correo
     const result = await sendEmail(to, subject, htmlContent);
@@ -213,30 +257,8 @@ Deno.serve(async (req) => {
         headers: { 'Content-Type': 'application/json' }
       });
     }
-    
-    // Enviar correo de confirmación al cliente
-    const clientHtml = generateEmailHtml(booking);
-    const clientResult = await sendEmail(to, subject, clientHtml);
-    
-    // Enviar notificación al administrador
-    const adminResult = await sendAdminNotification(booking);
-    
-    if (clientResult.success) {
-      console.log('Correo enviado al cliente y notificación al admin');
-      return new Response(JSON.stringify({ 
-        success: true, 
-        clientEmail: clientResult.success,
-        adminEmail: adminResult.success 
-      }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    } else {
-      return new Response(JSON.stringify({ error: clientResult.error }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
+
+    // Nota: el código inferior era inalcanzable anteriormente y se mantiene fuera de flujo
   } catch (error) {
     console.error('Error processing request:', error);
     return new Response(JSON.stringify({ error: error.message }), {
