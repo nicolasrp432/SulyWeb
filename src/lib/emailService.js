@@ -5,7 +5,7 @@
 
 import { supabase } from './customSupabaseClient';
 
-const ADMIN_EMAIL = 'nicolasrp432@gmail.com';
+const ADMIN_EMAIL = 'sulyprettynails@gmail.com';
 
 // URL de la función Edge de Supabase para envío de emails
 const SUPABASE_FUNCTIONS_URL = 'https://qeuqspjpwybaxppqgehm.supabase.co/functions/v1';
@@ -157,6 +157,61 @@ export const sendContactNotificationToAdmin = async (contactData) => {
   }
 };
 
+// NUEVO: Enviar confirmación al usuario para reservas
+export const sendBookingConfirmationToUser = async (bookingData, services, location) => {
+  try {
+    const emailData = {
+      name: bookingData.name,
+      email: bookingData.email,
+      phone: bookingData.phone,
+      date: bookingData.date,
+      time: bookingData.time,
+      location: location?.name || '',
+      services: services || [],
+      notes: bookingData.notes || 'Sin notas adicionales',
+      submissionDate: new Date().toLocaleString('es-ES')
+    };
+
+    const emailResult = await sendEmailViaSupabaseFunction(
+      bookingData.email,
+      `Confirmación de Reserva - ${formatDate(bookingData.date)} a las ${bookingData.time}`,
+      emailData
+    );
+
+    if (emailResult.success) return { success: true, data: emailData };
+    return { success: false, error: emailResult.error };
+  } catch (error) {
+    console.error('❌ Error al enviar confirmación de reserva al usuario:', error);
+    return { success: false, error: error.message || error };
+  }
+};
+
+// NUEVO: Enviar confirmación al usuario para formulario de contacto
+export const sendContactConfirmationToUser = async (contactData) => {
+  try {
+    const emailData = {
+      name: contactData.name,
+      email: contactData.email,
+      phone: contactData.phone || 'No proporcionado',
+      message: contactData.message,
+      submissionDate: new Date().toLocaleString('es-ES'),
+      isContact: true,
+      forUser: true
+    };
+
+    const emailResult = await sendEmailViaSupabaseFunction(
+      contactData.email,
+      'Hemos recibido tu mensaje - Suly Pretty Nails',
+      emailData
+    );
+
+    if (emailResult.success) return { success: true, data: emailData };
+    return { success: false, error: emailResult.error };
+  } catch (error) {
+    console.error('❌ Error al enviar confirmación de contacto al usuario:', error);
+    return { success: false, error: error.message || error };
+  }
+};
 // Funciones obsoletas eliminadas:
 // - sendBookingConfirmationEmail (ya no se envían emails de confirmación al cliente)
 // - Todas las dependencias de EmailJS han sido removidas

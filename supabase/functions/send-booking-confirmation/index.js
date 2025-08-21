@@ -1,20 +1,16 @@
 // Supabase Edge Function para enviar correos de confirmación de reserva
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { SmtpClient } from 'https://esm.sh/smtp-client@0.4.0';
 
 // Configuración de Supabase
 const supabaseUrl = Deno.env.get('SUPABASE_URL');
 const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
-// Configuración de correo
-const SMTP_HOST = Deno.env.get('SMTP_HOST') || 'smtp.gmail.com';
-const SMTP_PORT = parseInt(Deno.env.get('SMTP_PORT') || '587');
-const SMTP_USER = Deno.env.get('SMTP_USER');
-const SMTP_PASSWORD = Deno.env.get('SMTP_PASSWORD');
-const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'noreply@sulyprettynails.com';
+// Configuración de correo (Resend)
+const FROM_EMAIL = Deno.env.get('FROM_EMAIL') || 'Suly Pretty Nails <info@sulyprettynails.com>';
+const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
 // Configuración adicional
-const ADMIN_EMAIL = 'nicolasrp432@gmail.com';
+const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'sulyprettynails@gmail.com';
 
 // Función para formatear la fecha
 function formatDate(dateStr) {
@@ -130,39 +126,68 @@ function generateContactEmailHtml(contact) {
   `;
 }
 
-// Función para enviar el correo
+// NUEVO: Plantilla para confirmación al usuario del formulario de contacto
+function generateContactConfirmationHtml(contact) {
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Hemos recibido tu mensaje - Suly Pretty Nails</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px; }
+        .header { background-color: #e11d48; color: white; padding: 20px; text-align: center; }
+        .content { background-color: #f9f9f9; padding: 20px; }
+        .card { background-color: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .footer { text-align: center; font-size: 12px; color: #666; margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <h1>¡Gracias por contactarnos, ${contact?.name || ''}!</h1>
+      </div>
+      <div class="content">
+        <div class="card">
+          <p>Hemos recibido tu mensaje correctamente y nuestro equipo te responderá lo antes posible.</p>
+          <p><strong>Resumen:</strong></p>
+          <p><strong>Nombre:</strong> ${contact?.name || 'Sin nombre'}</p>
+          <p><strong>Email:</strong> ${contact?.email || 'Sin email'}</p>
+          ${contact?.phone ? `<p><strong>Teléfono:</strong> ${contact.phone}</p>` : ''}
+          <p><strong>Fecha de envío:</strong> ${contact?.submissionDate || new Date().toLocaleString('es-ES')}</p>
+        </div>
+      </div>
+      <div class="footer">
+        <p>© ${new Date().getFullYear()} Suly Pretty Nails. Todos los derechos reservados.</p>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
+// Función para enviar el correo usando Resend
 async function sendEmail(to, subject, htmlContent) {
-  const client = new SmtpClient();
-  
+  if (!RESEND_API_KEY) return { success: false, error: 'Missing RESEND_API_KEY' };
+
   try {
-    await client.connect({
-      host: SMTP_HOST,
-      port: SMTP_PORT,
-      use_tls: true,
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: FROM_EMAIL,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        html: htmlContent
+      })
     });
-    
-    await client.authenticate({
-      username: SMTP_USER,
-      password: SMTP_PASSWORD,
-    });
-    
-    await client.send({
-      from: FROM_EMAIL,
-      to: [to],
-      subject: subject,
-      content: htmlContent,
-      html: true,
-    });
-    
-    await client.close();
-    return { success: true };
+
+    const json = await res.json();
+    if (!res.ok) return { success: false, error: json?.message || 'Resend API error' };
+    return { success: true, data: json };
   } catch (error) {
-    console.error('Error sending email:', error);
-    try {
-      await client.close();
-    } catch (e) {
-      // Ignorar errores al cerrar la conexión
-    }
+    console.error('Error sending email via Resend:', error);
     return { success: false, error: error.message };
   }
 }
@@ -240,7 +265,7 @@ Deno.serve(async (req) => {
     
     // Generar HTML del correo según el tipo de payload
     const htmlContent = booking?.isContact
-      ? generateContactEmailHtml(booking)
+      ? (booking?.forUser ? generateContactConfirmationHtml(booking) : generateContactEmailHtml(booking))
       : generateEmailHtml(booking);
     
     // Enviar correo

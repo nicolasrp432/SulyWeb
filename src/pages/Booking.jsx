@@ -8,7 +8,7 @@ import {
   ArrowRight,
   Loader2,
 } from 'lucide-react';
-import { sendBookingNotificationToAdmin } from '@/lib/emailService';
+import { sendBookingNotificationToAdmin, sendBookingConfirmationToUser } from '@/lib/emailService';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -362,7 +362,21 @@ const Booking = () => {
       } catch (adminEmailError) {
         console.error('❌ Error al enviar notificación al administrador:', adminEmailError);
       }
-
+      // Enviar confirmación de reserva al usuario
+      try {
+        const userConfirmationResult = await sendBookingConfirmationToUser(
+          bookingData,
+          selectedServicesData || [],
+          locationData
+        );
+        if (userConfirmationResult.success) {
+          console.log('✅ Confirmación de reserva enviada al usuario');
+        } else {
+          console.error('❌ Error al enviar confirmación al usuario:', userConfirmationResult.error);
+        }
+      } catch (userEmailError) {
+        console.error('❌ Error inesperado al enviar confirmación al usuario:', userEmailError);
+      }
       // Reserva creada exitosamente
       console.log('Proceso de reserva completado con éxito');
       toast({

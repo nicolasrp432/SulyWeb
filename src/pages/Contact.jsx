@@ -13,7 +13,8 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { sendContactNotificationToAdmin } from '../lib/emailService';
+import { sendContactNotificationToAdmin, sendContactConfirmationToUser } from '../lib/emailService';
+import { supabase } from '@/lib/customSupabaseClient';
 import { useContactForm } from '@/hooks/useFormValidation';
 import MapComponent from '@/components/MapComponent';
 
@@ -57,18 +58,39 @@ const Contact = () => {
       messages.push({ id: Date.now(), ...formData, timestamp: new Date().toISOString() });
       localStorage.setItem('contactMessages', JSON.stringify(messages));
 
-      // Enviar notificación al administrador
-      const emailResult = await sendContactNotificationToAdmin(formData);
-      
-      if (emailResult.success) {
-        toast({ 
-          title: "¡Mensaje enviado!", 
-          description: "Te responderemos lo antes posible. También hemos notificado a nuestro equipo." 
+      // Guardar en base de datos (tabla contact_messages)
+      try {
+        const { error: dbError } = await supabase
+          .from('contact_messages')
+          .insert([{ name: formData.name, email: formData.email, phone: formData.phone || null, message: formData.message }]);
+        if (dbError) console.error('Error al guardar mensaje de contacto en DB:', dbError);
+      } catch (dbCatchErr) {
+        console.error('Excepción al guardar en DB:', dbCatchErr);
+      }
+
+      // Enviar correos: a admin y confirmación al usuario en paralelo
+      const [adminEmail, userEmail] = await Promise.allSettled([
+        sendContactNotificationToAdmin(formData),
+        sendContactConfirmationToUser(formData)
+      ]);
+
+      const adminOk = adminEmail.status === 'fulfilled' && adminEmail.value?.success;
+      const userOk = userEmail.status === 'fulfilled' && userEmail.value?.success;
+
+      if (adminOk && userOk) {
+        toast({
+          title: '¡Mensaje enviado!',
+          description: 'Hemos recibido tu mensaje y te hemos enviado una confirmación por email.'
+        });
+      } else if (adminOk || userOk) {
+        toast({
+          title: '¡Mensaje enviado!',
+          description: 'Tu mensaje se ha enviado. Si no recibes confirmación por email, revisa tu correo o inténtalo más tarde.'
         });
       } else {
-        toast({ 
-          title: "¡Mensaje guardado!", 
-          description: "Tu mensaje se ha guardado correctamente. Te responderemos pronto." 
+        toast({
+          title: '¡Mensaje guardado!',
+          description: 'Tu mensaje se ha guardado correctamente. Te responderemos pronto.'
         });
       }
 
