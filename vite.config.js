@@ -10,7 +10,10 @@ if (isDev) {
 	editModeDevPlugin = (await import('./plugins/visual-editor/vite-plugin-edit-mode.js')).default;
 }
 
-const configHorizonsViteErrorHandler = `
+// Mueve definiciones dev-only dentro del bloque condicional
+let addTransformIndexHtml;
+if (isDev) {
+	const configHorizonsViteErrorHandler = `
 const observer = new MutationObserver((mutations) => {
 	for (const mutation of mutations) {
 		for (const addedNode of mutation.addedNodes) {
@@ -57,7 +60,7 @@ function handleViteOverlay(node) {
 }
 `;
 
-const configHorizonsRuntimeErrorHandler = `
+	const configHorizonsRuntimeErrorHandler = `
 window.onerror = (message, source, lineno, colno, errorObj) => {
 	const errorDetails = errorObj ? JSON.stringify({
 		name: errorObj.name,
@@ -76,7 +79,7 @@ window.onerror = (message, source, lineno, colno, errorObj) => {
 };
 `;
 
-const configHorizonsConsoleErrroHandler = `
+	const configHorizonsConsoleErrroHandler = `
 const originalConsoleError = console.error;
 console.error = function(...args) {
 	originalConsoleError.apply(console, args);
@@ -86,13 +89,13 @@ console.error = function(...args) {
 	for (let i = 0; i < args.length; i++) {
 		const arg = args[i];
 		if (arg instanceof Error) {
-			errorString = arg.stack || \`\${arg.name}: \${arg.message}\`;
+			errorString = arg.stack || (arg.name + ': ' + arg.message);
 			break;
 		}
 	}
 
 	if (!errorString) {
-		errorString = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : String(arg)).join(' ');
+		errorString = args.map(function(x){ return typeof x === 'object' ? JSON.stringify(x) : String(x); }).join(' ');
 	}
 
 	window.parent.postMessage({
@@ -102,7 +105,7 @@ console.error = function(...args) {
 };
 `;
 
-const configWindowFetchMonkeyPatch = `
+	const configWindowFetchMonkeyPatch = `
 const originalFetch = window.fetch;
 
 window.fetch = function(...args) {
@@ -124,15 +127,16 @@ window.fetch = function(...args) {
 
 			if (!response.ok && !isDocumentResponse) {
 					const responseClone = response.clone();
-					const errorFromRes = await responseClone.text();
+					let errorFromRes = '';
+					try { errorFromRes = await responseClone.text(); } catch {}
 					const requestUrl = response.url;
-					console.error(\`Fetch error from \${requestUrl}: \${errorFromRes}\`);
+					console.error('Fetch error from ' + requestUrl + ': ' + errorFromRes);
 			}
 
 			return response;
 		})
 		.catch(error => {
-			if (!url.match(/\.html?$/i)) {
+			if (!String(url).match(/\\.html?$/i)) {
 				console.error(error);
 			}
 
@@ -141,42 +145,44 @@ window.fetch = function(...args) {
 };
 `;
 
-const addTransformIndexHtml = {
-	name: 'add-transform-index-html',
-	transformIndexHtml(html) {
-		return {
-			html,
-			tags: [
-				{
-					tag: 'script',
-					attrs: { type: 'module' },
-					children: configHorizonsRuntimeErrorHandler,
-					injectTo: 'head',
-				},
-				{
-					tag: 'script',
-					attrs: { type: 'module' },
-					children: configHorizonsViteErrorHandler,
-					injectTo: 'head',
-				},
-				{
-					tag: 'script',
-					attrs: {type: 'module'},
-					children: configHorizonsConsoleErrroHandler,
-					injectTo: 'head',
-				},
-				{
-					tag: 'script',
-					attrs: { type: 'module' },
-					children: configWindowFetchMonkeyPatch,
-					injectTo: 'head',
-				},
-			],
-		};
-	},
-};
+	addTransformIndexHtml = {
+		name: 'add-transform-index-html',
+		transformIndexHtml(html) {
+			return {
+				html,
+				tags: [
+					{
+						tag: 'script',
+						attrs: { type: 'module' },
+						children: configHorizonsRuntimeErrorHandler,
+						injectTo: 'head',
+					},
+					{
+						tag: 'script',
+						attrs: { type: 'module' },
+						children: configHorizonsViteErrorHandler,
+						injectTo: 'head',
+					},
+					{
+						tag: 'script',
+						attrs: {type: 'module'},
+						children: configHorizonsConsoleErrroHandler,
+						injectTo: 'head',
+					},
+					{
+						tag: 'script',
+						attrs: { type: 'module' },
+						children: configWindowFetchMonkeyPatch,
+						injectTo: 'head',
+					},
+				],
+			};
+		},
+	};
+}
 
-console.warn = () => {};
+// Do not silence warnings in production
+if (isDev) console.warn = () => {};
 
 const logger = createLogger()
 const loggerError = logger.error
@@ -191,10 +197,12 @@ logger.error = (msg, options) => {
 
 export default defineConfig({
 	customLogger: logger,
+	// Rutas relativas para producción (funciona en raíz o subcarpetas)
+	base: './',
 	plugins: [
-		...(isDev ? [inlineEditPlugin(), editModeDevPlugin()] : []),
+		// Dev-only plugins e index.html injections
+		...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), addTransformIndexHtml].filter(Boolean) : []),
 		react(),
-		addTransformIndexHtml
 	],
 	server: {
 		cors: true,

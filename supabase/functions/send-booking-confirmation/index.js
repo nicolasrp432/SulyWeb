@@ -11,6 +11,8 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 
 // Configuración adicional
 const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'sulyprettynails@gmail.com';
+// Teléfono de WhatsApp de la tienda en formato internacional, p.ej. "34XXXXXXXXX" (sin +)
+const BUSINESS_WHATSAPP = (Deno.env.get('BUSINESS_WHATSAPP') || '').replace(/[^0-9]/g, '');
 
 // Función para formatear la fecha
 function formatDate(dateStr) {
@@ -29,6 +31,37 @@ function generateEmailHtml(booking) {
   const servicesList = (booking?.services || [])
     .map(service => `<li>${service.name} - ${service.price}</li>`)
     .join('');
+
+  // Si es email para el administrador, añadimos botones rápidos para WhatsApp
+  let adminActionsHtml = '';
+  if (booking?.forAdmin) {
+    const summaryText = `Nueva reserva\nNombre: ${booking?.name || ''}\nEmail: ${booking?.email || ''}\nTeléfono: ${booking?.phone || ''}\nFecha: ${formattedDate}\nHora: ${booking?.time || ''}\nUbicación: ${booking?.location || ''}`;
+    const clientGreet = `Hola ${booking?.name || ''}, soy de Suly Pretty Nails. Te confirmo tu cita el ${formattedDate} a las ${booking?.time || ''} en ${booking?.location || ''}.`;
+    const waToStore = BUSINESS_WHATSAPP ? `https://wa.me/${BUSINESS_WHATSAPP}?text=${encodeURIComponent(summaryText)}` : '';
+    const clientPhone = (booking?.phone || '').toString().replace(/[^0-9]/g, '');
+    const waToClient = clientPhone ? `https://wa.me/${clientPhone}?text=${encodeURIComponent(clientGreet)}` : '';
+    adminActionsHtml = `
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid #eee;">
+        <p style="margin:0 0 8px 0;font-weight:bold;color:#be185d;">Acciones rápidas</p>
+        <div>
+          ${waToStore ? `<a href="${waToStore}" target="_blank" style="display:inline-block;margin-right:8px;background:#25D366;color:#fff;padding:10px 14px;border-radius:6px;text-decoration:none;">Enviar a WhatsApp de la tienda</a>` : ''}
+          ${waToClient ? `<a href="${waToClient}" target="_blank" style="display:inline-block;background:#25D366;color:#fff;padding:10px 14px;border-radius:6px;text-decoration:none;">Escribir al cliente por WhatsApp</a>` : ''}
+        </div>
+      </div>`;
+  }
+
+  // Si es email para el usuario, añadimos botón para escribir por WhatsApp a la tienda
+  let userActionsHtml = '';
+  if (!booking?.forAdmin) {
+    const userText = `Hola, soy ${booking?.name || 'cliente'} y tengo una consulta sobre mi cita del ${formattedDate} a las ${booking?.time || ''} en ${booking?.location || ''}.`;
+    const waToStore = BUSINESS_WHATSAPP ? `https://wa.me/${BUSINESS_WHATSAPP}?text=${encodeURIComponent(userText)}` : '';
+    if (waToStore) {
+      userActionsHtml = `
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #eee;">
+          <a href="${waToStore}" target="_blank" style="display:inline-block;background:#25D366;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;font-weight:bold;">Contactar por WhatsApp</a>
+        </div>`;
+    }
+  }
 
   return `
     <!DOCTYPE html>
@@ -62,12 +95,16 @@ function generateEmailHtml(booking) {
         <p><strong>Fecha:</strong> ${formattedDate}</p>
         <p><strong>Hora:</strong> ${booking?.time || ''}</p>
         <p><strong>Ubicación:</strong> ${booking?.location || ''}</p>
+        <p><strong>Teléfono:</strong> ${booking?.phone || 'No proporcionado'}</p>
+        ${booking?.notes ? `<p><strong>Notas:</strong> ${booking.notes}</p>` : ''}
         
         <p><strong>Servicios:</strong></p>
         <ul>
           ${servicesList}
         </ul>
       </div>
+      ${adminActionsHtml}
+      ${userActionsHtml}
       
       <p>Si necesitas modificar o cancelar tu cita, por favor contáctanos por WhatsApp al número que aparece en nuestra web con al menos 24 horas de antelación.</p>
       
@@ -128,6 +165,10 @@ function generateContactEmailHtml(contact) {
 
 // NUEVO: Plantilla para confirmación al usuario del formulario de contacto
 function generateContactConfirmationHtml(contact) {
+  // Botón para WhatsApp hacia la tienda
+  const userText = `Hola, soy ${contact?.name || 'cliente'} y tengo una consulta sobre el mensaje que envié desde la web.`;
+  const waToStore = BUSINESS_WHATSAPP ? `https://wa.me/${BUSINESS_WHATSAPP}?text=${encodeURIComponent(userText)}` : '';
+
   return `
     <!DOCTYPE html>
     <html>
@@ -154,6 +195,7 @@ function generateContactConfirmationHtml(contact) {
           <p><strong>Email:</strong> ${contact?.email || 'Sin email'}</p>
           ${contact?.phone ? `<p><strong>Teléfono:</strong> ${contact.phone}</p>` : ''}
           <p><strong>Fecha de envío:</strong> ${contact?.submissionDate || new Date().toLocaleString('es-ES')}</p>
+          ${waToStore ? `<div style="margin-top:12px"><a href="${waToStore}" target="_blank" style="display:inline-block;background:#25D366;color:#fff;padding:12px 16px;border-radius:8px;text-decoration:none;font-weight:bold;">Escribirnos por WhatsApp</a></div>` : ''}
         </div>
       </div>
       <div class="footer">

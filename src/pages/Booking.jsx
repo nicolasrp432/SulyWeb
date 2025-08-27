@@ -488,7 +488,11 @@ const Booking = () => {
               <ConfirmationStep onResetBooking={() => {
                 dispatch({ type: 'RESET_BOOKING' });
                 clearServices();
-              }} />
+              }} 
+              bookingData={bookingData}
+              services={services.filter(s => bookingData.services.includes(s.id))}
+              locationName={locations.find(l => l.id === bookingData.location)?.name}
+            />
             )}
           </motion.div>
 

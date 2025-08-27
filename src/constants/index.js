@@ -70,7 +70,7 @@ export const CONFIG = {
 // Información de contacto
 export const CONTACT_INFO = {
   PHONE: '+34 123 456 789',
-  WHATSAPP: '+34 123 456 789',
+  WHATSAPP: '+34 631 119 686',
   EMAIL: 'sulyprettynails@gmail.com',
   LOCATIONS: {
     BASAURI: {

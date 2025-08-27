@@ -70,22 +70,27 @@ export const sendBookingNotificationToAdmin = async (bookingData, services, loca
       .map(service => `${service.name} - ${service.price}`)
       .join(', ');
 
+    const normalizedPhone = (bookingData.phone || '').toString().trim();
+
     // Datos para el email
     const emailData = {
       name: bookingData.name,
       email: bookingData.email,
-      phone: bookingData.phone,
+      phone: normalizedPhone || 'No proporcionado',
       date: bookingData.date,
       time: bookingData.time,
       location: location?.name || '',
       services: services,
       notes: bookingData.notes || 'Sin notas adicionales',
-      submissionDate: new Date().toLocaleString('es-ES')
+      submissionDate: new Date().toLocaleString('es-ES'),
+      // Flag para que la plantilla incluya acciones rápidas para WhatsApp en el correo del admin
+      forAdmin: true
     };
 
     // Log para debugging
     console.log('📧 Nueva reserva registrada:', {
       cliente: bookingData.name,
+      telefono: normalizedPhone,
       fecha: formatDate(bookingData.date),
       hora: bookingData.time,
       sede: location?.name,
@@ -119,11 +124,13 @@ export const sendBookingNotificationToAdmin = async (bookingData, services, loca
  */
 export const sendContactNotificationToAdmin = async (contactData) => {
   try {
+    const normalizedPhone = (contactData.phone || '').toString().trim() || 'No proporcionado';
+
     // Datos para el email
     const emailData = {
       name: contactData.name,
       email: contactData.email,
-      phone: contactData.phone || 'No proporcionado',
+      phone: normalizedPhone,
       message: contactData.message,
       submissionDate: new Date().toLocaleString('es-ES'),
       // Formato específico para mensajes de contacto
@@ -134,7 +141,8 @@ export const sendContactNotificationToAdmin = async (contactData) => {
     console.log('📧 Nuevo mensaje de contacto:', {
       de: contactData.name,
       email: contactData.email,
-      mensaje: contactData.message.substring(0, 100) + '...'
+      telefono: normalizedPhone,
+      mensaje: (contactData.message || '').substring(0, 100) + '...'
     });
 
     // Enviar email al administrador
@@ -160,10 +168,12 @@ export const sendContactNotificationToAdmin = async (contactData) => {
 // NUEVO: Enviar confirmación al usuario para reservas
 export const sendBookingConfirmationToUser = async (bookingData, services, location) => {
   try {
+    const normalizedPhone = (bookingData.phone || '').toString().trim();
+
     const emailData = {
       name: bookingData.name,
       email: bookingData.email,
-      phone: bookingData.phone,
+      phone: normalizedPhone || 'No proporcionado',
       date: bookingData.date,
       time: bookingData.time,
       location: location?.name || '',
@@ -189,10 +199,12 @@ export const sendBookingConfirmationToUser = async (bookingData, services, locat
 // NUEVO: Enviar confirmación al usuario para formulario de contacto
 export const sendContactConfirmationToUser = async (contactData) => {
   try {
+    const normalizedPhone = (contactData.phone || '').toString().trim();
+
     const emailData = {
       name: contactData.name,
       email: contactData.email,
-      phone: contactData.phone || 'No proporcionado',
+      phone: normalizedPhone || 'No proporcionado',
       message: contactData.message,
       submissionDate: new Date().toLocaleString('es-ES'),
       isContact: true,
