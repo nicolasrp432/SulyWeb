@@ -9,6 +9,7 @@ Este es el sitio web oficial de Suly Pretty Nails, un salón de belleza especial
 - Integración con CommonNinja para mostrar reseñas de Google y mapas interactivos
 - Botón de WhatsApp para contacto directo
 - Animaciones suaves con Framer Motion
+- Panel administrativo de calendario en `/admin/calendario` con vistas día, semana, mes y agenda
 
 ## Tecnologías Utilizadas
 
@@ -50,6 +51,12 @@ yarn dev
 ## Configuración de Widgets de CommonNinja
 
 Este proyecto utiliza widgets de CommonNinja para mostrar reseñas de Google y mapas interactivos sin necesidad de una API key de Google Maps. Para configurar estos widgets, consulta el archivo [COMMONNINJA_SETUP.md](./COMMONNINJA_SETUP.md) que contiene instrucciones detalladas.
+
+## Configuración de calendario admin (Supabase)
+
+Para habilitar estados de cita, responsables y bloqueos persistentes del panel `/admin/calendario`, ejecuta la migración:
+
+`supabase/migrations/20260524_admin_calendar.sql`
 
 ## Estructura del Proyecto
 
