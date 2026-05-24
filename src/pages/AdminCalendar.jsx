@@ -198,6 +198,7 @@ const AdminCalendar = () => {
 
   const [draggedBookingId, setDraggedBookingId] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
 
   const [detailForm, setDetailForm] = useState({
@@ -216,10 +217,17 @@ const AdminCalendar = () => {
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginSubmitting, setLoginSubmitting] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
 
-  const isMobile = useMemo(() => {
-    if (typeof window === 'undefined') return false;
-    return window.innerWidth < 768;
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const onResize = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
   }, []);
 
   useEffect(() => {
@@ -493,6 +501,7 @@ const AdminCalendar = () => {
     const meta = bookingMetaById(booking.id);
     setIsCreatingBooking(false);
     setSelectedBookingId(booking.id);
+    setIsDetailDialogOpen(true);
     setDetailForm({
       id: booking.id,
       location_id: String(booking.location_id),
@@ -537,6 +546,7 @@ const AdminCalendar = () => {
   const resetDetailDialog = useCallback(() => {
     setSelectedBookingId(null);
     setIsCreatingBooking(false);
+    setIsDetailDialogOpen(false);
     setDetailForm({
       id: null,
       location_id: locations[0] ? String(locations[0].id) : '',
@@ -837,7 +847,8 @@ const AdminCalendar = () => {
 
   const beginCreateBooking = useCallback((date = toISODate(currentDate), time = CONFIG.BOOKING.TIME_SLOTS[0]) => {
     setIsCreatingBooking(true);
-    setSelectedBookingId(true);
+    setSelectedBookingId(null);
+    setIsDetailDialogOpen(true);
     setDetailForm({
       id: null,
       location_id: locations[0] ? String(locations[0].id) : '',
@@ -1134,9 +1145,9 @@ const AdminCalendar = () => {
     setLoginSubmitting(true);
     const { error } = await signIn(loginEmail, loginPassword);
     setLoginSubmitting(false);
+    setLoginPassword('');
 
     if (!error) {
-      setLoginPassword('');
       toast({ title: 'Acceso concedido', description: 'Bienvenida al panel de calendario' });
     }
   };
@@ -1329,7 +1340,7 @@ const AdminCalendar = () => {
         </div>
       </section>
 
-      <Dialog open={Boolean(selectedBookingId)} onOpenChange={(open) => { if (!open) resetDetailDialog(); }}>
+      <Dialog open={isDetailDialogOpen} onOpenChange={(open) => { if (!open) resetDetailDialog(); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isCreatingBooking ? 'Crear nueva cita' : 'Detalle de cita'}</DialogTitle>
