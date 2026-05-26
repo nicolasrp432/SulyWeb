@@ -264,7 +264,7 @@ const Services = () => {
       popular: false
     },
         {
-      id: 20,
+      id: 21,
       category: 'beauty',
       title: 'Retirar pestaña',
       description: 'Retirado de pestañas pelo a pelo',

@@ -33,6 +33,7 @@ function App() {
               <Route path="/galeria" element={<Gallery />} />
               <Route path="/reservas" element={<Booking />} />
               <Route path="/contacto" element={<Contact />} />
+              <Route path="/admin" element={<AdminServices />} />
               <Route path="/admin/servicios" element={<AdminServices />} />
             </Routes>
           </main>
