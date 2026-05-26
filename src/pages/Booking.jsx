@@ -1,5 +1,5 @@
 
-import React, { useReducer, useMemo, useEffect, useCallback, memo } from 'react';
+import React, { useReducer, useMemo, useEffect, useCallback, useState, memo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion } from 'framer-motion';
 import { 
@@ -87,16 +87,55 @@ const Booking = () => {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
   const { currentStep, bookingData, locations, services, blockedSlots, loading } = state;
 
-  // Usar constantes para time slots
-  const timeSlots = CONFIG.BOOKING.TIME_SLOTS;
+  // Estado para la configuración dinámica de la agenda
+  const [agendaSettings, setAgendaSettings] = useState({
+    max_advance_days: CONFIG.BOOKING.MAX_ADVANCE_DAYS,
+    excluded_days: CONFIG.BOOKING.EXCLUDED_DAYS,
+    time_slots: CONFIG.BOOKING.TIME_SLOTS
+  });
+
+  // Cargar configuración de agenda de Supabase
+  useEffect(() => {
+    const fetchAgendaSettings = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('salon_settings')
+          .select('*')
+          .eq('id', 1)
+          .single();
+        
+        if (error) {
+          // Fallback silencioso si no existe la tabla
+          console.log('Usando configuración de agenda por defecto:', error.message);
+          return;
+        }
+
+        if (data) {
+          console.log('Configuración de agenda cargada dinámicamente:', data);
+          setAgendaSettings({
+            max_advance_days: data.max_advance_days ?? CONFIG.BOOKING.MAX_ADVANCE_DAYS,
+            excluded_days: data.excluded_days ?? CONFIG.BOOKING.EXCLUDED_DAYS,
+            time_slots: data.time_slots ?? CONFIG.BOOKING.TIME_SLOTS
+          });
+        }
+      } catch (err) {
+        console.error('Error al obtener ajustes de agenda:', err);
+      }
+    };
+
+    fetchAgendaSettings();
+  }, []);
+
+  // Usar constantes para time slots cargadas dinámicamente
+  const timeSlots = agendaSettings.time_slots;
 
   const generateAvailableDates = useCallback(() => {
     const dates = [];
     const today = new Date();
-    for (let i = 1; i <= CONFIG.BOOKING.MAX_ADVANCE_DAYS; i++) {
+    for (let i = 1; i <= agendaSettings.max_advance_days; i++) {
       const date = new Date(today);
       date.setDate(today.getDate() + i);
-      if (!CONFIG.BOOKING.EXCLUDED_DAYS.includes(date.getDay())) {
+      if (!agendaSettings.excluded_days.includes(date.getDay())) {
         dates.push({
           date: date.toISOString().split('T')[0],
           display: date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
@@ -104,7 +143,7 @@ const Booking = () => {
       }
     }
     return dates;
-  }, []);
+  }, [agendaSettings]);
 
   const availableDates = useMemo(() => generateAvailableDates(), [generateAvailableDates]);
 
