@@ -437,15 +437,15 @@ const CalendarPage = () => {
 
       if (blocksTableAvailable) {
         const { data: blocksData, error: blocksError } = await supabase
-          .from('admin_time_blocks')
-          .select('id,location_id,block_date,start_time,end_time,reason,is_available,created_at')
+          .from('schedule_blocks')
+          .select('id,location_id,block_date,start_time,end_time,reason,created_at')
           .gte('block_date', dateRange.start)
           .lte('block_date', dateRange.end)
           .order('block_date', { ascending: true })
           .order('start_time', { ascending: true });
 
         if (blocksError) {
-          if (blocksError.message?.toLowerCase().includes('admin_time_blocks')) {
+          if (blocksError.message?.toLowerCase().includes('schedule_blocks')) {
             setBlocksTableAvailable(false);
             setTimeBlocks([]);
           } else {
@@ -486,7 +486,7 @@ const CalendarPage = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings_admin_meta' }, () => fetchCalendarData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_time_blocks' }, () => fetchCalendarData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => fetchCalendarData())
       .subscribe((status) => {
         setRealtimeConnected(status === 'SUBSCRIBED');
       });
@@ -737,21 +737,20 @@ const CalendarPage = () => {
       toast({
         variant: 'destructive',
         title: 'Migración pendiente',
-        description: 'La tabla admin_time_blocks no está disponible.'
+        description: 'La tabla schedule_blocks no está disponible.'
       });
       return;
     }
 
     try {
       const { error } = await supabase
-        .from('admin_time_blocks')
+        .from('schedule_blocks')
         .insert([{
           block_date: date,
           start_time: time + ':00',
           end_time: addMinutes(time, 30) + ':00',
           location_id: filterLocation === 'all' ? null : Number(filterLocation),
-          reason: 'Bloqueo manual desde calendario',
-          is_available: false
+          reason: 'Bloqueo manual desde calendario'
         }]);
 
       if (error) throw error;
@@ -772,7 +771,7 @@ const CalendarPage = () => {
 
     try {
       const { error } = await supabase
-        .from('admin_time_blocks')
+        .from('schedule_blocks')
         .delete()
         .eq('id', blockId);
 

@@ -193,32 +193,85 @@ const Booking = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null);
 
-  /* Fetch services and locations on mount */
+  const getAvailableTimeSlots = useCallback((date) => {
+    if (!date) return [];
+    const day = date.getDay();
+    const slots = [];
+    
+    if (day >= 1 && day <= 5) {
+      // Lunes a Viernes: 10:00 - 20:00 (última cita empieza a las 19:30)
+      for (let h = 10; h < 20; h++) {
+        slots.push(`${String(h).padStart(2, '0')}:00`);
+        slots.push(`${String(h).padStart(2, '0')}:30`);
+      }
+    } else if (day === 6) {
+      // Sábados: 10:00 - 17:00 (última cita empieza a las 16:30)
+      for (let h = 10; h < 17; h++) {
+        slots.push(`${String(h).padStart(2, '0')}:00`);
+        slots.push(`${String(h).padStart(2, '0')}:30`);
+      }
+    }
+    return slots;
+  }, []);
+
+  /* Fetch services and locations on mount with real-time subscription */
   useEffect(() => {
-    supabase.from('services').select('*').eq('active', true)
-      .order('display_order').order('name')
-      .then(({ data }) => {
-        if (data && data.length > 0) setServices(data);
-      });
+    const fetchServices = () => {
+      supabase.from('services').select('*').eq('active', true)
+        .order('display_order').order('name')
+        .then(({ data }) => {
+          if (data && data.length > 0) setServices(data);
+        });
+    };
+
+    fetchServices();
+
     supabase.from('locations').select('id, name').then(({ data }) => {
       setLocations(data ?? []);
       if (data && data.length > 0) setSelectedLocation(data[0]);
     });
+
+    const channel = supabase
+      .channel('booking-services-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
+        fetchServices();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
-  /* Fetch blocked full-day dates when location changes */
+  /* Fetch blocked full-day dates when location changes and subscribe */
   useEffect(() => {
     if (!selectedLocation) return;
-    const today = format(new Date(), 'yyyy-MM-dd');
-    const maxDay = format(addDays(new Date(), 60), 'yyyy-MM-dd');
-    supabase
-      .from('schedule_blocks')
-      .select('block_date')
-      .gte('block_date', today)
-      .lte('block_date', maxDay)
-      .is('start_time', null)
-      .or(`location_id.eq.${selectedLocation.id},location_id.is.null`)
-      .then(({ data }) => setBlockedDates((data ?? []).map((b) => b.block_date)));
+    
+    const fetchBlockedDays = () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const maxDay = format(addDays(new Date(), 60), 'yyyy-MM-dd');
+      supabase
+        .from('schedule_blocks')
+        .select('block_date')
+        .gte('block_date', today)
+        .lte('block_date', maxDay)
+        .is('start_time', null)
+        .or(`location_id.eq.${selectedLocation.id},location_id.is.null`)
+        .then(({ data }) => setBlockedDates((data ?? []).map((b) => b.block_date)));
+    };
+
+    fetchBlockedDays();
+
+    const channel = supabase
+      .channel('booking-day-blocks-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => {
+        fetchBlockedDays();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [selectedLocation]);
 
   /* Fetch booked + blocked times when date + location change */
@@ -244,11 +297,25 @@ const Booking = () => {
 
     setBookedTimes((bookingData ?? []).map((b) => b.booking_time?.slice(0, 5)));
     setBlockedTimes(blockData ?? []);
-    setSelectedTime(null);
     setLoadingSlots(false);
   }, [selectedDate, selectedLocation]);
 
   useEffect(() => { loadSlots(); }, [loadSlots]);
+
+  /* Subscribe to slot updates in real-time */
+  useEffect(() => {
+    if (!selectedDate || !selectedLocation) return;
+
+    const channel = supabase
+      .channel('booking-slots-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => loadSlots())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => loadSlots())
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedDate, selectedLocation, loadSlots]);
 
   const isTimeBlocked = (slot) => {
     return blockedTimes.some((b) => b.start_time <= slot + ':00' && (b.end_time ?? '23:59') > slot + ':00');
@@ -566,7 +633,7 @@ const Booking = () => {
                       </div>
                     ) : (
                       <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                        {TIME_SLOTS.map((slot) => {
+                        {getAvailableTimeSlots(selectedDate).map((slot) => {
                           const unavailable = isTimeUnavailable(slot);
                           const selected = selectedTime === slot;
                           return (

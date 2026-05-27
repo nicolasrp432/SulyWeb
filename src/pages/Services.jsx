@@ -39,27 +39,42 @@ const Services = () => {
   const { addService, selectedServices } = useBookingCart();
 
   useEffect(() => {
-    supabase
-      .from('services')
-      .select('*')
-      .eq('active', true)
-      .order('display_order', { ascending: true })
-      .order('name', { ascending: true })
-      .then(({ data }) => {
-        if (data && data.length > 0) {
-          setDbServices(data.map((s) => ({
-            id: s.id,
-            category: s.category ?? 'nails',
-            title: s.name,
-            description: s.description ?? '',
-            duration: s.duration_minutes ? `${s.duration_minutes} min` : '—',
-            price: s.price ?? '',
-            image: s.image_url || '/serviciosimg/manicura-expres.jpg',
-            features: [],
-            popular: false,
-          })));
-        }
-      });
+    const fetchServices = () => {
+      supabase
+        .from('services')
+        .select('*')
+        .eq('active', true)
+        .order('display_order', { ascending: true })
+        .order('name', { ascending: true })
+        .then(({ data }) => {
+          if (data && data.length > 0) {
+            setDbServices(data.map((s) => ({
+              id: s.id,
+              category: s.category ?? 'nails',
+              title: s.name,
+              description: s.description ?? '',
+              duration: s.duration_minutes ? `${s.duration_minutes} min` : '—',
+              price: s.price ?? '',
+              image: s.image_url || '/serviciosimg/manicura-expres.jpg',
+              features: [],
+              popular: false,
+            })));
+          }
+        });
+    };
+
+    fetchServices();
+
+    const channel = supabase
+      .channel('services-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
+        fetchServices();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const categories = [
