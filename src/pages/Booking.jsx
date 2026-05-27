@@ -105,7 +105,7 @@ const ServiceCard = ({ service, selected, onToggle }) => (
 );
 
 /* ── Mini calendar ──────────────────────────── */
-const MiniCalendar = ({ selectedDate, blockedDates, onSelect }) => {
+const MiniCalendar = ({ selectedDate, blockedDates, businessHours, onSelect }) => {
   const [calDate, setCalDate] = useState(new Date());
   const today = startOfDay(new Date());
   const maxDate = addDays(today, 60);
@@ -114,11 +114,16 @@ const MiniCalendar = ({ selectedDate, blockedDates, onSelect }) => {
   const calEnd   = endOfWeek(endOfMonth(calDate),   { weekStartsOn: 1 });
   const days     = eachDayOfInterval({ start: calStart, end: calEnd });
 
-  const isDisabled = (d) =>
-    isBefore(d, today) ||
-    isBefore(maxDate, d) ||
-    d.getDay() === 0 ||
-    blockedDates.some((bd) => isSameDay(parseISO(bd), d));
+  const isDisabled = (d) => {
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayName = dayNames[d.getDay()];
+    const isDayClosed = businessHours?.[dayName]?.closed ?? (d.getDay() === 0);
+
+    return isBefore(d, today) ||
+      isBefore(maxDate, d) ||
+      isDayClosed ||
+      blockedDates.some((bd) => isSameDay(parseISO(bd), d));
+  };
 
   return (
     <div className="bg-white rounded-2xl border border-brand-rose-100 shadow-card overflow-hidden">
@@ -193,26 +198,43 @@ const Booking = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null);
 
+  const [businessHours, setBusinessHours] = useState({
+    monday: { open: '10:00', close: '20:00', closed: false },
+    tuesday: { open: '10:00', close: '20:00', closed: false },
+    wednesday: { open: '10:00', close: '20:00', closed: false },
+    thursday: { open: '10:00', close: '20:00', closed: false },
+    friday: { open: '10:00', close: '20:00', closed: false },
+    saturday: { open: '10:00', close: '17:00', closed: false },
+    sunday: { open: '10:00', close: '20:00', closed: true }
+  });
+
   const getAvailableTimeSlots = useCallback((date) => {
     if (!date) return [];
-    const day = date.getDay();
+    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const dayKey = dayNames[date.getDay()];
+    const config = businessHours[dayKey] || { open: '10:00', close: '20:00', closed: false };
+
+    if (config.closed) return [];
+
     const slots = [];
-    
-    if (day >= 1 && day <= 5) {
-      // Lunes a Viernes: 10:00 - 20:00 (última cita empieza a las 19:30)
-      for (let h = 10; h < 20; h++) {
-        slots.push(`${String(h).padStart(2, '0')}:00`);
-        slots.push(`${String(h).padStart(2, '0')}:30`);
+    try {
+      const [openHour, openMin] = config.open.split(':').map(Number);
+      const [closeHour, closeMin] = config.close.split(':').map(Number);
+
+      const openMinutes = openHour * 60 + openMin;
+      const closeMinutes = closeHour * 60 + closeMin;
+
+      for (let minutes = openMinutes; minutes < closeMinutes; minutes += 30) {
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
       }
-    } else if (day === 6) {
-      // Sábados: 10:00 - 17:00 (última cita empieza a las 16:30)
-      for (let h = 10; h < 17; h++) {
-        slots.push(`${String(h).padStart(2, '0')}:00`);
-        slots.push(`${String(h).padStart(2, '0')}:30`);
-      }
+    } catch (e) {
+      console.error("Error generating time slots:", e);
     }
+    
     return slots;
-  }, []);
+  }, [businessHours]);
 
   /* Fetch services and locations on mount with real-time subscription */
   useEffect(() => {
@@ -235,6 +257,35 @@ const Booking = () => {
       .channel('booking-services-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
         fetchServices();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  /* Fetch and subscribe to business hours */
+  useEffect(() => {
+    const fetchBusinessHours = () => {
+      supabase
+        .from('settings')
+        .select('value')
+        .eq('key', 'business_hours')
+        .single()
+        .then(({ data }) => {
+          if (data && data.value) {
+            setBusinessHours(data.value);
+          }
+        });
+    };
+
+    fetchBusinessHours();
+
+    const channel = supabase
+      .channel('booking-settings-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
+        fetchBusinessHours();
       })
       .subscribe();
 
@@ -611,6 +662,7 @@ const Booking = () => {
                   <MiniCalendar
                     selectedDate={selectedDate}
                     blockedDates={blockedDates}
+                    businessHours={businessHours}
                     onSelect={setSelectedDate}
                   />
                 </div>

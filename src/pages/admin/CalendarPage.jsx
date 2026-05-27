@@ -17,7 +17,10 @@ import {
   Mail,
   MessageCircle,
   Clock3,
-  AlertCircle
+  AlertCircle,
+  X,
+  Sliders,
+  Settings
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -212,6 +215,21 @@ const CalendarPage = () => {
 
   const [isCreatingBooking, setIsCreatingBooking] = useState(false);
   const [isMobile, setIsMobile] = useState(() => (typeof window !== 'undefined' ? window.innerWidth < 768 : false));
+
+  // UX Form states
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  // Horarios de Apertura states
+  const [isHoursDialogOpen, setIsHoursDialogOpen] = useState(false);
+  const [businessHours, setBusinessHours] = useState({
+    monday: { open: '10:00', close: '20:00', closed: false },
+    tuesday: { open: '10:00', close: '20:00', closed: false },
+    wednesday: { open: '10:00', close: '20:00', closed: false },
+    thursday: { open: '10:00', close: '20:00', closed: false },
+    friday: { open: '10:00', close: '20:00', closed: false },
+    saturday: { open: '10:00', close: '17:00', closed: false },
+    sunday: { open: '10:00', close: '20:00', closed: true }
+  });
 
   // WhatsApp Custom templates state
   const [waModalOpen, setWaModalOpen] = useState(false);
@@ -472,6 +490,18 @@ const CalendarPage = () => {
 
     fetchLocations();
     fetchStaffMembers();
+
+    // Fetch opening hours configuration
+    supabase
+      .from('settings')
+      .select('value')
+      .eq('key', 'business_hours')
+      .single()
+      .then(({ data }) => {
+        if (data && data.value) {
+          setBusinessHours(data.value);
+        }
+      });
   }, [fetchLocations, fetchStaffMembers, user]);
 
   useEffect(() => {
@@ -487,6 +517,18 @@ const CalendarPage = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings_admin_meta' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => fetchCalendarData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
+        supabase
+          .from('settings')
+          .select('value')
+          .eq('key', 'business_hours')
+          .single()
+          .then(({ data }) => {
+            if (data && data.value) {
+              setBusinessHours(data.value);
+            }
+          });
+      })
       .subscribe((status) => {
         setRealtimeConnected(status === 'SUBSCRIBED');
       });
@@ -497,9 +539,34 @@ const CalendarPage = () => {
     };
   }, [fetchCalendarData, user]);
 
+  const saveBusinessHours = useCallback(async () => {
+    try {
+      const { error } = await supabase
+        .from('settings')
+        .upsert([{
+          key: 'business_hours',
+          value: businessHours,
+          updated_at: new Date().toISOString()
+        }], { onConflict: 'key' });
+
+      if (error) throw error;
+
+      toast({ title: 'Horarios guardados', description: 'Los horarios del salón se actualizaron correctamente.' });
+      setIsHoursDialogOpen(false);
+    } catch (error) {
+      console.error('Error saving business hours:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error al guardar horarios',
+        description: error.message
+      });
+    }
+  }, [businessHours, toast]);
+
   const openBookingDetail = useCallback((booking) => {
     const meta = bookingMetaById(booking.id);
     setIsCreatingBooking(false);
+    setShowAdvanced(false);
     setSelectedBookingId(booking.id);
     setIsDetailDialogOpen(true);
     setDetailForm({
@@ -546,6 +613,7 @@ const CalendarPage = () => {
   const resetDetailDialog = useCallback(() => {
     setSelectedBookingId(null);
     setIsCreatingBooking(false);
+    setShowAdvanced(false);
     setIsDetailDialogOpen(false);
     setDetailForm({
       id: null,
@@ -853,6 +921,7 @@ const CalendarPage = () => {
   const beginCreateBooking = useCallback((date = toISODate(currentDate), time = CONFIG.BOOKING.TIME_SLOTS[0]) => {
     setIsCreatingBooking(true);
     setSelectedBookingId(null);
+    setShowAdvanced(false);
     setIsDetailDialogOpen(true);
     setDetailForm({
       id: null,
@@ -943,23 +1012,56 @@ const CalendarPage = () => {
           e.stopPropagation();
           openBookingDetail(booking);
         }}
-        className={`rounded-xl border p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${STATUS_STYLES[bookingStatus] || STATUS_STYLES.pending} border-l-4 border-l-current`}
+        className={`rounded-xl border p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${STATUS_STYLES[bookingStatus] || STATUS_STYLES.pending} border-l-4 border-l-current flex items-center justify-between gap-3`}
       >
-        <div className="flex items-start justify-between gap-1">
-          <p className="text-xs font-bold truncate max-w-[120px]">{booking.client_name}</p>
-          <span className="text-[9px] font-extrabold px-1.5 py-0.5 rounded bg-white/60 border border-current/25 tracking-wide uppercase shrink-0">
-            {statusLabel}
-          </span>
-        </div>
-        <p className="text-[10px] opacity-90 mt-1 font-semibold truncate">
-          {booking.booking_time?.slice(0, 5)} · {locationNameById[booking.location_id] || 'Sede'}
-        </p>
-        <p className="text-[10px] opacity-80 mt-0.5 truncate italic">{servicesText}</p>
-        {booking.meta.assigned_to ? (
-          <p className="text-[9px] mt-1 font-bold text-gray-700 bg-white/50 inline-block px-1.5 py-0.5 rounded border border-gray-300/40">
-            👤 {booking.meta.assigned_to}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-xs font-bold truncate max-w-[140px]">{booking.client_name}</p>
+            <span className="text-[8px] font-extrabold px-1.5 py-0.2 rounded bg-white/60 border border-current/25 tracking-wide uppercase shrink-0">
+              {statusLabel}
+            </span>
+          </div>
+          <p className="text-[10px] opacity-90 mt-1 font-semibold truncate">
+            {booking.booking_time?.slice(0, 5)} · {locationNameById[booking.location_id] || 'Sede'}
           </p>
-        ) : null}
+          <p className="text-[10px] opacity-80 mt-0.5 truncate italic">{servicesText}</p>
+          {booking.meta.assigned_to ? (
+            <p className="text-[9px] mt-1 font-bold text-gray-700 bg-white/50 inline-block px-1.5 py-0.5 rounded border border-gray-300/40">
+              👤 {booking.meta.assigned_to}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="flex items-center gap-0.5 shrink-0 bg-white/50 p-0.5 rounded-lg border border-current/10" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button"
+            className="h-6 w-6 p-0 flex items-center justify-center text-green-600 hover:bg-green-100/60 rounded transition-colors"
+            onClick={() => handleOpenWaModal(booking)}
+            title="Recordatorio WhatsApp"
+          >
+            <MessageCircle className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="h-6 w-6 p-0 flex items-center justify-center text-admin-muted hover:text-admin-text hover:bg-gray-100 rounded transition-colors"
+            onClick={() => openBookingDetail(booking)}
+            title="Detalles / Editar"
+          >
+            <Search className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            className="h-6 w-6 p-0 flex items-center justify-center text-rose-600 hover:bg-rose-50 rounded transition-colors"
+            onClick={() => {
+              if (confirm(`¿Seguro que deseas cancelar la cita de ${booking.client_name}?`)) {
+                updateBookingStatus(booking.id, 'cancelled');
+              }
+            }}
+            title="Cancelar cita"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
     );
   };
@@ -980,33 +1082,44 @@ const CalendarPage = () => {
           {bookingsInSlot.map((booking) => renderBookingCard(booking))}
 
           {blocksInSlot.map((block) => (
-            <div key={block.id} className="rounded-xl border border-zinc-200 bg-zinc-50 p-2.5 text-xs text-zinc-700 shadow-sm border-l-4 border-l-zinc-400">
-              <div className="flex items-center justify-between gap-2">
-                <span className="font-bold">{block.reason || 'Bloqueo manual'}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0 hover:bg-zinc-200 rounded-lg shrink-0 text-zinc-500"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    removeTimeBlock(block.id);
-                  }}
-                >
-                  <Unlock className="h-3.5 w-3.5" />
-                </Button>
+            <div key={block.id} className="rounded-xl border border-zinc-200 bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%,transparent_50%,#f4f4f5_50%,#f4f4f5_75%,transparent_75%,transparent)] bg-[length:15px_15px] bg-zinc-100 p-2.5 text-xs text-zinc-700 shadow-sm border-l-4 border-l-zinc-500 flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <span className="font-bold text-zinc-800 flex items-center gap-1.5">
+                  🚫 Horario Bloqueado
+                </span>
+                <p className="text-[10px] text-zinc-500 mt-0.5">{block.start_time?.slice(0, 5)} - {block.end_time?.slice(0, 5)} · {block.reason || 'Bloqueo manual'}</p>
               </div>
-              <p className="text-[10px] text-zinc-500 mt-0.5">{block.start_time?.slice(0, 5)} - {block.end_time?.slice(0, 5)}</p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2.5 text-[10px] font-bold text-zinc-700 border-zinc-300 hover:bg-zinc-200/80 bg-white rounded-lg shrink-0"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeTimeBlock(block.id);
+                }}
+              >
+                <Unlock className="h-3 w-3 mr-1" /> Habilitar
+              </Button>
             </div>
           ))}
 
           {bookingsInSlot.length === 0 && blocksInSlot.length === 0 ? (
-            <button
-              type="button"
-              className="h-7 px-3 text-[10px] text-admin-muted hover:text-brand-rose border border-dashed border-admin-border hover:border-brand-rose rounded-lg transition-all flex items-center gap-1 bg-white hover:bg-brand-rose/5"
-              onClick={() => createTimeBlock(date, time)}
-            >
-              <Lock className="h-3 w-3" /> Bloquear
-            </button>
+            <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
+              <button
+                type="button"
+                className="h-7 px-3 text-[10px] text-brand-rose border border-brand-rose/30 hover:border-brand-rose rounded-lg transition-all flex items-center gap-1.5 bg-white hover:bg-brand-rose/5 font-semibold cursor-pointer"
+                onClick={() => beginCreateBooking(date, time)}
+              >
+                <Plus className="h-3 w-3" /> Reservar
+              </button>
+              <button
+                type="button"
+                className="h-7 px-3 text-[10px] text-zinc-500 border border-zinc-300 hover:border-zinc-500 rounded-lg transition-all flex items-center gap-1.5 bg-white hover:bg-zinc-50 font-semibold cursor-pointer"
+                onClick={() => createTimeBlock(date, time)}
+              >
+                <Lock className="h-3 w-3" /> Bloquear
+              </button>
+            </div>
           ) : null}
         </div>
       </div>
@@ -1382,9 +1495,14 @@ const CalendarPage = () => {
               <span>Citas filtradas: <strong className="text-admin-text">{filteredBookings.length}</strong></span>
               <span>· Bloqueos manuales: <strong className="text-admin-text">{timeBlocks.length}</strong></span>
             </div>
-            <Button size="sm" className="h-8 bg-gradient-rose-gold text-white font-bold" onClick={() => beginCreateBooking()}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Nueva cita manual
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button size="sm" variant="outline" className="h-8 border-zinc-300 text-zinc-700 hover:bg-zinc-50 font-bold" onClick={() => setIsHoursDialogOpen(true)}>
+                <Clock3 className="h-3.5 w-3.5 mr-1.5 text-zinc-500 shrink-0" /> Horarios del Salón
+              </Button>
+              <Button size="sm" className="h-8 bg-gradient-rose-gold text-white font-bold" onClick={() => beginCreateBooking()}>
+                <Plus className="h-3.5 w-3.5 mr-1" /> Nueva cita manual
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -1414,7 +1532,7 @@ const CalendarPage = () => {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Teléfono *</Label>
+              <Label className="text-xs font-bold text-admin-text">Teléfono / Móvil *</Label>
               <Input
                 value={detailForm.client_phone}
                 onChange={(event) => setDetailForm((prev) => ({ ...prev, client_phone: event.target.value }))}
@@ -1463,56 +1581,6 @@ const CalendarPage = () => {
                 className="h-9 text-xs"
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Estado</Label>
-              <select
-                value={detailForm.status}
-                onChange={(e) => setDetailForm((prev) => ({ ...prev, status: e.target.value }))}
-                className="w-full px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-              >
-                {STATUS_OPTIONS.map((status) => (
-                  <option key={status.value} value={status.value}>{status.label}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Especialista Responsable</Label>
-              <Input
-                list="staff-options"
-                value={detailForm.assigned_to}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, assigned_to: event.target.value }))}
-                placeholder="Escribe el nombre del especialista"
-                className="h-9 text-xs"
-              />
-              <datalist id="staff-options">
-                {responsibleOptions.map((name) => (
-                  <option key={name} value={name} />
-                ))}
-              </datalist>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Duración (minutos)</Label>
-              <Input
-                type="number"
-                min="15"
-                step="5"
-                value={detailForm.duration_minutes}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, duration_minutes: Number(event.target.value || 30) }))}
-                className="h-9 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Origen</Label>
-              <select
-                value={detailForm.source}
-                onChange={(e) => setDetailForm((prev) => ({ ...prev, source: e.target.value }))}
-                className="w-full px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-              >
-                {SOURCE_OPTIONS.map((source) => (
-                  <option key={source.value} value={source.value}>{source.label}</option>
-                ))}
-              </select>
-            </div>
           </div>
 
           <div className="space-y-3 mt-3">
@@ -1534,16 +1602,81 @@ const CalendarPage = () => {
                 placeholder="Comentarios o solicitudes especiales del cliente..."
               />
             </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Notas internas (privadas)</Label>
-              <textarea
-                value={detailForm.internal_notes}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, internal_notes: event.target.value }))}
-                className="w-full min-h-[60px] rounded-xl border border-admin-border px-3 py-2 text-xs focus:outline-none focus:border-brand-rose resize-none text-gray-700 bg-gray-50/30"
-                placeholder="Comentarios de uso interno para el salón o especialista..."
-              />
-            </div>
           </div>
+
+          <div className="mt-4 pt-1">
+            <button
+              type="button"
+              className="text-xs font-bold text-brand-rose hover:text-brand-rose/85 transition-colors flex items-center gap-1.5 focus:outline-none"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              {showAdvanced ? '🔼 Opciones básicas' : '🔽 Más opciones (Especialista, Estado, Notas internas...)'}
+            </button>
+          </div>
+
+          {showAdvanced && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pt-3 border-t border-admin-border/30 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-admin-text">Especialista Responsable</Label>
+                <Input
+                  list="staff-options"
+                  value={detailForm.assigned_to}
+                  onChange={(event) => setDetailForm((prev) => ({ ...prev, assigned_to: event.target.value }))}
+                  placeholder="Escribe el nombre del especialista"
+                  className="h-9 text-xs"
+                />
+                <datalist id="staff-options">
+                  {responsibleOptions.map((name) => (
+                    <option key={name} value={name} />
+                  ))}
+                </datalist>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-admin-text">Estado</Label>
+                <select
+                  value={detailForm.status}
+                  onChange={(e) => setDetailForm((prev) => ({ ...prev, status: e.target.value }))}
+                  className="w-full px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
+                >
+                  {STATUS_OPTIONS.map((status) => (
+                    <option key={status.value} value={status.value}>{status.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-admin-text">Duración (minutos)</Label>
+                <Input
+                  type="number"
+                  min="15"
+                  step="5"
+                  value={detailForm.duration_minutes}
+                  onChange={(event) => setDetailForm((prev) => ({ ...prev, duration_minutes: Number(event.target.value || 30) }))}
+                  className="h-9 text-xs"
+                />
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs font-bold text-admin-text">Origen</Label>
+                <select
+                  value={detailForm.source}
+                  onChange={(e) => setDetailForm((prev) => ({ ...prev, source: e.target.value }))}
+                  className="w-full px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
+                >
+                  {SOURCE_OPTIONS.map((source) => (
+                    <option key={source.value} value={source.value}>{source.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2 space-y-1">
+                <Label className="text-xs font-bold text-admin-text">Notas internas (privadas)</Label>
+                <textarea
+                  value={detailForm.internal_notes}
+                  onChange={(event) => setDetailForm((prev) => ({ ...prev, internal_notes: event.target.value }))}
+                  className="w-full min-h-[60px] rounded-xl border border-admin-border px-3 py-2 text-xs focus:outline-none focus:border-brand-rose resize-none text-gray-700 bg-gray-50/30"
+                  placeholder="Comentarios de uso interno para el salón o especialista..."
+                />
+              </div>
+            </div>
+          )}
 
           {/* Quick Actions Footer */}
           {!isCreatingBooking ? (
@@ -1719,6 +1852,102 @@ const CalendarPage = () => {
               className="bg-green-500 hover:bg-green-600 text-white font-bold h-9 shadow-sm"
             >
               <MessageCircle className="h-4 w-4 mr-2" /> Enviar por WhatsApp
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Business Hours Settings Dialog */}
+      <Dialog open={isHoursDialogOpen} onOpenChange={setIsHoursDialogOpen}>
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl border border-admin-border bg-white shadow-2xl p-6">
+          <DialogHeader>
+            <DialogTitle className="text-base font-bold text-admin-text flex items-center gap-2">
+              <Clock3 className="h-5 w-5 text-brand-rose" /> Horarios Comerciales del Salón
+            </DialogTitle>
+            <DialogDescription className="text-xs text-admin-muted">
+              Configura las horas de apertura, cierre y días de inactividad. Los cambios se sincronizarán en tiempo real con la web del cliente.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 mt-4 divide-y divide-admin-border/30">
+            {Object.entries({
+              monday: 'Lunes',
+              tuesday: 'Martes',
+              wednesday: 'Miércoles',
+              thursday: 'Jueves',
+              friday: 'Viernes',
+              saturday: 'Sábado',
+              sunday: 'Domingo'
+            }).map(([dayKey, dayLabel]) => {
+              const config = businessHours[dayKey] || { open: '10:00', close: '20:00', closed: false };
+
+              return (
+                <div key={dayKey} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 first:pt-0">
+                  <div className="flex items-center gap-3 shrink-0">
+                    <input
+                      type="checkbox"
+                      id={`closed-${dayKey}`}
+                      checked={!config.closed}
+                      onChange={(e) => {
+                        const openStatus = e.target.checked;
+                        setBusinessHours((prev) => ({
+                          ...prev,
+                          [dayKey]: { ...config, closed: !openStatus }
+                        }));
+                      }}
+                      className="h-4 w-4 rounded border-gray-300 text-brand-rose focus:ring-brand-rose cursor-pointer"
+                    />
+                    <label htmlFor={`closed-${dayKey}`} className="text-xs font-bold text-admin-text cursor-pointer select-none min-w-[70px]">
+                      {dayLabel}
+                    </label>
+                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded uppercase tracking-wider ${
+                      config.closed ? 'bg-rose-500/10 text-rose-600' : 'bg-emerald-500/10 text-emerald-600'
+                    }`}>
+                      {config.closed ? 'Cerrado' : 'Abierto'}
+                    </span>
+                  </div>
+
+                  {!config.closed && (
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-admin-muted font-medium">Abre:</span>
+                        <Input
+                          type="time"
+                          value={config.open}
+                          onChange={(e) => {
+                            setBusinessHours((prev) => ({
+                              ...prev,
+                              [dayKey]: { ...config, open: e.target.value }
+                            }));
+                          }}
+                          className="h-8 w-[95px] text-xs py-1 px-2"
+                        />
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-admin-muted font-medium">Cierra:</span>
+                        <Input
+                          type="time"
+                          value={config.close}
+                          onChange={(e) => {
+                            setBusinessHours((prev) => ({
+                              ...prev,
+                              [dayKey]: { ...config, close: e.target.value }
+                            }));
+                          }}
+                          className="h-8 w-[95px] text-xs py-1 px-2"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          <DialogFooter className="mt-6 gap-2 border-t border-admin-border/30 pt-3">
+            <Button variant="outline" className="h-9" onClick={() => setIsHoursDialogOpen(false)}>Cancelar</Button>
+            <Button className="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold h-9 shadow-rose-sm" onClick={saveBusinessHours}>
+              Guardar Horarios
             </Button>
           </DialogFooter>
         </DialogContent>
