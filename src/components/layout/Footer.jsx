@@ -1,109 +1,167 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Clock, 
-  Instagram, 
-  Facebook, 
-  Heart 
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  MapPin, Phone, Mail, Clock,
+  Instagram, Facebook, Heart, ChevronDown, Calendar
 } from 'lucide-react';
 import Logo from '@/components/Logo';
+
+const socialLinks = [
+  { icon: Instagram, href: 'https://www.instagram.com/suly_prettynails/', label: 'Instagram' },
+  { icon: Facebook,  href: '#',                                             label: 'Facebook' },
+];
+
+const quickLinks = [
+  { name: 'Servicios', path: '/servicios' },
+  { name: 'Galería',   path: '/galeria' },
+  { name: 'Reservas',  path: '/reservas' },
+  { name: 'Contacto',  path: '/contacto' },
+];
+
+const locations = [
+  {
+    name: 'Sede Basauri',
+    address: 'Kareaga Goikoa Kalea, 28, 48970 Basauri, Bizkaia',
+    mapsUrl: 'https://maps.google.com/?q=Kareaga+Goikoa+Kalea+28+Basauri',
+  },
+  {
+    name: 'Sede Galdakao',
+    address: 'Juan Bautista Uriarte Kalea, 27, 48960 Galdakao, Bizkaia',
+    mapsUrl: 'https://maps.google.com/?q=Juan+Bautista+Uriarte+Kalea+27+Galdakao',
+  },
+];
+
+/* Accordion for mobile footer sections */
+const FooterAccordion = ({ title, children }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border-b border-white/10 md:border-none">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex w-full items-center justify-between py-4 md:py-0 text-left"
+      >
+        <span className="text-sm font-bold uppercase tracking-widest text-brand-rose-200">
+          {title}
+        </span>
+        <ChevronDown
+          className={`h-4 w-4 text-brand-rose-200 md:hidden transition-transform duration-200 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <AnimatePresence initial={false}>
+        {(open || true) && (
+          <motion.div
+            key="content"
+            initial={false}
+            animate={{ height: open ? 'auto' : 0, opacity: open ? 1 : 0 }}
+            transition={{ duration: 0.22, ease: 'easeInOut' }}
+            className="overflow-hidden md:!h-auto md:!opacity-100 md:overflow-visible"
+          >
+            <div className="pb-4 md:pb-0 md:mt-5 md:block">{children}</div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
-  const socialLinks = [
-    { icon: Instagram, href: 'https://www.instagram.com/suly_prettynails/', label: 'Instagram' },
-    { icon: Facebook, href: '#', label: 'Facebook' }
-  ];
-
-  const quickLinks = [
-    { name: 'Servicios', path: '/servicios' },
-    { name: 'Galería', path: '/galeria' },
-    { name: 'Reservas', path: '/reservas' },
-    { name: 'Contacto', path: '/contacto' }
-  ];
-
-  const services = [
-    'Manicura Gel',
-    'Pedicura Spa',
-    'Lifting de Pestañas',
-    'Depilación con Henna',
-    'Diseños Personalizados',
-  ];
-
-  const locations = [
-    { name: 'Sede Basauri', address: 'Kareaga Goikoa Kalea, 28, 48970 Basauri, Bizkaia' },
-    { name: 'Sede Galdakao', address: 'Juan Bautista Uriarte Kalea, 27, 48960 Galdakao, Bizkaia' }
-  ];
-
   return (
-    <footer className="bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white font-sans">
-      {/* Main Footer Content */}
+    <footer className="bg-gradient-to-br from-brand-dark via-[#17101f] to-brand-dark text-white font-body">
+
+      {/* ── CTA strip ── */}
+      <div className="bg-gradient-rose-gold">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-white font-semibold text-sm sm:text-base text-center sm:text-left">
+            ¿Lista para lucir unas uñas perfectas? Reserva en segundos.
+          </p>
+          <Link
+            to="/reservas"
+            className="shrink-0 inline-flex items-center gap-2 bg-white text-brand-rose font-bold px-6 py-2.5 rounded-full text-sm shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
+          >
+            <Calendar className="h-4 w-4" />
+            Reservar ahora
+          </Link>
+        </div>
+      </div>
+
+      {/* ── Main content ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          
-          {/* Brand Section */}
-          <div className="lg:col-span-1">
+
+          {/* Brand column */}
+          <div className="md:col-span-2 lg:col-span-1">
             <Logo />
-            <p className="text-gray-300 mt-6 mb-6 leading-relaxed">
-              Tu salón de belleza en Basauri y Galdakao. Expertas en manicura, pedicura y tratamientos de belleza.
+            <p className="text-white/60 mt-5 mb-6 text-sm leading-relaxed max-w-xs">
+              Tu salón de belleza de confianza en Basauri y Galdakao. Expertas en manicura, pedicura y tratamientos premium.
             </p>
-            
-            {/* Social Links */}
-            <div className="flex space-x-4">
-              {socialLinks.map((social, index) => (
+            <div className="flex gap-3">
+              {socialLinks.map((s) => (
                 <motion.a
-                  key={index}
-                  href={social.href}
+                  key={s.label}
+                  href={s.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  whileHover={{ scale: 1.1 }}
+                  whileHover={{ scale: 1.1, y: -2 }}
                   whileTap={{ scale: 0.95 }}
-                  className="w-10 h-10 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full flex items-center justify-center hover:from-pink-600 hover:to-rose-600 transition-all duration-300 shadow-lg hover:shadow-xl"
-                  aria-label={social.label}
+                  aria-label={s.label}
+                  className="w-10 h-10 rounded-xl bg-white/10 hover:bg-gradient-rose-gold flex items-center justify-center transition-colors duration-200"
                 >
-                  <social.icon className="h-5 w-5" />
+                  <s.icon className="h-4 w-4" />
                 </motion.a>
               ))}
             </div>
           </div>
 
-          {/* Locations */}
-          <div>
-            <span className="text-lg font-semibold text-pink-400 mb-6 block">
+          {/* Sedes */}
+          <div className="md:col-span-2 lg:col-span-1">
+            <div className="hidden md:block text-sm font-bold uppercase tracking-widest text-brand-rose-200 mb-5">
               Nuestras Sedes
-            </span>
-            <ul className="space-y-4">
+            </div>
+            <div className="md:hidden">
+              {/* accordion trigger rendered in FooterAccordion */}
+            </div>
+            <ul className="space-y-4 mt-4 md:mt-0">
               {locations.map((loc) => (
-                <li key={loc.name} className="flex items-start space-x-3">
-                   <MapPin className="h-5 w-5 text-pink-400 mt-1 flex-shrink-0" />
-                   <div>
-                     <p className="font-semibold">{loc.name}</p>
-                     <p className="text-gray-300 text-sm">{loc.address}</p>
-                   </div>
+                <li key={loc.name}>
+                  <a
+                    href={loc.mapsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-start gap-3 group"
+                  >
+                    <span className="mt-0.5 flex-shrink-0 w-7 h-7 rounded-lg bg-brand-rose/20 flex items-center justify-center">
+                      <MapPin className="h-3.5 w-3.5 text-brand-rose-200" />
+                    </span>
+                    <div>
+                      <p className="text-sm font-semibold text-white group-hover:text-brand-rose-200 transition-colors">
+                        {loc.name}
+                      </p>
+                      <p className="text-xs text-white/50 mt-0.5 leading-relaxed">
+                        {loc.address}
+                      </p>
+                    </div>
+                  </a>
                 </li>
               ))}
             </ul>
           </div>
-          
 
-          {/* Quick Links */}
+          {/* Quick links */}
           <div>
-            <span className="text-lg font-semibold text-pink-400 mb-6 block">
-              Enlaces Rápidos
-            </span>
-            <ul className="space-y-3">
+            <p className="hidden md:block text-sm font-bold uppercase tracking-widest text-brand-rose-200 mb-5">
+              Navegación
+            </p>
+            <ul className="space-y-2 mt-4 md:mt-0">
               {quickLinks.map((link) => (
                 <li key={link.path}>
                   <Link
                     to={link.path}
-                    className="text-gray-300 hover:text-pink-400 transition-colors duration-300 flex items-center group"
+                    className="group flex items-center gap-2 text-sm text-white/60 hover:text-white transition-colors duration-200 py-1"
                   >
-                    <span className="w-2 h-2 bg-pink-500 rounded-full mr-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></span>
+                    <span className="w-1 h-1 rounded-full bg-brand-rose opacity-0 group-hover:opacity-100 transition-opacity" />
                     {link.name}
                   </Link>
                 </li>
@@ -111,51 +169,64 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact Info */}
+          {/* Contact & hours */}
           <div>
-            <span className="text-lg font-semibold text-pink-400 mb-6 block">
+            <p className="hidden md:block text-sm font-bold uppercase tracking-widest text-brand-rose-200 mb-5">
               Contacto y Horarios
-            </span>
-            <div className="space-y-4">
-              <div className="flex items-center space-x-3">
-                <Phone className="h-5 w-5 text-pink-400 flex-shrink-0" />
-                <a href="https://wa.link/f3tn6z" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-pink-400">631 119 686 (Solo WhatsApp)</a>
-              </div>
-              
-              <div className="flex items-center space-x-3">
-                <Mail className="h-5 w-5 text-pink-400 flex-shrink-0" />
-                <p className="text-gray-300">sulyprettynails@gmail.com</p>
-              </div>
-              
-              <div className="flex items-start space-x-3">
-                <Clock className="h-5 w-5 text-pink-400 mt-1 flex-shrink-0" />
-                <div>
-                  <p className="text-gray-300">Lun - Vie: 9:00 - 20:00</p>
-                  <p className="text-gray-300">Sáb: 9:00 - 18:00</p>
-                  <p className="text-gray-300">Dom: Cerrado</p>
+            </p>
+            <ul className="space-y-3 mt-4 md:mt-0">
+              <li>
+                <a
+                  href="https://wa.link/f3tn6z"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 text-sm text-white/60 hover:text-white transition-colors group"
+                >
+                  <span className="w-7 h-7 rounded-lg bg-brand-rose/20 flex items-center justify-center shrink-0">
+                    <Phone className="h-3.5 w-3.5 text-brand-rose-200" />
+                  </span>
+                  631 119 686
+                  <span className="text-xs text-white/30 group-hover:text-white/50">(WhatsApp)</span>
+                </a>
+              </li>
+              <li>
+                <a
+                  href="mailto:sulyprettynails@gmail.com"
+                  className="flex items-center gap-3 text-sm text-white/60 hover:text-white transition-colors"
+                >
+                  <span className="w-7 h-7 rounded-lg bg-brand-rose/20 flex items-center justify-center shrink-0">
+                    <Mail className="h-3.5 w-3.5 text-brand-rose-200" />
+                  </span>
+                  sulyprettynails@gmail.com
+                </a>
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="w-7 h-7 rounded-lg bg-brand-rose/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <Clock className="h-3.5 w-3.5 text-brand-rose-200" />
+                </span>
+                <div className="text-sm text-white/60 space-y-0.5">
+                  <p>Lun – Vie: 9:00 – 20:00</p>
+                  <p>Sábado: 9:00 – 18:00</p>
+                  <p className="text-white/35">Domingo: Cerrado</p>
                 </div>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
 
-      {/* Bottom Bar */}
-      <div className="border-t border-gray-700">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <div className="flex items-center space-x-2 text-gray-400 text-sm text-center md:text-left">
-              <span>© {currentYear}</span>
-              <span>Todos los derechos reservados.</span>
-            </div>
-            <div className="flex items-center space-x-2 text-gray-400 text-sm">
-              <span>Hecho con</span>
-              <Heart className="h-4 w-4 text-pink-400" />
-              <span>para nuestras clientas</span>
-            </div>
-          </div>
+      {/* ── Bottom bar ── */}
+      <div className="border-t border-white/8">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <p className="text-white/35 text-xs">
+            © {currentYear} Suly Pretty Nails · Todos los derechos reservados
+          </p>
+          <p className="flex items-center gap-1.5 text-white/35 text-xs">
+            Hecho con <Heart className="h-3 w-3 text-brand-rose fill-current" /> para nuestras clientas
+          </p>
         </div>
       </div>
+
     </footer>
   );
 };

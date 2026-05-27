@@ -1,10 +1,10 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { 
-  Sparkles, 
-  Calendar, 
-  Award, 
+import {
+  Sparkles,
+  Calendar,
+  Award,
   Heart,
   ArrowRight,
   CheckCircle,
@@ -14,42 +14,55 @@ import {
   Shield
 } from 'lucide-react';
 import CommonNinjaReviews from "../components/CommonNinjaReviews";
-import CommonNinjaMap from "../components/CommonNinjaMap";
 import SEOHead from '../components/SEO/SEOHead';
 import WhyChooseUsSlider from '../components/WhyChooseUsSlider';
+import { Button } from '@/components/ui/button';
+
+/* ── Animation helpers ─────────────────────────── */
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 32 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] },
+});
 
 const Home = () => {
-
   const services = [
     {
       title: 'Manicuras',
       description: 'Gel, semipermanente y diseños únicos.',
       image: '/serviciosimg/manicura-expres.jpg',
-      price: 'Desde 9,90€'
+      price: 'Desde 9,90€',
     },
     {
       title: 'Pedicuras',
       description: 'Relajantes pedicuras spa y tratamientos.',
       image: '/serviciosimg/pedicura-completa.jpg',
-      price: 'Desde 14,90€'
+      price: 'Desde 14,90€',
     },
     {
       title: 'Lifting de Pestañas',
       description: 'Realza tu mirada de forma natural.',
       image: '/serviciosimg/lifting-pestañas.jpg',
-      price: 'Desde 35€'
+      price: 'Desde 35€',
     },
     {
       title: 'Depilación',
-      description: 'Tenemos para cejas, bigote, axilas y rostro.',
+      description: 'Cejas, bigote, axilas y rostro.',
       image: '/serviciosimg/depilar-cejas.jpg',
-      price: 'Desde 5€'
-    }
+      price: 'Desde 5€',
+    },
+  ];
+
+  const trustBadges = [
+    'Profesionales Certificadas',
+    'Productos Premium',
+    'Dos Sedes Disponibles',
   ];
 
   return (
     <>
-      <SEOHead 
+      <SEOHead
         page="home"
         customTitle="Suly Pretty Nails - Mejor Salón de Uñas en Bilbao | Manicura Basauri y Galdakao"
         customDescription="✨ Salón de uñas líder en Bilbao. Manicura profesional, pedicura spa, uñas de gel y lifting de pestañas en Basauri y Galdakao. ¡Reserva tu cita online desde 9,90€!"
@@ -61,7 +74,7 @@ const Home = () => {
       <section className="hero-v2">
         {/* Background image */}
         <div className="hero-v2-bg">
-          <img  
+          <img
             src="https://images.unsplash.com/photo-1633681926019-03bd9325ec20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
             alt="Elegant nail salon interior with modern pink and gold decor"
             loading="eager"
@@ -98,6 +111,7 @@ const Home = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
           >
+            {/* Badge */}
             <motion.div
               className="hero-v2-badge"
               initial={{ opacity: 0, scale: 0.8 }}
@@ -114,20 +128,33 @@ const Home = () => {
             </h1>
 
             <p className="hero-v2-desc">
-              Descubre la experiencia única en <strong>Suly Pretty Nails</strong>. 
+              Descubre la experiencia única en <strong>Suly Pretty Nails</strong>.
               El mejor salón de uñas en <strong>Bilbao</strong>, con sedes en{' '}
               <strong>Basauri</strong> y <strong>Galdakao</strong>.
             </p>
 
             <div className="hero-v2-buttons">
-              <Link to="/reservas" className="hero-v2-btn-primary">
-                <Calendar size={18} />
-                Reservar Cita
-              </Link>
-              <Link to="/servicios" className="hero-v2-btn-secondary">
-                Ver Servicios
-                <ArrowRight size={18} />
-              </Link>
+              <Button
+                asChild
+                variant="gradient"
+                size="lg"
+                className="px-8 rounded-full text-base font-bold shadow-rose-lg hover:shadow-rose-xl pulse-glow"
+              >
+                <Link to="/reservas" className="flex items-center gap-2">
+                  <Calendar size={18} />
+                  Reservar Cita
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                className="border-2 border-white/70 bg-white/12 text-white hover:bg-white hover:text-brand-rose px-8 rounded-full text-base font-bold backdrop-blur-sm transition-all duration-200"
+              >
+                <Link to="/servicios" className="flex items-center gap-2">
+                  Ver Servicios
+                  <ArrowRight size={18} />
+                </Link>
+              </Button>
             </div>
 
             {/* Stats strip */}
@@ -219,158 +246,151 @@ const Home = () => {
       {/* ===== SERVICIOS ESTRELLA ===== */}
       <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold gradient-text mb-6">
-              Servicios Estrella
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <motion.div {...fadeUp()} className="text-center mb-14 sm:mb-16">
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-rose mb-4">
+              <span className="w-6 h-px bg-brand-rose" />
+              Lo Mejor de Suly
+              <span className="w-6 h-px bg-brand-rose" />
+            </span>
+            <h2 className="gradient-text mb-4">Servicios Estrella</h2>
+            <p className="text-brand-mid max-w-2xl mx-auto leading-relaxed">
               Descubre nuestros tratamientos más populares y déjate consentir por nuestras expertas.
             </p>
           </motion.div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            {services.map((service, index) => (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {services.map((service, i) => (
               <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 50 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                className="group cursor-pointer service-card-hover"
+                key={i}
+                {...fadeUp(i * 0.08)}
+                className="group"
               >
-                <Link to="/servicios" className="block">
-                  <div className="relative overflow-hidden rounded-2xl bg-white shadow-lg group-hover:shadow-2xl transition-all duration-300">
-                    <div className="aspect-w-4 aspect-h-3 relative">
-                      <img  
-                        className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
-                        alt={service.description} 
-                        src={service.image} 
-                      />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    </div>
-                    
-                    <div className="p-6">
-                      <h3 className="text-xl font-semibold text-gray-800 mb-2 group-hover:text-pink-600 transition-colors">
-                        {service.title}
-                      </h3>
-                      <p className="text-gray-600 mb-4">
-                        {service.description}
-                      </p>
-                      <div className="flex justify-between items-center">
-                        <span className="text-2xl font-bold gradient-text">
-                          {service.price}
-                        </span>
-                        <ArrowRight className="h-5 w-5 text-pink-500 group-hover:translate-x-2 transition-transform duration-300" />
-                      </div>
-                    </div>
+                <Link to="/servicios" className="block rounded-2xl overflow-hidden shadow-card hover:shadow-card-hover transition-all duration-300 hover:-translate-y-1.5">
+                  {/* Image */}
+                  <div className="relative aspect-[4/3] overflow-hidden">
+                    <img
+                      src={service.image}
+                      alt={service.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    {/* Always-visible gradient at bottom */}
+                    <div className="absolute inset-0 bg-gradient-card" />
+                    {/* Price badge */}
+                    <span className="absolute bottom-3 left-3 badge-pill bg-white/90 text-brand-rose text-xs font-bold shadow-sm">
+                      {service.price}
+                    </span>
+                  </div>
+
+                  {/* Info */}
+                  <div className="p-4 bg-white">
+                    <h3 className="font-bold text-brand-dark text-sm sm:text-base mb-1 group-hover:text-brand-rose transition-colors">
+                      {service.title}
+                    </h3>
+                    <p className="text-xs text-brand-mid leading-relaxed">
+                      {service.description}
+                    </p>
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-rose">
+                      Ver más <ArrowRight className="h-3 w-3 group-hover:translate-x-1 transition-transform" />
+                    </span>
                   </div>
                 </Link>
               </motion.div>
             ))}
           </div>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            viewport={{ once: true }}
-            className="text-center mt-12"
-          >
-            <Link
-              to="/servicios"
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+          <motion.div {...fadeUp(0.3)} className="text-center mt-10 sm:mt-12">
+            <Button
+              asChild
+              variant="gradient"
+              size="lg"
+              className="rounded-full px-10 shadow-rose-md"
             >
-              Ver Todos los Servicios
-            </Link>
+              <Link to="/servicios">
+                Ver Todos los Servicios
+              </Link>
+            </Button>
           </motion.div>
         </div>
       </section>
 
       {/* ===== TESTIMONIALS / REVIEWS ===== */}
-      <section className="py-20 bg-gradient-to-br from-gray-50 to-pink-50">
+      <section className="py-20 bg-gradient-cream">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold gradient-text mb-6">
-              Lo que Dicen Nuestras Clientas
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+          <motion.div {...fadeUp()} className="text-center mb-14">
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-rose mb-4">
+              <span className="w-6 h-px bg-brand-rose" />
+              Opiniones Reales
+              <span className="w-6 h-px bg-brand-rose" />
+            </span>
+            <h2 className="gradient-text mb-4">Lo que Dicen Nuestras Clientas</h2>
+            <p className="text-brand-mid max-w-2xl mx-auto leading-relaxed">
               La satisfacción de nuestras clientas es nuestra mayor recompensa.
             </p>
           </motion.div>
 
-          {/* Reseñas con CommonNinja */}
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-          >
+          <motion.div {...fadeUp(0.1)}>
             <CommonNinjaReviews />
           </motion.div>
         </div>
       </section>
 
       {/* ===== CTA FINAL ===== */}
-      <section className="py-20 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 50 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            viewport={{ once: true }}
-            className="space-y-8"
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white">
+      <section className="relative py-20 sm:py-28 overflow-hidden">
+        {/* Background */}
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-rose via-rose-600 to-brand-rose-dark" />
+        {/* SVG decorative pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.06]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          }}
+        />
+        <div className="absolute inset-0 bg-black/10" />
+
+        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <motion.div {...fadeUp()} className="space-y-6 sm:space-y-8">
+            <h2 className="font-sans font-bold text-white leading-tight" style={{ fontSize: 'clamp(1.75rem, 4.5vw, 3rem)' }}>
               ¿Lista para Lucir Espectacular?
             </h2>
-            <p className="text-xl text-white/90 max-w-3xl mx-auto">
+            <p className="text-white/85 text-lg max-w-xl mx-auto leading-relaxed">
               Reserva tu cita hoy mismo en tu sede más cercana y déjate consentir.
             </p>
-            
+
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-              <Link
-                to="/reservas"
-                className="inline-flex items-center gap-2 bg-white text-pink-600 hover:bg-gray-50 px-8 py-4 rounded-full text-lg font-semibold shadow-2xl hover:shadow-3xl transition-all duration-300"
-              >
-                <Calendar className="h-5 w-5" />
-                <span>Reservar Ahora</span>
-              </Link>
-              
-              <Link
-                to="/contacto"
-                className="inline-flex items-center gap-2 border-2 border-white text-white hover:bg-white hover:text-pink-600 px-8 py-4 rounded-full text-lg font-semibold backdrop-blur-sm transition-all duration-300"
-              >
-                <span>Contáctanos</span>
-                <ArrowRight className="h-5 w-5" />
-              </Link>
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                <Button
+                  asChild
+                  size="lg"
+                  className="bg-white text-brand-rose hover:bg-brand-rose-50 px-8 rounded-full font-bold shadow-xl hover:shadow-2xl"
+                >
+                  <Link to="/reservas" className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    Reservar Ahora
+                  </Link>
+                </Button>
+              </motion.div>
+
+              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+                <Button
+                  asChild
+                  size="lg"
+                  className="border-2 border-white/60 bg-white/10 text-white hover:bg-white hover:text-brand-rose px-8 rounded-full font-bold backdrop-blur-sm"
+                >
+                  <Link to="/contacto" className="flex items-center gap-2">
+                    Contáctanos
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                </Button>
+              </motion.div>
             </div>
 
-            <div className="flex flex-wrap justify-center items-center gap-8 pt-8 text-white/80">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5" />
-                <span>Profesionales Certificadas</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5" />
-                <span>Productos Premium</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="h-5 w-5" />
-                <span>Dos Sedes Disponibles</span>
-              </div>
+            <div className="flex flex-wrap justify-center gap-x-8 gap-y-2 pt-2">
+              {trustBadges.map((b) => (
+                <span key={b} className="flex items-center gap-1.5 text-white/75 text-sm">
+                  <CheckCircle className="h-4 w-4 text-brand-gold" />
+                  {b}
+                </span>
+              ))}
             </div>
           </motion.div>
         </div>

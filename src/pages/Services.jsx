@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import SEOHead from '../components/SEO/SEOHead';
+import { supabase } from '@/lib/customSupabaseClient';
 import { 
   Sparkles, 
   Clock, 
@@ -34,7 +35,32 @@ const Services = () => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedService, setSelectedService] = useState(null);
+  const [dbServices, setDbServices] = useState(null);
   const { addService, selectedServices } = useBookingCart();
+
+  useEffect(() => {
+    supabase
+      .from('services')
+      .select('*')
+      .eq('active', true)
+      .order('display_order', { ascending: true })
+      .order('name', { ascending: true })
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setDbServices(data.map((s) => ({
+            id: s.id,
+            category: s.category ?? 'nails',
+            title: s.name,
+            description: s.description ?? '',
+            duration: s.duration_minutes ? `${s.duration_minutes} min` : '—',
+            price: s.price ?? '',
+            image: s.image_url || '/serviciosimg/manicura-expres.jpg',
+            features: [],
+            popular: false,
+          })));
+        }
+      });
+  }, []);
 
   const categories = [
     { id: 'all', name: 'Todos', icon: Sparkles },
@@ -276,9 +302,10 @@ const Services = () => {
     }
   ];
 
-  const filteredServices = selectedCategory === 'all' 
-    ? services 
-    : services.filter(service => service.category === selectedCategory);
+  const activeServices = dbServices ?? services;
+  const filteredServices = selectedCategory === 'all'
+    ? activeServices
+    : activeServices.filter(service => service.category === selectedCategory);
 
   return (
     <>
@@ -290,43 +317,47 @@ const Services = () => {
         canonicalUrl="/servicios"
       />
 
-      <section className="relative pt-32 pb-16 bg-gradient-to-br from-pink-50 to-rose-100 overflow-hidden">
-
-        
+      <section className="relative pt-28 pb-14 bg-gradient-cream overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 right-0 w-72 h-72 bg-brand-rose/5 rounded-full blur-3xl translate-x-1/2 -translate-y-1/2" />
+          <div className="absolute bottom-0 left-0 w-56 h-56 bg-brand-gold/8 rounded-full blur-2xl -translate-x-1/3 translate-y-1/3" />
+        </div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 32 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="space-y-6"
+            transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+            className="space-y-4"
           >
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold gradient-text">
-              Nuestros Servicios
-            </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-              Descubre nuestra gama de servicios diseñados para realzar 
-              tu belleza natural con la más alta calidad profesional.
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-rose mb-2">
+              <span className="w-6 h-px bg-brand-rose" />
+              Lo que Ofrecemos
+              <span className="w-6 h-px bg-brand-rose" />
+            </span>
+            <h1 className="gradient-text">Nuestros Servicios</h1>
+            <p className="text-brand-mid max-w-2xl mx-auto leading-relaxed">
+              Descubre nuestra gama de servicios diseñados para realzar tu belleza natural con la más alta calidad profesional.
             </p>
           </motion.div>
         </div>
       </section>
 
-      <section className="py-8 bg-white border-b sticky top-[64px] lg:top-[80px] z-40">
+      <section className="py-4 sm:py-5 bg-white/90 backdrop-blur-sm border-b border-brand-rose-100 sticky top-[64px] lg:top-[80px] z-40 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap justify-center gap-4">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
             {categories.map((category) => (
               <motion.button
                 key={category.id}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
                 onClick={() => setSelectedCategory(category.id)}
-                className={`flex items-center space-x-2 px-6 py-3 rounded-full font-medium transition-all duration-300 ${
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all duration-200 ${
                   selectedCategory === category.id
-                    ? 'bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg'
-                    : 'bg-gray-100 text-gray-600 hover:bg-pink-50 hover:text-pink-600'
+                    ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
+                    : 'bg-brand-rose-50 text-brand-mid hover:bg-brand-rose-100 hover:text-brand-rose'
                 }`}
               >
-                <category.icon className="h-5 w-5" />
+                <category.icon className="h-4 w-4" />
                 <span>{category.name}</span>
               </motion.button>
             ))}
@@ -334,98 +365,98 @@ const Services = () => {
         </div>
       </section>
 
-      <section className="py-16 bg-gray-50 min-h-screen">
+      <section className="py-12 sm:py-16 bg-brand-rose-50/40 min-h-screen">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
             layout
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 auto-rows-fr"
+            className="grid grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 auto-rows-fr"
           >
             {filteredServices.map((service, index) => (
               <motion.div
                 key={service.id}
                 layout
-                initial={{ opacity: 0, y: 50 }}
+                initial={{ opacity: 0, y: 32 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                className="bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 overflow-hidden group service-card-hover cursor-pointer h-full flex flex-col"
+                transition={{ duration: 0.5, delay: index * 0.06, ease: [0.22, 1, 0.36, 1] }}
+                className="bg-white rounded-2xl shadow-card hover:shadow-card-hover transition-all duration-300 overflow-hidden group cursor-pointer h-full flex flex-col hover:-translate-y-1"
                 onClick={() => setSelectedService(service)}
               >
-                <div className="relative">
-                  <img  
-                    className="w-full h-64 object-cover group-hover:scale-110 transition-transform duration-500" 
-                    alt={service.title} 
-                    src={service.image} />
-                  
-                  {/* Overlay con texto para indicar que es clickeable */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="bg-white/90 backdrop-blur-sm rounded-full px-4 py-2 text-gray-800 font-medium text-sm">
-                      Click para ver detalles
-                    </div>
-                  </div>
-                  
+                {/* Image */}
+                <div className="relative aspect-[4/3] overflow-hidden">
+                  <img
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    alt={service.title}
+                    src={service.image}
+                  />
+                  {/* Permanent bottom gradient */}
+                  <div className="absolute inset-0 bg-gradient-card" />
+
                   {service.popular && (
-                    <div className="absolute top-4 left-4 bg-gradient-to-r from-pink-500 to-rose-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center space-x-1 z-10">
-                      <Star className="h-4 w-4 fill-current" />
-                      <span>Popular</span>
-                    </div>
+                    <span className="absolute top-2.5 left-2.5 badge-pill bg-gradient-rose-gold text-white text-[10px] sm:text-xs shadow-rose-sm z-10">
+                      <Star className="h-3 w-3 fill-current" /> Popular
+                    </span>
                   )}
-                  
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+
+                  {/* Hover overlay hint */}
+                  <div className="absolute inset-0 bg-brand-dark/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-3">
+                    <span className="glass-effect rounded-full px-3 py-1 text-white text-xs font-semibold">
+                      Ver detalles
+                    </span>
+                  </div>
                 </div>
 
-                <div className="p-6 flex flex-col flex-grow">
-                  <div className="flex justify-between items-start mb-4">
-                    <h3 className="text-xl font-semibold text-gray-800 group-hover:text-pink-600 transition-colors">
+                <div className="p-4 sm:p-5 flex flex-col flex-grow">
+                  {/* Title + price */}
+                  <div className="flex justify-between items-start gap-2 mb-2">
+                    <h3 className="text-sm sm:text-base font-bold text-brand-dark group-hover:text-brand-rose transition-colors leading-tight">
                       {service.title}
                     </h3>
-                    <div className="text-right flex-shrink-0 ml-4">
-                      <div className="text-2xl font-bold gradient-text">
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm sm:text-base font-bold gradient-text whitespace-nowrap">
                         {service.price}
                       </div>
-                      <div className="flex items-center text-sm text-gray-500 justify-end">
-                        <Clock className="h-4 w-4 mr-1" />
+                      <div className="flex items-center text-xs text-brand-mid/70 justify-end mt-0.5">
+                        <Clock className="h-3 w-3 mr-1" />
                         {service.duration}
                       </div>
                     </div>
                   </div>
 
-                  <p className="text-gray-600 mb-4 leading-relaxed flex-grow">
+                  <p className="text-xs sm:text-sm text-brand-mid leading-relaxed flex-grow mb-3 hidden sm:block">
                     {service.description}
                   </p>
 
-                  <div className="space-y-2 mb-6">
-                    {service.features.map((feature, idx) => (
-                      <div key={idx} className="flex items-center text-sm text-gray-600">
-                        <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
+                  {/* Feature dots — hidden on mobile to save space */}
+                  <div className="hidden sm:block space-y-1.5 mb-4">
+                    {service.features.slice(0, 3).map((feature, idx) => (
+                      <div key={idx} className="flex items-center text-xs text-brand-mid">
+                        <span className="w-1.5 h-1.5 bg-brand-rose rounded-full mr-2 shrink-0" />
                         {feature}
                       </div>
                     ))}
                   </div>
 
-                  <div className="flex gap-2 mt-auto pt-4">
-                    <Button 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedService(service);
-                      }}
-                      className="flex-1 bg-white border border-pink-500 text-pink-500 hover:bg-pink-50 rounded-full font-medium transition-all duration-300 h-10"
+                  <div className="flex gap-2 mt-auto">
+                    <Button
+                      onClick={(e) => { e.stopPropagation(); setSelectedService(service); }}
+                      size="sm"
+                      className="flex-1 border border-brand-rose/40 bg-transparent text-brand-rose hover:bg-brand-rose-50 rounded-full text-xs sm:text-sm h-9"
                     >
-                      <Eye className="h-4 w-4 mr-2" />
-                      <span>Ver Detalles</span>
+                      <Eye className="h-3.5 w-3.5 mr-1.5" />
+                      <span className="hidden sm:inline">Ver </span>Detalles
                     </Button>
-                    <Button 
+                    <Button
                       onClick={(e) => {
                         e.stopPropagation();
                         addService(service);
-                        toast({
-                          title: "Servicio añadido",
-                          description: `${service.title} añadido a tu reserva`,
-                        });
+                        toast({ title: "Servicio añadido", description: `${service.title} añadido a tu reserva` });
                       }}
-                      className="flex-1 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full font-medium transition-all duration-300 group shadow-lg hover:shadow-xl h-10"
+                      size="sm"
+                      variant="gradient"
+                      className="flex-1 rounded-full text-xs sm:text-sm h-9"
                     >
-                      <Plus className="h-4 w-4 mr-2" />
-                      <span>Añadir</span>
+                      <Plus className="h-3.5 w-3.5 mr-1.5" />
+                      Añadir
                     </Button>
                   </div>
                 </div>
@@ -435,19 +466,22 @@ const Services = () => {
         </div>
       </section>
 
-      <section className="py-16 bg-white">
+      <section className="py-16 sm:py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <motion.div
-            initial={{ opacity: 0, y: 50 }}
+            initial={{ opacity: 0, y: 32 }}
             whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
             viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl md:text-4xl font-bold gradient-text mb-6">
-              Paquetes Especiales
-            </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-rose mb-4">
+              <span className="w-6 h-px bg-brand-rose" />
+              Ahorra más
+              <span className="w-6 h-px bg-brand-rose" />
+            </span>
+            <h2 className="gradient-text mb-4">Paquetes Especiales</h2>
+            <p className="text-brand-mid max-w-2xl mx-auto leading-relaxed">
               Combina servicios y ahorra con nuestros paquetes diseñados para ti.
             </p>
           </motion.div>
@@ -752,78 +786,62 @@ const Services = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Botón flotante para ir a reservas con contador y vista previa */}
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        className="fixed bottom-6 left-6 z-40"
-      >
-        <div className="relative group">
-          <Button
-            asChild
-            className="bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full p-4 shadow-lg hover:shadow-xl transition-all duration-300 group"
-          >
-            <Link to="/reservas" className="flex items-center space-x-2">
-              <div className="relative">
-                <ShoppingBag className="h-6 w-6" />
-                {selectedServices.length > 0 && (
-                  <motion.div
-                    initial={{ scale: 0 }}
+      {/* Floating cart button — shown only when there are selected services */}
+      {selectedServices.length > 0 && (
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          exit={{ scale: 0, opacity: 0 }}
+          className="fixed bottom-24 lg:bottom-8 right-4 sm:right-6 z-40"
+        >
+          <div className="relative group">
+            <Button
+              asChild
+              size="lg"
+              className="bg-gradient-rose-gold text-white rounded-2xl shadow-rose-lg hover:shadow-rose-xl pr-5 pl-4"
+            >
+              <Link to="/reservas" className="flex items-center gap-2">
+                <div className="relative">
+                  <ShoppingBag className="h-5 w-5" />
+                  <motion.span
+                    key={selectedServices.length}
+                    initial={{ scale: 0.5 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-2 -right-2 bg-white text-pink-600 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md"
+                    className="absolute -top-2 -right-2 bg-white text-brand-rose rounded-full w-5 h-5 flex items-center justify-center text-[10px] font-bold shadow"
                   >
                     {selectedServices.length}
-                  </motion.div>
-                )}
-              </div>
-              <span className="hidden sm:inline font-medium">Ver Reservas ({selectedServices.length})</span>
-            </Link>
-          </Button>
-          
-          {/* Vista previa de servicios */}
-          {selectedServices.length > 0 && (
-            <motion.div
-              initial={{ opacity: 0, x: -20, scale: 0.8 }}
-              whileHover={{ opacity: 1, x: 0, scale: 1 }}
-              className="absolute bottom-full left-0 mb-2 bg-white rounded-lg shadow-xl p-4 w-80 max-h-60 overflow-y-auto opacity-0 group-hover:opacity-100 transition-all duration-300 border border-gray-200"
-            >
-              <h4 className="font-semibold text-gray-800 mb-3 flex items-center">
-                <ShoppingBag className="h-4 w-4 mr-2 text-pink-500" />
-                Servicios Seleccionados ({selectedServices.length})
-              </h4>
-              <div className="space-y-2">
-                {selectedServices.slice(0, 3).map((service, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-800 truncate">{service.title}</p>
-                      <p className="text-xs text-gray-500">{service.duration}</p>
-                    </div>
-                    <div className="text-sm font-bold text-pink-600 ml-2">
-                      {service.price}
-                    </div>
+                  </motion.span>
+                </div>
+                <span className="font-semibold">Reservar</span>
+              </Link>
+            </Button>
+
+            {/* Popover preview on hover */}
+            <div className="absolute bottom-full right-0 mb-3 w-72 bg-white rounded-2xl shadow-rose-lg border border-brand-rose-100 p-4 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 translate-y-2 group-hover:translate-y-0">
+              <p className="text-xs font-bold uppercase tracking-wide text-brand-rose mb-3">
+                Servicios seleccionados ({selectedServices.length})
+              </p>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {selectedServices.slice(0, 4).map((service, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2 py-1.5 border-b border-brand-rose-50 last:border-0">
+                    <p className="text-sm text-brand-dark font-medium truncate">{service.title}</p>
+                    <span className="text-xs font-bold text-brand-rose shrink-0">{service.price}</span>
                   </div>
                 ))}
-                {selectedServices.length > 3 && (
-                  <div className="text-center text-xs text-gray-500 pt-2 border-t">
-                    +{selectedServices.length - 3} servicios más
-                  </div>
+                {selectedServices.length > 4 && (
+                  <p className="text-xs text-brand-mid text-center pt-1">+{selectedServices.length - 4} más</p>
                 )}
               </div>
-              <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-medium text-gray-600">Total:</span>
-                  <span className="text-lg font-bold gradient-text">
-                    {selectedServices.reduce((total, service) => {
-                      const price = parseFloat(service.price.replace('€', '').replace(',', '.'));
-                      return total + price;
-                    }, 0).toFixed(2).replace('.', ',')}€
-                  </span>
-                </div>
+              <div className="mt-3 pt-3 border-t border-brand-rose-100 flex justify-between items-center">
+                <span className="text-sm text-brand-mid">Total est.</span>
+                <span className="font-bold gradient-text">
+                  {selectedServices.reduce((t, s) => t + parseFloat(s.price.replace('€', '').replace(',', '.')), 0).toFixed(2).replace('.', ',')}€
+                </span>
               </div>
-            </motion.div>
-          )}
-        </div>
-      </motion.div>
+            </div>
+          </div>
+        </motion.div>
+      )}
     </>
   );
 };

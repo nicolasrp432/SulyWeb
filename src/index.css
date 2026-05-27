@@ -2,106 +2,218 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ============================================================
+   DESIGN TOKENS — Suly Pretty Nails
+   ============================================================ */
 :root {
+  /* Brand colors */
   --primary-pink: #f8b4c4;
   --primary-rose: #e91e63;
   --primary-gold: #d4af37;
   --secondary-cream: #faf7f2;
   --accent-purple: #8b5a8c;
-  --neutral-dark: #2d2d2d;
+  --neutral-dark: #1e1e2e;
+  --neutral-mid: #4a4a5a;
   --neutral-light: #f5f5f5;
+
+  /* Extended rose scale */
+  --rose-50: #fff1f5;
+  --rose-100: #ffe4ec;
+  --rose-200: #ffb3cc;
+  --rose-500: #e91e63;
+  --rose-600: #c2185b;
+  --rose-900: #6a0032;
+
+  /* Gold scale */
+  --gold-light: #f5e6a3;
+  --gold-400: #d4af37;
+  --gold-600: #a07d00;
+
+  /* Surface tokens */
+  --surface-glass: rgba(255, 255, 255, 0.82);
+  --surface-glass-dark: rgba(30, 30, 46, 0.75);
+  --surface-card: #ffffff;
+  --surface-muted: #fdf8fb;
+
+  /* Elevation shadows */
+  --shadow-xs: 0 1px 3px rgba(233, 30, 99, 0.06);
+  --shadow-sm: 0 4px 12px rgba(233, 30, 99, 0.08);
+  --shadow-md: 0 8px 24px rgba(233, 30, 99, 0.12);
+  --shadow-lg: 0 20px 48px rgba(233, 30, 99, 0.15);
+  --shadow-xl: 0 32px 64px rgba(233, 30, 99, 0.18);
+  --shadow-gold: 0 8px 24px rgba(212, 175, 55, 0.18);
+
+  /* Spacing scale */
+  --section-y: clamp(3.5rem, 8vw, 6rem);
+  --section-x: clamp(1rem, 5vw, 2rem);
+
+  /* Radius */
+  --radius: 0.75rem;
+  --radius-card: 1.25rem;
+  --radius-pill: 9999px;
 }
 
+/* ============================================================
+   BASE RESET
+   ============================================================ */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: 'Poppins', sans-serif;
-  line-height: 1.6;
+  font-size: clamp(0.9375rem, 1.5vw, 1rem);
+  line-height: 1.65;
   color: var(--neutral-dark);
   background-color: #ffffff;
   overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
   font-family: 'Montserrat', sans-serif;
-  font-weight: 600;
-  line-height: 1.2;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  color: var(--neutral-dark);
 }
 
+/* Fluid heading scale */
+h1 { font-size: clamp(2rem, 5.5vw, 3.75rem); }
+h2 { font-size: clamp(1.5rem, 3.5vw, 2.5rem); }
+h3 { font-size: clamp(1.125rem, 2.5vw, 1.5rem); }
+
+/* ============================================================
+   UTILITY CLASSES
+   ============================================================ */
+
+/* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, var(--primary-rose), var(--primary-gold));
+  background: linear-gradient(135deg, var(--primary-rose) 0%, var(--primary-gold) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+/* Glassmorphism surfaces */
 .glass-effect {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: var(--surface-glass);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
 }
 
+.glass-effect-dark {
+  background: var(--surface-glass-dark);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+/* Hero gradient overlay */
 .hero-gradient {
-  background: linear-gradient(135deg, 
-    rgba(248, 180, 196, 0.9) 0%, 
-    rgba(233, 30, 99, 0.8) 50%, 
-    rgba(212, 175, 55, 0.9) 100%);
+  background: linear-gradient(
+    160deg,
+    rgba(233, 30, 99, 0.72) 0%,
+    rgba(180, 20, 75, 0.82) 40%,
+    rgba(30, 20, 40, 0.88) 100%
+  );
 }
 
+/* Section backgrounds */
+.bg-section-cream {
+  background: linear-gradient(160deg, var(--rose-50) 0%, #fff8f0 100%);
+}
+
+/* Card hover elevation */
 .service-card-hover {
-  transition: all 0.3s ease;
+  transition: transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.28s ease;
+  will-change: transform;
 }
 
 .service-card-hover:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 20px 40px rgba(233, 30, 99, 0.2);
+  transform: translateY(-6px) scale(1.01);
+  box-shadow: var(--shadow-lg);
 }
 
+/* Floating animation — refined (smaller amplitude) */
 .floating-animation {
-  animation: float 6s ease-in-out infinite;
+  animation: float 7s ease-in-out infinite;
 }
 
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
+  50%       { transform: translateY(-12px); }
 }
 
+/* Pulse glow */
 .pulse-glow {
-  animation: pulse-glow 2s infinite;
+  animation: pulse-glow 2.4s ease-in-out infinite;
 }
 
 @keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 20px rgba(233, 30, 99, 0.3); }
-  50% { box-shadow: 0 0 40px rgba(233, 30, 99, 0.6); }
+  0%, 100% { box-shadow: 0 0 16px rgba(233, 30, 99, 0.25); }
+  50%       { box-shadow: 0 0 36px rgba(233, 30, 99, 0.55); }
 }
 
-.scroll-smooth {
-  scroll-behavior: smooth;
+/* Shimmer loading skeleton */
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(248, 180, 196, 0.15) 25%,
+    rgba(248, 180, 196, 0.35) 50%,
+    rgba(248, 180, 196, 0.15) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: var(--radius);
 }
 
-::-webkit-scrollbar-track {
-  background: var(--neutral-light);
+/* Pill badge */
+.badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
 }
 
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, var(--primary-rose), var(--primary-gold));
+/* Focus visible ring */
+:focus-visible {
+  outline: 2px solid var(--primary-rose);
+  outline-offset: 2px;
   border-radius: 4px;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, var(--primary-gold), var(--primary-rose));
+/* ============================================================
+   CUSTOM SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--neutral-light); }
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(160deg, var(--primary-rose), var(--primary-gold));
+  border-radius: 3px;
 }
-
-/* ========================
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(160deg, var(--rose-600), var(--gold-600));
+}/* ========================
    WHY CHOOSE US SLIDER
    ======================== */
 .why-choose-section {
@@ -633,10 +745,35 @@ h1, h2, h3, h4, h5, h6 {
     }
 }
 /* Mobile optimizations */
+/* ============================================================
+   MOBILE OPTIMIZATIONS
+   ============================================================ */
 @media (max-width: 768px) {
   .hero-gradient {
-    background: linear-gradient(180deg, 
-      rgba(248, 180, 196, 0.95) 0%, 
-      rgba(233, 30, 99, 0.9) 100%);
+    background: linear-gradient(
+      180deg,
+      rgba(233, 30, 99, 0.65) 0%,
+      rgba(30, 20, 40, 0.92) 100%
+    );
+  }
+
+  /* Larger tap targets */
+  button, a, [role="button"] {
+    min-height: 44px;
+  }
+
+  /* Prevent text zoom on input focus (iOS) */
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* ============================================================
+   DESKTOP TYPE OVERRIDE (Tailwind override fix)
+   ============================================================ */
+@media (min-width: 1024px) {
+  .lg\:text-5xl {
+    font-size: 3rem;
+    line-height: 1.15;
   }
 }
