@@ -332,12 +332,7 @@ const Booking = () => {
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
     const [{ data: bookingData }, { data: blockData }] = await Promise.all([
-      supabase
-        .from('bookings')
-        .select('booking_time')
-        .eq('booking_date', dateStr)
-        .eq('location_id', selectedLocation.id)
-        .neq('status', 'cancelled'),
+      supabase.rpc('get_booked_slots', { p_location_id: selectedLocation.id, p_date: dateStr }),
       supabase
         .from('schedule_blocks')
         .select('start_time, end_time')
@@ -357,9 +352,11 @@ const Booking = () => {
   useEffect(() => {
     if (!selectedDate || !selectedLocation) return;
 
+    // Note: anonymous clients can only subscribe to tables they may read under
+    // RLS. Booking PII is locked down, so live updates come from schedule_blocks;
+    // slot conflicts are additionally enforced server-side by create_public_booking.
     const channel = supabase
       .channel('booking-slots-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => loadSlots())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => loadSlots())
       .subscribe();
 
@@ -401,36 +398,36 @@ const Booking = () => {
     setSubmitting(true);
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
-    const bookingPayload = {
-      location_id: selectedLocation.id,
-      booking_date: dateStr,
-      booking_time: selectedTime + ':00',
-      client_name: form.name,
-      client_phone: form.phone,
-      client_email: form.email || null,
-      notes: form.notes || null,
-      status: 'confirmed',
-      origin: 'online',
-    };
 
-    const { data: booking, error: bookingErr } = await supabase
-      .from('bookings')
-      .insert([bookingPayload])
-      .select()
-      .single();
+    /* Atomic, server-validated creation: prevents double-booking and respects
+       admin blocks, without exposing the bookings table to anonymous clients. */
+    const { data: bookingId, error: bookingErr } = await supabase.rpc('create_public_booking', {
+      p_location_id: selectedLocation.id,
+      p_booking_date: dateStr,
+      p_booking_time: selectedTime,
+      p_client_name: form.name,
+      p_client_phone: form.phone,
+      p_client_email: form.email || null,
+      p_notes: form.notes || null,
+      p_service_ids: selectedServices.map((s) => s.id),
+    });
 
     if (bookingErr) {
       setSubmitting(false);
-      alert('Error al crear la reserva: ' + bookingErr.message);
+      const msg = bookingErr.message || '';
+      if (msg.includes('SLOT_TAKEN')) {
+        alert('Lo sentimos, ese horario acaba de ocuparse. Por favor, elige otra hora.');
+        loadSlots();
+      } else if (msg.includes('SLOT_BLOCKED')) {
+        alert('Ese horario ya no está disponible. Por favor, elige otra hora.');
+        loadSlots();
+      } else {
+        alert('No se pudo crear la reserva. Por favor, inténtalo de nuevo.');
+      }
       return;
     }
 
-    /* Insert booking_services */
-    if (selectedServices.length > 0) {
-      await supabase.from('booking_services').insert(
-        selectedServices.map((s) => ({ booking_id: booking.id, service_id: s.id }))
-      );
-    }
+    const booking = { id: bookingId };
 
     /* Email notifications — emailService expects (bookingData, services[], location) */
     try {

@@ -56,9 +56,9 @@ const STATUS_OPTIONS = [
 ];
 
 const SOURCE_OPTIONS = [
-  { value: 'web', label: 'Web' },
-  { value: 'phone', label: 'Teléfono' },
+  { value: 'online', label: 'Online (web)' },
   { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'presencial', label: 'Presencial' },
   { value: 'admin', label: 'Admin' }
 ];
 
@@ -75,7 +75,7 @@ const DEFAULT_BOOKING_META = {
   duration_minutes: 30,
   appointment_type: '',
   internal_notes: '',
-  source: 'web'
+  source: 'online'
 };
 
 const STATUS_STYLES = {
@@ -390,7 +390,7 @@ const CalendarPage = () => {
     try {
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
-        .select('id,location_id,booking_date,booking_time,client_name,client_phone,client_email,notes,created_at')
+        .select('id,location_id,booking_date,booking_time,client_name,client_phone,client_email,notes,notes_admin,status,assigned_to,duration_minutes,appointment_type,origin,created_at')
         .gte('booking_date', dateRange.start)
         .lte('booking_date', dateRange.end)
         .order('booking_date', { ascending: true })
@@ -400,6 +400,20 @@ const CalendarPage = () => {
 
       const safeBookings = bookingsData || [];
       setBookings(safeBookings);
+
+      // Booking metadata now lives directly on the bookings row (single source of truth).
+      const metaMap = safeBookings.reduce((acc, row) => {
+        acc[row.id] = {
+          status: row.status || DEFAULT_BOOKING_META.status,
+          assigned_to: row.assigned_to || '',
+          duration_minutes: row.duration_minutes || DEFAULT_BOOKING_META.duration_minutes,
+          appointment_type: row.appointment_type || '',
+          internal_notes: row.notes_admin || '',
+          source: row.origin || DEFAULT_BOOKING_META.source
+        };
+        return acc;
+      }, {});
+      setBookingMetaMap(metaMap);
 
       const bookingIds = safeBookings.map((booking) => booking.id);
 
@@ -418,39 +432,8 @@ const CalendarPage = () => {
         }, {});
 
         setBookingServicesMap(servicesMap);
-
-        if (metaTableAvailable) {
-          const { data: metaData, error: metaError } = await supabase
-            .from('bookings_admin_meta')
-            .select('booking_id,status,assigned_to,duration_minutes,appointment_type,internal_notes,source')
-            .in('booking_id', bookingIds);
-
-          if (metaError) {
-            if (metaError.message?.toLowerCase().includes('bookings_admin_meta')) {
-              setMetaTableAvailable(false);
-              setBookingMetaMap({});
-            } else {
-              throw metaError;
-            }
-          } else {
-            const metaMap = (metaData || []).reduce((acc, row) => {
-              acc[row.booking_id] = {
-                status: row.status || DEFAULT_BOOKING_META.status,
-                assigned_to: row.assigned_to || '',
-                duration_minutes: row.duration_minutes || DEFAULT_BOOKING_META.duration_minutes,
-                appointment_type: row.appointment_type || '',
-                internal_notes: row.internal_notes || '',
-                source: row.source || DEFAULT_BOOKING_META.source
-              };
-              return acc;
-            }, {});
-
-            setBookingMetaMap(metaMap);
-          }
-        }
       } else {
         setBookingServicesMap({});
-        setBookingMetaMap({});
       }
 
       if (blocksTableAvailable) {
@@ -515,7 +498,6 @@ const CalendarPage = () => {
       .channel('admin-calendar-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, () => fetchCalendarData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings_admin_meta' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
         supabase
@@ -639,91 +621,37 @@ const CalendarPage = () => {
     }
 
     try {
+      const bookingRow = {
+        location_id: detailForm.location_id,
+        booking_date: detailForm.booking_date,
+        booking_time: detailForm.booking_time + ':00',
+        client_name: detailForm.client_name,
+        client_phone: detailForm.client_phone,
+        client_email: detailForm.client_email || null,
+        notes: detailForm.notes || null,
+        notes_admin: detailForm.internal_notes || null,
+        status: detailForm.status,
+        assigned_to: detailForm.assigned_to || null,
+        duration_minutes: Number(detailForm.duration_minutes) || 30,
+        appointment_type: detailForm.appointment_type || null,
+        origin: detailForm.source || 'admin'
+      };
+
       if (isCreatingBooking) {
-        const { data: createdBooking, error: createError } = await supabase
+        const { error: createError } = await supabase
           .from('bookings')
-          .insert([{
-            location_id: Number(detailForm.location_id),
-            booking_date: detailForm.booking_date,
-            booking_time: detailForm.booking_time + ':00',
-            client_name: detailForm.client_name,
-            client_phone: detailForm.client_phone,
-            client_email: detailForm.client_email,
-            notes: detailForm.notes,
-            status: detailForm.status,
-            origin: 'presencial'
-          }])
-          .select('id')
-          .single();
+          .insert([bookingRow]);
 
         if (createError) throw createError;
-
-        if (metaTableAvailable && createdBooking?.id) {
-          const { error: metaError } = await supabase
-            .from('bookings_admin_meta')
-            .upsert([{
-              booking_id: createdBooking.id,
-              status: detailForm.status,
-              assigned_to: detailForm.assigned_to || null,
-              duration_minutes: Number(detailForm.duration_minutes) || 30,
-              appointment_type: detailForm.appointment_type || null,
-              internal_notes: detailForm.internal_notes || null,
-              source: detailForm.source || 'admin'
-            }], { onConflict: 'booking_id' });
-
-          if (metaError) {
-            if (metaError.message?.toLowerCase().includes('bookings_admin_meta')) {
-              setMetaTableAvailable(false);
-            } else {
-              throw metaError;
-            }
-          }
-        }
 
         toast({ title: 'Cita creada', description: 'La cita fue creada correctamente' });
       } else if (detailForm.id) {
         const { error: bookingError } = await supabase
           .from('bookings')
-          .update({
-            location_id: Number(detailForm.location_id),
-            booking_date: detailForm.booking_date,
-            booking_time: detailForm.booking_time + ':00',
-            client_name: detailForm.client_name,
-            client_phone: detailForm.client_phone,
-            client_email: detailForm.client_email,
-            notes: detailForm.notes,
-            status: detailForm.status
-          })
+          .update(bookingRow)
           .eq('id', detailForm.id);
 
         if (bookingError) throw bookingError;
-
-        if (metaTableAvailable) {
-          const { error: metaError } = await supabase
-            .from('bookings_admin_meta')
-            .upsert([{
-              booking_id: detailForm.id,
-              status: detailForm.status,
-              assigned_to: detailForm.assigned_to || null,
-              duration_minutes: Number(detailForm.duration_minutes) || 30,
-              appointment_type: detailForm.appointment_type || null,
-              internal_notes: detailForm.internal_notes || null,
-              source: detailForm.source || 'web'
-            }], { onConflict: 'booking_id' });
-
-          if (metaError) {
-            if (metaError.message?.toLowerCase().includes('bookings_admin_meta')) {
-              setMetaTableAvailable(false);
-              toast({
-                variant: 'destructive',
-                title: 'Falta tabla de metadatos',
-                description: 'Ejecuta la migración SQL para guardar estado y responsable.'
-              });
-            } else {
-              throw metaError;
-            }
-          }
-        }
 
         toast({ title: 'Cita actualizada', description: 'Los cambios se guardaron correctamente' });
       }
@@ -742,31 +670,10 @@ const CalendarPage = () => {
 
   const updateBookingStatus = useCallback(async (bookingId, status) => {
     try {
-      // 1. Update main booking status for back compatibility
-      const { error: baseError } = await supabase
+      const { error } = await supabase
         .from('bookings')
         .update({ status })
         .eq('id', bookingId);
-      if (baseError) throw baseError;
-
-      if (!metaTableAvailable) {
-        fetchCalendarData();
-        return;
-      }
-
-      const currentMeta = bookingMetaById(bookingId);
-      const { error } = await supabase
-        .from('bookings_admin_meta')
-        .upsert([{
-          booking_id: bookingId,
-          status,
-          assigned_to: currentMeta.assigned_to || null,
-          duration_minutes: currentMeta.duration_minutes || 30,
-          appointment_type: currentMeta.appointment_type || null,
-          internal_notes: currentMeta.internal_notes || null,
-          source: currentMeta.source || 'web'
-        }], { onConflict: 'booking_id' });
-
       if (error) throw error;
 
       fetchCalendarData();
@@ -777,7 +684,7 @@ const CalendarPage = () => {
         description: error.message
       });
     }
-  }, [bookingMetaById, fetchCalendarData, metaTableAvailable, toast]);
+  }, [fetchCalendarData, toast]);
 
   const moveBooking = useCallback(async (bookingId, bookingDate, bookingTime) => {
     try {
@@ -817,7 +724,7 @@ const CalendarPage = () => {
           block_date: date,
           start_time: time + ':00',
           end_time: addMinutes(time, 30) + ':00',
-          location_id: filterLocation === 'all' ? null : Number(filterLocation),
+          location_id: filterLocation === 'all' ? null : filterLocation,
           reason: 'Bloqueo manual desde calendario'
         }]);
 
