@@ -38,6 +38,18 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { CONFIG } from '@/constants';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import CalendarToolbar from '@/components/admin/calendar/CalendarToolbar';
+import CalendarFiltersDrawer from '@/components/admin/calendar/CalendarFiltersDrawer';
+import ActiveFiltersChips from '@/components/admin/calendar/ActiveFiltersChips';
+import TeamDayView from '@/components/admin/calendar/TeamDayView';
+import MobileStaffDayView from '@/components/admin/calendar/MobileStaffDayView';
+import MobileMonthView from '@/components/admin/calendar/MobileMonthView';
+import DayDetailSheet from '@/components/admin/calendar/DayDetailSheet';
+import NewBookingSheet from '@/components/admin/calendar/NewBookingSheet';
+import BookingDetailDialog from '@/components/admin/calendar/BookingDetailDialog';
+import EmailComposeModal from '@/components/admin/calendar/EmailComposeModal';
+import DayAgendaPanel from '@/components/admin/calendar/DayAgendaPanel';
+import { sendBookingConfirmationToUser } from '@/lib/emailService';
 
 const VIEW_MODES = {
   day: 'day',
@@ -174,8 +186,14 @@ const CalendarPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [viewMode, setViewMode] = useState(VIEW_MODES.week);
+  const [viewMode, setViewMode] = useState(VIEW_MODES.day);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [newBookingSheet, setNewBookingSheet] = useState(null);
+  const [daySheetDate, setDaySheetDate] = useState(null);
+  const [selectedAgendaDate, setSelectedAgendaDate] = useState(new Date());
+  const [emailModalBooking, setEmailModalBooking] = useState(null);
+  const blocksSectionRef = React.useRef(null);
 
   const [locations, setLocations] = useState([]);
   const [bookings, setBookings] = useState([]);
@@ -249,8 +267,9 @@ const CalendarPage = () => {
   }, []);
 
   useEffect(() => {
-    if (isMobile && viewMode === VIEW_MODES.week) {
-      setViewMode(VIEW_MODES.agenda);
+    // En móvil, semana y agenda colapsan a vista día (que usa MobileStaffDayView con tabs swipeables)
+    if (isMobile && (viewMode === VIEW_MODES.week || viewMode === VIEW_MODES.agenda)) {
+      setViewMode(VIEW_MODES.day);
     }
   }, [isMobile, viewMode]);
 
@@ -338,6 +357,22 @@ const CalendarPage = () => {
     const fromTable = staffMembers.map((member) => member.full_name).filter(Boolean);
     return Array.from(new Set([...fromMeta, ...fromTable])).sort((a, b) => a.localeCompare(b));
   }, [filteredBookings, staffMembers]);
+
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filterSearch?.trim()) count += 1;
+    if (filterLocation && filterLocation !== 'all') count += 1;
+    if (filterStatus && filterStatus !== 'all') count += 1;
+    if (filterResponsible && filterResponsible !== 'all') count += 1;
+    return count;
+  }, [filterSearch, filterLocation, filterStatus, filterResponsible]);
+
+  const clearAllFilters = useCallback(() => {
+    setFilterSearch('');
+    setFilterLocation('all');
+    setFilterStatus('all');
+    setFilterResponsible('all');
+  }, []);
 
   const activeBooking = useMemo(() => {
     if (!selectedBookingId) return null;
@@ -763,6 +798,138 @@ const CalendarPage = () => {
     }
   }, [fetchCalendarData, toast]);
 
+  // --- Sprint 3: acciones de cita en tiempo real ---
+
+  const confirmBookingAction = useCallback(async (booking) => {
+    if (!booking?.id) return;
+    await updateBookingStatus(booking.id, 'confirmed');
+    if (booking.client_email) {
+      try {
+        const services =
+          booking.services?.map((s) => ({ name: s.name, price: s.price })) ||
+          booking.booking_services?.map((bs) => ({
+            name: bs.services?.name,
+            price: bs.services?.price,
+          })).filter((s) => s.name) ||
+          [];
+        const location = locations.find((l) => String(l.id) === String(booking.location_id));
+        await sendBookingConfirmationToUser(
+          {
+            name: booking.client_name,
+            email: booking.client_email,
+            phone: booking.client_phone,
+            date: booking.booking_date,
+            time: booking.booking_time?.slice(0, 5),
+            notes: booking.notes || '',
+          },
+          services,
+          location
+        );
+        toast({ title: 'Cita confirmada', description: 'Correo de confirmación enviado.' });
+      } catch (e) {
+        console.error('Error enviando email:', e);
+        toast({ title: 'Cita confirmada', description: 'Estado actualizado (correo no enviado).' });
+      }
+    } else {
+      toast({ title: 'Cita confirmada' });
+    }
+  }, [updateBookingStatus, locations, toast]);
+
+  const completeBookingAction = useCallback(async (booking) => {
+    if (!booking?.id) return;
+    await updateBookingStatus(booking.id, 'completed');
+    toast({ title: 'Cita completada' });
+  }, [updateBookingStatus, toast]);
+
+  const cancelBookingAction = useCallback(async (booking) => {
+    if (!booking?.id) return;
+    await updateBookingStatus(booking.id, 'cancelled');
+    toast({ title: 'Cita cancelada' });
+  }, [updateBookingStatus, toast]);
+
+  const callBookingAction = useCallback((booking) => {
+    if (!booking?.client_phone) return;
+    window.location.href = `tel:${booking.client_phone.replace(/\s+/g, '')}`;
+  }, []);
+
+  const moveBookingTo = useCallback(async (bookingId, newTime) => {
+    if (!bookingId || !newTime) return;
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ booking_time: newTime + ':00' })
+        .eq('id', bookingId);
+      if (error) throw error;
+      toast({ title: 'Cita movida', description: `Nueva hora: ${newTime}` });
+      fetchCalendarData();
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'No se pudo mover la cita', description: e.message });
+    }
+  }, [fetchCalendarData, toast]);
+
+  const resizeBookingDuration = useCallback(async (bookingId, newDuration) => {
+    if (!bookingId || !newDuration) return;
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ duration_minutes: newDuration })
+        .eq('id', bookingId);
+      if (error) throw error;
+      toast({ title: 'Duración actualizada', description: `${newDuration} min` });
+      fetchCalendarData();
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'No se pudo cambiar la duración', description: e.message });
+    }
+  }, [fetchCalendarData, toast]);
+
+  const saveBookingEdits = useCallback(async (bookingId, formData) => {
+    if (!bookingId) return;
+    try {
+      const updatePayload = {
+        client_name: formData.client_name?.trim() || null,
+        client_phone: formData.client_phone?.trim() || null,
+        client_email: formData.client_email?.trim() || null,
+        location_id: formData.location_id ? Number(formData.location_id) : null,
+        booking_date: formData.booking_date || null,
+        booking_time: formData.booking_time
+          ? (formData.booking_time.length === 5 ? formData.booking_time + ':00' : formData.booking_time)
+          : null,
+        appointment_type: formData.appointment_type?.trim() || null,
+        notes: formData.notes || null,
+        notes_admin: formData.internal_notes || null,
+        assigned_to: formData.assigned_to || null,
+        duration_minutes: Number(formData.duration_minutes) || 30,
+        origin: formData.source || 'admin',
+      };
+
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update(updatePayload)
+        .eq('id', bookingId);
+      if (updateError) throw updateError;
+
+      // Sync booking_services if list changed
+      if (Array.isArray(formData.selectedServiceIds)) {
+        await supabase.from('booking_services').delete().eq('booking_id', bookingId);
+        if (formData.selectedServiceIds.length > 0) {
+          const rows = formData.selectedServiceIds.map((sid) => ({
+            booking_id: bookingId,
+            service_id: sid,
+          }));
+          const { error: bsError } = await supabase.from('booking_services').insert(rows);
+          if (bsError) throw bsError;
+        }
+      }
+
+      toast({ title: 'Cambios guardados' });
+      fetchCalendarData();
+      setSelectedBookingId(null);
+      setIsDetailDialogOpen(false);
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'No se pudo guardar', description: e.message });
+    }
+  }, [fetchCalendarData, toast]);
+
   const getHeaderLabel = useMemo(() => {
     if (viewMode === VIEW_MODES.day) return formatHumanDate(currentDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
     if (viewMode === VIEW_MODES.week) {
@@ -825,28 +992,14 @@ const CalendarPage = () => {
     await moveBooking(draggedBookingId, date, booking.booking_time?.slice(0, 5));
   }, [draggedBookingId, enrichedBookings, moveBooking]);
 
-  const beginCreateBooking = useCallback((date = toISODate(currentDate), time = CONFIG.BOOKING.TIME_SLOTS[0]) => {
-    setIsCreatingBooking(true);
-    setSelectedBookingId(null);
-    setShowAdvanced(false);
-    setIsDetailDialogOpen(true);
-    setDetailForm({
-      id: null,
-      location_id: locations[0] ? String(locations[0].id) : '',
-      booking_date: date,
-      booking_time: time,
-      client_name: '',
-      client_phone: '',
-      client_email: '',
-      notes: '',
-      status: 'pending',
-      assigned_to: '',
-      duration_minutes: 30,
-      appointment_type: '',
-      internal_notes: '',
-      source: 'admin'
+  const beginCreateBooking = useCallback((date = toISODate(currentDate), time = CONFIG.BOOKING.TIME_SLOTS[0], assignedTo = '') => {
+    // Sprint 3: el flujo de creación va siempre al NewBookingSheet (móvil y desktop).
+    setNewBookingSheet({
+      date: typeof date === 'string' ? date : toISODate(date),
+      time: time && time.length === 5 ? time : (time?.slice(0, 5) || '10:00'),
+      assignedTo: assignedTo || '',
     });
-  }, [currentDate, locations]);
+  }, [currentDate]);
 
   // WhatsApp recordatorios template builder
   const getWaTemplateText = (templateType, booking) => {
@@ -1140,12 +1293,17 @@ const CalendarPage = () => {
             const isOtherMonth = dayDate.getMonth() !== currentMonth;
             const isToday = iso === toISODate(new Date());
 
+            const selectedIso = selectedAgendaDate ? toISODate(selectedAgendaDate) : null;
+            const isSelected = iso === selectedIso;
             return (
               <div
                 key={iso}
-                className={`min-h-[110px] rounded-xl border p-2 flex flex-col justify-between transition-all ${
+                className={`min-h-[110px] rounded-xl border p-2 flex flex-col justify-between transition-all cursor-pointer ${
                   isOtherMonth ? 'bg-zinc-50/50 text-admin-muted border-zinc-200/50' : 'bg-white border-admin-border'
-                } ${isToday ? 'border-brand-rose ring-1 ring-brand-rose/25 bg-brand-rose-50/5 shadow-rose-xs' : 'hover:shadow-sm'}`}
+                } ${isToday ? 'border-brand-rose ring-1 ring-brand-rose/25 bg-brand-rose-50/5 shadow-rose-xs' : 'hover:shadow-sm'} ${
+                  isSelected && !isToday ? 'ring-2 ring-brand-rose/60' : ''
+                }`}
+                onClick={() => setSelectedAgendaDate(dayDate)}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={() => handleDropOnMonthDay(iso)}
               >
@@ -1155,7 +1313,9 @@ const CalendarPage = () => {
                     className={`text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center ${
                       isToday ? 'bg-brand-rose text-white shadow-rose-xs' : 'text-admin-text hover:bg-admin-surface'
                     }`}
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedAgendaDate(dayDate);
                       setSelectedDay(iso);
                       setCurrentDate(dayDate);
                     }}
@@ -1266,9 +1426,73 @@ const CalendarPage = () => {
       );
     }
 
-    if (viewMode === VIEW_MODES.day) return renderDayView();
+    if (viewMode === VIEW_MODES.day) {
+      const dayProps = {
+        date: currentDate,
+        bookings: filteredBookings,
+        blocks: timeBlocks,
+        staffMembers,
+        businessHours,
+        onBookingClick: openBookingDetail,
+        onSlotClick: (date, time, staff) => {
+          setNewBookingSheet({
+            date: toISODate(date),
+            time,
+            assignedTo: staff?.full_name || '',
+          });
+        },
+        onBlockClick: removeTimeBlock,
+        onMoveBooking: moveBookingTo,
+        onResizeBooking: resizeBookingDuration,
+      };
+      const wrapperCls = 'rounded-2xl border border-admin-border bg-white shadow-sm overflow-hidden flex flex-col min-h-[60vh]';
+      return (
+        <div className={wrapperCls}>
+          {isMobile
+            ? <MobileStaffDayView {...dayProps} />
+            : <TeamDayView {...dayProps} />}
+        </div>
+      );
+    }
     if (viewMode === VIEW_MODES.week) return renderWeekView();
-    if (viewMode === VIEW_MODES.month) return renderMonthView();
+    if (viewMode === VIEW_MODES.month) {
+      const monthGrid = isMobile ? (
+        <div className="rounded-2xl border border-admin-border bg-white shadow-sm overflow-hidden">
+          <MobileMonthView
+            date={currentDate}
+            bookings={filteredBookings}
+            blocks={timeBlocks}
+            selectedDate={selectedAgendaDate}
+            onDayClick={(d) => {
+              setSelectedAgendaDate(d);
+              setDaySheetDate(d);
+            }}
+          />
+        </div>
+      ) : renderMonthView();
+
+      return (
+        <div className="space-y-4">
+          {monthGrid}
+          <DayAgendaPanel
+            date={selectedAgendaDate}
+            bookings={filteredBookings}
+            onBookingClick={openBookingDetail}
+            onNewBooking={(d) => setNewBookingSheet({
+              date: toISODate(d || selectedAgendaDate),
+              time: '10:00',
+              assignedTo: '',
+            })}
+            onConfirm={confirmBookingAction}
+            onComplete={completeBookingAction}
+            onCancel={cancelBookingAction}
+            onWa={handleOpenWaModal}
+            onCall={callBookingAction}
+            onEmail={(b) => setEmailModalBooking(b)}
+          />
+        </div>
+      );
+    }
     return renderAgendaView();
   };
 
@@ -1285,29 +1509,45 @@ const CalendarPage = () => {
         />
       </Helmet>
 
-      <div className="max-w-7xl mx-auto space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h1 className="text-xl font-bold text-admin-text">Calendario</h1>
-            <p className="text-sm text-admin-muted mt-0.5">Control de agenda, disponibilidad y responsables.</p>
-          </div>
+      <CalendarToolbar
+        date={currentDate}
+        viewMode={viewMode}
+        realtimeConnected={realtimeConnected}
+        activeFilterCount={activeFilterCount}
+        isMobile={isMobile}
+        onPrev={() => moveCalendarCursor('prev')}
+        onNext={() => moveCalendarCursor('next')}
+        onToday={() => setCurrentDate(new Date())}
+        onViewChange={setViewMode}
+        onOpenFilters={() => setFiltersOpen(true)}
+        onNewBooking={() => setNewBookingSheet({ date: toISODate(currentDate), time: '10:00', assignedTo: '' })}
+        onBlock={() => {
+          setIsHoursDialogOpen(true);
+          setTimeout(() => {
+            blocksSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }, 200);
+        }}
+        onRefresh={fetchCalendarData}
+        onOpenHours={() => setIsHoursDialogOpen(true)}
+      />
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className={`text-[10px] font-bold px-2 py-1 rounded-full border transition-all ${
-              realtimeConnected
-                ? 'text-emerald-600 border-emerald-200/50 bg-emerald-50'
-                : 'text-amber-600 border-amber-200/50 bg-amber-50 animate-pulse'
-            }`}>
-              {realtimeConnected ? '🟢 Tiempo real' : '🟡 Reconectando...'}
-            </span>
-            <Button variant="outline" size="sm" onClick={fetchCalendarData}>
-              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Actualizar
-            </Button>
-          </div>
-        </div>
+      <div className="max-w-7xl mx-auto pt-2">
+        <ActiveFiltersChips
+          filterSearch={filterSearch}
+          filterLocation={filterLocation}
+          filterStatus={filterStatus}
+          filterResponsible={filterResponsible}
+          locations={locations}
+          statusOptions={STATUS_OPTIONS}
+          onClearSearch={() => setFilterSearch('')}
+          onClearLocation={() => setFilterLocation('all')}
+          onClearStatus={() => setFilterStatus('all')}
+          onClearResponsible={() => setFilterResponsible('all')}
+          onClearAll={clearAllFilters}
+        />
 
         {(!metaTableAvailable || !blocksTableAvailable || !staffTableAvailable) ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-800 flex items-start gap-3 shadow-sm">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-start gap-3 shadow-sm mb-3">
             <AlertCircle className="h-5 w-5 mt-0.5 text-amber-600 shrink-0" />
             <div>
               <p className="font-bold text-sm">Modo de compatibilidad activo</p>
@@ -1318,320 +1558,117 @@ const CalendarPage = () => {
           </div>
         ) : null}
 
-        <div className="rounded-2xl border border-admin-border bg-white p-4 space-y-4 shadow-sm">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => moveCalendarCursor('prev')}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => moveCalendarCursor('next')}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" size="sm" className="h-8" onClick={() => setCurrentDate(new Date())}>Hoy</Button>
-              <span className="text-sm font-bold text-admin-text capitalize ml-2">{getHeaderLabel}</span>
-            </div>
-
-            <div className="flex items-center gap-1 bg-admin-bg p-0.5 rounded-lg border border-admin-border">
-              {[VIEW_MODES.day, VIEW_MODES.week, VIEW_MODES.month, VIEW_MODES.agenda].map((mode) => (
-                <Button
-                  key={mode}
-                  size="sm"
-                  variant="ghost"
-                  className={`h-7 px-3 text-xs font-semibold rounded-md transition-all ${
-                    viewMode === mode
-                      ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
-                      : 'text-admin-muted hover:text-admin-text'
-                  }`}
-                  onClick={() => setViewMode(mode)}
-                >
-                  {mode === VIEW_MODES.day ? <CalendarIcon className="h-3.5 w-3.5 mr-1" /> : null}
-                  {mode === VIEW_MODES.week ? <CalendarRange className="h-3.5 w-3.5 mr-1" /> : null}
-                  {mode === VIEW_MODES.month ? <CalendarDays className="h-3.5 w-3.5 mr-1" /> : null}
-                  {mode === VIEW_MODES.agenda ? <List className="h-3.5 w-3.5 mr-1" /> : null}
-                  {VIEW_LABELS[mode]}
-                </Button>
-              ))}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-            <div className="lg:col-span-2 relative">
-              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-admin-muted" />
-              <Input
-                className="pl-9 h-9 text-xs"
-                placeholder="Buscar por cliente, teléfono, email, responsable..."
-                value={filterSearch}
-                onChange={(event) => setFilterSearch(event.target.value)}
-              />
-            </div>
-
-            <select
-              value={filterLocation}
-              onChange={(e) => setFilterLocation(e.target.value)}
-              className="px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-            >
-              <option value="all">Todas las sedes</option>
-              {locations.map((l) => <option key={l.id} value={String(l.id)}>{l.name}</option>)}
-            </select>
-
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-            >
-              <option value="all">Todos los estados</option>
-              {STATUS_OPTIONS.map((status) => (
-                <option key={status.value} value={status.value}>{status.label}</option>
-              ))}
-            </select>
-
-            <select
-              value={filterResponsible}
-              onChange={(e) => setFilterResponsible(e.target.value)}
-              className="px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-            >
-              <option value="all">Responsable: Todos</option>
-              {responsibleOptions.map((resp) => (
-                <option key={resp} value={resp}>{resp}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-admin-muted pt-1 border-t border-admin-border/30">
-            <div className="flex flex-wrap items-center gap-3">
-              <span>Citas filtradas: <strong className="text-admin-text">{filteredBookings.length}</strong></span>
-              <span>· Bloqueos manuales: <strong className="text-admin-text">{timeBlocks.length}</strong></span>
-            </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <Button size="sm" variant="outline" className="h-8 border-zinc-300 text-zinc-700 hover:bg-zinc-50 font-bold" onClick={() => setIsHoursDialogOpen(true)}>
-                <Clock3 className="h-3.5 w-3.5 mr-1.5 text-zinc-500 shrink-0" /> Horarios del Salón
-              </Button>
-              <Button size="sm" className="h-8 bg-gradient-rose-gold text-white font-bold" onClick={() => beginCreateBooking()}>
-                <Plus className="h-3.5 w-3.5 mr-1" /> Nueva cita manual
-              </Button>
-            </div>
-          </div>
-        </div>
-
         {renderCalendarBody()}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-admin-muted px-1 pt-3">
+          <span>
+            Citas filtradas: <strong className="text-admin-text">{filteredBookings.length}</strong>
+            <span className="mx-1">·</span>
+            Bloqueos manuales: <strong className="text-admin-text">{timeBlocks.length}</strong>
+          </span>
+        </div>
       </div>
 
-      {/* Appointment Detail Dialog */}
-      <Dialog open={isDetailDialogOpen} onOpenChange={(open) => { if (!open) resetDetailDialog(); }}>
-        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto rounded-2xl border border-admin-border bg-white shadow-2xl p-6">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-admin-text">
-              {isCreatingBooking ? 'Crear Nueva Cita' : 'Detalle de Cita'}
-            </DialogTitle>
-            <DialogDescription className="text-xs text-admin-muted">
-              Gestiona todos los detalles, estado y responsable de la reserva en un único panel.
-            </DialogDescription>
-          </DialogHeader>
+      <CalendarFiltersDrawer
+        open={filtersOpen}
+        onClose={() => setFiltersOpen(false)}
+        filterSearch={filterSearch}
+        onFilterSearchChange={setFilterSearch}
+        filterLocation={filterLocation}
+        onFilterLocationChange={setFilterLocation}
+        filterStatus={filterStatus}
+        onFilterStatusChange={setFilterStatus}
+        filterResponsible={filterResponsible}
+        onFilterResponsibleChange={setFilterResponsible}
+        locations={locations}
+        statusOptions={STATUS_OPTIONS}
+        responsibleOptions={responsibleOptions}
+        onClearAll={clearAllFilters}
+      />
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Nombre del cliente *</Label>
-              <Input
-                value={detailForm.client_name}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, client_name: event.target.value }))}
-                placeholder="Nombre completo"
-                className="h-9 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Teléfono / Móvil *</Label>
-              <Input
-                value={detailForm.client_phone}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, client_phone: event.target.value }))}
-                placeholder="Ej: 612 345 678"
-                className="h-9 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Email</Label>
-              <Input
-                type="email"
-                value={detailForm.client_email}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, client_email: event.target.value }))}
-                placeholder="ejemplo@correo.com"
-                className="h-9 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Sede *</Label>
-              <select
-                value={detailForm.location_id}
-                onChange={(e) => setDetailForm((prev) => ({ ...prev, location_id: e.target.value }))}
-                className="w-full px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-              >
-                <option value="">Selecciona sede</option>
-                {locations.map((location) => (
-                  <option key={location.id} value={String(location.id)}>{location.name}</option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Fecha *</Label>
-              <Input
-                type="date"
-                value={detailForm.booking_date}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, booking_date: event.target.value }))}
-                className="h-9 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Hora *</Label>
-              <Input
-                type="time"
-                value={detailForm.booking_time}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, booking_time: event.target.value }))}
-                className="h-9 text-xs"
-              />
-            </div>
-          </div>
+      <NewBookingSheet
+        open={!!newBookingSheet}
+        onClose={() => setNewBookingSheet(null)}
+        isMobile={isMobile}
+        defaultDate={newBookingSheet?.date}
+        defaultTime={newBookingSheet?.time}
+        defaultAssignedTo={newBookingSheet?.assignedTo}
+        locations={locations}
+        responsibleOptions={responsibleOptions}
+        onCreated={() => fetchCalendarData()}
+      />
 
-          <div className="space-y-3 mt-3">
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Tipo / Nombre del Servicio</Label>
-              <Input
-                value={detailForm.appointment_type}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, appointment_type: event.target.value }))}
-                placeholder="Ej: Uñas acrílicas + diseño"
-                className="h-9 text-xs"
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs font-bold text-admin-text">Notas del cliente</Label>
-              <textarea
-                value={detailForm.notes}
-                onChange={(event) => setDetailForm((prev) => ({ ...prev, notes: event.target.value }))}
-                className="w-full min-h-[50px] rounded-xl border border-admin-border px-3 py-2 text-xs focus:outline-none focus:border-brand-rose resize-none text-gray-700 bg-gray-50/30"
-                placeholder="Comentarios o solicitudes especiales del cliente..."
-              />
-            </div>
-          </div>
+      <DayDetailSheet
+        open={!!daySheetDate}
+        onClose={() => setDaySheetDate(null)}
+        date={daySheetDate}
+        bookings={filteredBookings}
+        blocks={timeBlocks}
+        onBookingClick={(b) => { setDaySheetDate(null); openBookingDetail(b); }}
+        onConfirm={confirmBookingAction}
+        onComplete={completeBookingAction}
+        onCancel={cancelBookingAction}
+        onWa={handleOpenWaModal}
+        onCall={callBookingAction}
+        onEmail={(b) => { setDaySheetDate(null); setEmailModalBooking(b); }}
+        onNewBooking={() => {
+          if (!daySheetDate) return;
+          const iso = toISODate(daySheetDate);
+          setDaySheetDate(null);
+          setNewBookingSheet({ date: iso, time: '10:00', assignedTo: '' });
+        }}
+        onBlockFullDay={async () => {
+          if (!daySheetDate) return;
+          if (!blocksTableAvailable) {
+            toast({ variant: 'destructive', title: 'Migración pendiente', description: 'La tabla schedule_blocks no está disponible.' });
+            return;
+          }
+          if (!confirm('¿Bloquear este día completo? Los clientes no podrán reservar.')) return;
+          try {
+            const { error } = await supabase.from('schedule_blocks').insert([{
+              block_date: toISODate(daySheetDate),
+              start_time: null,
+              end_time: null,
+              location_id: filterLocation === 'all' ? null : filterLocation,
+              reason: 'Bloqueo desde calendario',
+            }]);
+            if (error) throw error;
+            toast({ title: 'Día bloqueado' });
+            fetchCalendarData();
+            setDaySheetDate(null);
+          } catch (e) {
+            toast({ variant: 'destructive', title: 'No se pudo bloquear', description: e.message });
+          }
+        }}
+        onUnblock={(id) => removeTimeBlock(id)}
+        onOpenDayView={() => {
+          if (!daySheetDate) return;
+          setCurrentDate(daySheetDate);
+          setViewMode(VIEW_MODES.day);
+          setDaySheetDate(null);
+        }}
+      />
 
-          <div className="mt-4 pt-1">
-            <button
-              type="button"
-              className="text-xs font-bold text-brand-rose hover:text-brand-rose/85 transition-colors flex items-center gap-1.5 focus:outline-none"
-              onClick={() => setShowAdvanced(!showAdvanced)}
-            >
-              {showAdvanced ? '🔼 Opciones básicas' : '🔽 Más opciones (Especialista, Estado, Notas internas...)'}
-            </button>
-          </div>
+      {/* Booking Detail Dialog (redesigned) */}
+      <BookingDetailDialog
+        open={isDetailDialogOpen && !isCreatingBooking}
+        onClose={resetDetailDialog}
+        booking={activeBooking}
+        locations={locations}
+        responsibleOptions={responsibleOptions}
+        onConfirm={confirmBookingAction}
+        onComplete={completeBookingAction}
+        onCancel={cancelBookingAction}
+        onOpenWa={handleOpenWaModal}
+        onOpenEmail={(b) => setEmailModalBooking(b)}
+        onSave={saveBookingEdits}
+      />
 
-          {showAdvanced && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-3 pt-3 border-t border-admin-border/30 animate-in fade-in slide-in-from-top-1 duration-150">
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-admin-text">Especialista Responsable</Label>
-                <Input
-                  list="staff-options"
-                  value={detailForm.assigned_to}
-                  onChange={(event) => setDetailForm((prev) => ({ ...prev, assigned_to: event.target.value }))}
-                  placeholder="Escribe el nombre del especialista"
-                  className="h-9 text-xs"
-                />
-                <datalist id="staff-options">
-                  {responsibleOptions.map((name) => (
-                    <option key={name} value={name} />
-                  ))}
-                </datalist>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-admin-text">Estado</Label>
-                <select
-                  value={detailForm.status}
-                  onChange={(e) => setDetailForm((prev) => ({ ...prev, status: e.target.value }))}
-                  className="w-full px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-                >
-                  {STATUS_OPTIONS.map((status) => (
-                    <option key={status.value} value={status.value}>{status.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-admin-text">Duración (minutos)</Label>
-                <Input
-                  type="number"
-                  min="15"
-                  step="5"
-                  value={detailForm.duration_minutes}
-                  onChange={(event) => setDetailForm((prev) => ({ ...prev, duration_minutes: Number(event.target.value || 30) }))}
-                  className="h-9 text-xs"
-                />
-              </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-bold text-admin-text">Origen</Label>
-                <select
-                  value={detailForm.source}
-                  onChange={(e) => setDetailForm((prev) => ({ ...prev, source: e.target.value }))}
-                  className="w-full px-3 h-9 bg-admin-sidebar border border-admin-border rounded-xl text-admin-text text-xs focus:outline-none focus:border-brand-rose transition-colors"
-                >
-                  {SOURCE_OPTIONS.map((source) => (
-                    <option key={source.value} value={source.value}>{source.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="sm:col-span-2 space-y-1">
-                <Label className="text-xs font-bold text-admin-text">Notas internas (privadas)</Label>
-                <textarea
-                  value={detailForm.internal_notes}
-                  onChange={(event) => setDetailForm((prev) => ({ ...prev, internal_notes: event.target.value }))}
-                  className="w-full min-h-[60px] rounded-xl border border-admin-border px-3 py-2 text-xs focus:outline-none focus:border-brand-rose resize-none text-gray-700 bg-gray-50/30"
-                  placeholder="Comentarios de uso interno para el salón o especialista..."
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Quick Actions Footer */}
-          {!isCreatingBooking ? (
-            <div className="mt-4 pt-3 border-t border-admin-border/50 flex flex-wrap items-center gap-2">
-              <Button variant="outline" size="sm" className="h-8 text-xs hover:text-brand-rose border-admin-border bg-gray-50/20" onClick={() => setDetailForm((p) => ({ ...p, status: 'confirmed' }))}>Confirmar</Button>
-              <Button variant="outline" size="sm" className="h-8 text-xs hover:text-emerald-600 border-admin-border bg-gray-50/20" onClick={() => setDetailForm((p) => ({ ...p, status: 'completed' }))}>Completar</Button>
-              <Button variant="outline" size="sm" className="h-8 text-xs hover:text-rose-600 border-admin-border bg-gray-50/20" onClick={() => setDetailForm((p) => ({ ...p, status: 'cancelled' }))}>Cancelar</Button>
-
-              {detailForm.client_phone ? (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-xs border-green-200 text-green-600 hover:bg-green-50"
-                    onClick={() => {
-                      const currentBooking = enrichedBookings.find(b => b.id === selectedBookingId);
-                      if (currentBooking) handleOpenWaModal(currentBooking);
-                    }}
-                  >
-                    <MessageCircle className="h-4 w-4 mr-1 shrink-0" /> WhatsApp
-                  </Button>
-                  <a href={`tel:${detailForm.client_phone.replace(/\s+/g, '')}`} className="inline-flex">
-                    <Button variant="outline" size="sm" className="h-8 text-xs border-admin-border bg-gray-50/20">
-                      <Phone className="h-4 w-4 mr-1 shrink-0 text-admin-muted" /> Llamar
-                    </Button>
-                  </a>
-                </>
-              ) : null}
-
-              {detailForm.client_email ? (
-                <a href={`mailto:${detailForm.client_email}`} className="inline-flex">
-                  <Button variant="outline" size="sm" className="h-8 text-xs border-admin-border bg-gray-50/20">
-                    <Mail className="h-4 w-4 mr-1 shrink-0 text-admin-muted" /> Email
-                  </Button>
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-
-          <DialogFooter className="mt-5 gap-2 border-t border-admin-border/30 pt-3">
-            <Button variant="outline" className="h-9" onClick={resetDetailDialog}>Cerrar</Button>
-            <Button className="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold h-9 shadow-rose-sm" onClick={saveBookingDetails}>
-              {isCreatingBooking ? 'Crear cita' : 'Guardar cambios'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
+      <EmailComposeModal
+        open={!!emailModalBooking}
+        onClose={() => setEmailModalBooking(null)}
+        booking={emailModalBooking}
+      />
       {/* Day Overview Detail Dialog */}
       <Dialog open={Boolean(selectedDay)} onOpenChange={(open) => { if (!open) setSelectedDay(null); }}>
         <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto rounded-2xl border border-admin-border bg-white shadow-2xl p-6">
@@ -1851,6 +1888,71 @@ const CalendarPage = () => {
             })}
           </div>
 
+          <div ref={blocksSectionRef} className="mt-6 pt-5 border-t border-admin-border/30">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h4 className="text-sm font-bold text-admin-text flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-amber-600" /> Bloqueos puntuales
+                </h4>
+                <p className="text-xs text-admin-muted mt-0.5">
+                  Vacaciones, eventos o pausas. Los clientes no podrán reservar en esos huecos.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-1.5 max-h-[180px] overflow-y-auto pr-1">
+              {timeBlocks.length === 0 ? (
+                <p className="text-xs text-admin-muted italic text-center py-3">Sin bloqueos activos</p>
+              ) : (
+                [...timeBlocks]
+                  .sort((a, b) => (a.block_date || '').localeCompare(b.block_date || ''))
+                  .map((b) => (
+                    <div key={b.id} className="flex items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50/60 px-2.5 py-1.5">
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-amber-800">
+                          {formatHumanDate(b.block_date, { weekday: 'short', day: 'numeric', month: 'short' })}
+                          {b.start_time ? (
+                            <span className="ml-1.5 text-amber-700">
+                              · {b.start_time?.slice(0, 5)} – {b.end_time?.slice(0, 5) || '23:59'}
+                            </span>
+                          ) : (
+                            <span className="ml-1.5 text-amber-700">· Todo el día</span>
+                          )}
+                        </p>
+                        {b.reason && <p className="text-[10px] text-amber-700 truncate">{b.reason}</p>}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => removeTimeBlock(b.id)}
+                        className="text-[10px] font-bold text-amber-700 border border-amber-300 rounded-md px-2 py-1 hover:bg-amber-100 transition-colors"
+                      >
+                        Quitar
+                      </button>
+                    </div>
+                  ))
+              )}
+            </div>
+
+            <NewBlockInlineForm
+              defaultLocation={filterLocation === 'all' ? null : filterLocation}
+              disabled={!blocksTableAvailable}
+              onCreate={async (payload) => {
+                if (!blocksTableAvailable) {
+                  toast({ variant: 'destructive', title: 'Migración pendiente', description: 'La tabla schedule_blocks no está disponible.' });
+                  return;
+                }
+                try {
+                  const { error } = await supabase.from('schedule_blocks').insert([payload]);
+                  if (error) throw error;
+                  toast({ title: 'Bloqueo creado' });
+                  fetchCalendarData();
+                } catch (e) {
+                  toast({ variant: 'destructive', title: 'No se pudo crear', description: e.message });
+                }
+              }}
+            />
+          </div>
+
           <DialogFooter className="mt-6 gap-2 border-t border-admin-border/30 pt-3">
             <Button variant="outline" className="h-9" onClick={() => setIsHoursDialogOpen(false)}>Cancelar</Button>
             <Button className="bg-gradient-to-r from-pink-500 to-rose-500 text-white font-bold h-9 shadow-rose-sm" onClick={saveBusinessHours}>
@@ -1860,6 +1962,88 @@ const CalendarPage = () => {
         </DialogContent>
       </Dialog>
     </>
+  );
+};
+
+const NewBlockInlineForm = ({ defaultLocation, disabled, onCreate }) => {
+  const [date, setDate] = useState('');
+  const [allDay, setAllDay] = useState(true);
+  const [start, setStart] = useState('10:00');
+  const [end, setEnd] = useState('12:00');
+  const [reason, setReason] = useState('');
+
+  const reset = () => {
+    setDate('');
+    setAllDay(true);
+    setStart('10:00');
+    setEnd('12:00');
+    setReason('');
+  };
+
+  const canSave = !!date && (allDay || (start && end));
+
+  const handleAdd = async () => {
+    if (!canSave) return;
+    await onCreate({
+      block_date: date,
+      start_time: allDay ? null : `${start}:00`,
+      end_time: allDay ? null : `${end}:00`,
+      location_id: defaultLocation,
+      reason: reason || (allDay ? 'Bloqueo de día' : 'Bloqueo horario'),
+    });
+    reset();
+  };
+
+  return (
+    <div className="mt-3 rounded-xl border border-dashed border-admin-border bg-admin-bg/40 p-3 space-y-2">
+      <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider">Añadir bloqueo</p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <Input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          disabled={disabled}
+          className="h-9 text-xs"
+        />
+        <label className="flex items-center gap-2 text-xs font-bold text-admin-text px-2">
+          <input
+            type="checkbox"
+            checked={allDay}
+            onChange={(e) => setAllDay(e.target.checked)}
+            disabled={disabled}
+            className="w-4 h-4 rounded text-brand-rose focus:ring-brand-rose"
+          />
+          Todo el día
+        </label>
+      </div>
+      {!allDay && (
+        <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-admin-muted font-medium">Desde:</span>
+            <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} disabled={disabled} className="h-9 text-xs" />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] text-admin-muted font-medium">Hasta:</span>
+            <Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} disabled={disabled} className="h-9 text-xs" />
+          </div>
+        </div>
+      )}
+      <Input
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="Motivo (opcional)"
+        disabled={disabled}
+        className="h-9 text-xs placeholder:italic placeholder:text-gray-400"
+      />
+      <Button
+        size="sm"
+        disabled={!canSave || disabled}
+        onClick={handleAdd}
+        className="w-full h-9 bg-gradient-rose-gold text-white font-bold disabled:opacity-50"
+      >
+        <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir bloqueo
+      </Button>
+    </div>
   );
 };
 

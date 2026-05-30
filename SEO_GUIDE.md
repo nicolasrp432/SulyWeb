@@ -25,7 +25,7 @@ He implementado una estrategia completa de SEO para que tu sitio web aparezca cu
    - Configuración SEO centralizada
 
 4. **Componentes SEO Reutilizables**
-   - `SEOHead` component para meta tags dinámicos
+   - `SEOHead` component para meta tags dinám icos
    - `Analytics` component para tracking
    - Configuración centralizada en `/src/config/seo.js`
 
