@@ -20,7 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_admin_profiles_email ON public.admin_profiles(ema
 
 -- Trigger para mantener updated_at
 CREATE OR REPLACE FUNCTION public.admin_profiles_set_updated_at()
-RETURNS trigger LANGUAGE plpgsql AS $$
+RETURNS trigger LANGUAGE plpgsql SET search_path = public AS $$
 BEGIN
   NEW.updated_at = now();
   RETURN NEW;
@@ -70,6 +70,7 @@ LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
   )
 $$;
 
+REVOKE ALL ON FUNCTION public.is_admin_active() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_admin_active() TO authenticated;
 
 -- Resuelve email -> user_id consultando auth.users (que el cliente no puede leer
@@ -83,7 +84,7 @@ AS $$
   SELECT id FROM auth.users WHERE email = lower(p_email) LIMIT 1
 $$;
 
-REVOKE ALL ON FUNCTION public.find_user_id_by_email(text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.find_user_id_by_email(text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.find_user_id_by_email(text) TO authenticated;
 
 -- ============================================================================
