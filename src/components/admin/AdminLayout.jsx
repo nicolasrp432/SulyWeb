@@ -5,7 +5,7 @@ import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 const AdminLayout = ({ children }) => {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { unreadCount } = useRealtimeNotifications();
+  const { notifications, unreadCount, markAllRead, markOneRead } = useRealtimeNotifications();
 
   return (
     <div className="flex h-screen bg-admin-bg overflow-hidden">
@@ -13,7 +13,10 @@ const AdminLayout = ({ children }) => {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <AdminTopbar
           onMobileMenuOpen={() => setMobileOpen(true)}
-          notificationCount={unreadCount}
+          notifications={notifications}
+          unreadCount={unreadCount}
+          onMarkAllRead={markAllRead}
+          onMarkOneRead={markOneRead}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
           {children}

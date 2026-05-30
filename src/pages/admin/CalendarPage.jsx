@@ -38,6 +38,7 @@ import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
 import { CONFIG } from '@/constants';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
+import { useSearchParams } from 'react-router-dom';
 import CalendarToolbar from '@/components/admin/calendar/CalendarToolbar';
 import CalendarFiltersDrawer from '@/components/admin/calendar/CalendarFiltersDrawer';
 import ActiveFiltersChips from '@/components/admin/calendar/ActiveFiltersChips';
@@ -185,13 +186,38 @@ function buildMonthGrid(anchorDate) {
 const CalendarPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const initialDate = useMemo(() => {
+    const dateParam = searchParams.get('date');
+    if (dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
+      const d = new Date(`${dateParam}T00:00:00`);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [viewMode, setViewMode] = useState(VIEW_MODES.day);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(initialDate);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [newBookingSheet, setNewBookingSheet] = useState(null);
   const [daySheetDate, setDaySheetDate] = useState(null);
-  const [selectedAgendaDate, setSelectedAgendaDate] = useState(new Date());
+  const [selectedAgendaDate, setSelectedAgendaDate] = useState(initialDate);
+
+  // Sync URL ?date= changes (e.g. desde notificaciones) con la fecha visible
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) return;
+    const d = new Date(`${dateParam}T00:00:00`);
+    if (isNaN(d.getTime())) return;
+    setCurrentDate(d);
+    setSelectedAgendaDate(d);
+    // Limpia el parámetro tras consumirlo para no bloquear navegación posterior
+    const next = new URLSearchParams(searchParams);
+    next.delete('date');
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
   const [emailModalBooking, setEmailModalBooking] = useState(null);
   const blocksSectionRef = React.useRef(null);
 

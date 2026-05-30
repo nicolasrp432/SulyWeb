@@ -1,25 +1,64 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+
+const VALID_ORIGINS = new Set(['online', 'whatsapp']);
+
+const enrichBooking = async (bookingRow) => {
+  let location = null;
+  if (bookingRow?.location_id) {
+    const { data } = await supabase
+      .from('locations')
+      .select('id, name')
+      .eq('id', bookingRow.location_id)
+      .maybeSingle();
+    location = data || null;
+  }
+  return { ...bookingRow, location };
+};
 
 export const useRealtimeNotifications = () => {
   const [notifications, setNotifications] = useState([]);
-  const [unreadCount, setUnreadCount] = useState(0);
 
-  const addNotification = useCallback((booking) => {
+  const addNotification = useCallback(async (rawBooking) => {
+    const origin = rawBooking?.origin;
+    if (!origin || !VALID_ORIGINS.has(origin)) return;
+
+    const enriched = await enrichBooking(rawBooking);
     const n = {
-      id: booking.id,
-      message: `Nueva cita: ${booking.client_name}`,
-      time: new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }),
+      id: enriched.id,
+      bookingId: enriched.id,
+      message: `Nueva cita — ${enriched.client_name || 'Cliente'}`,
+      origin,
+      bookingDate: enriched.booking_date,
+      bookingTime: enriched.booking_time?.slice(0, 5),
+      clientName: enriched.client_name,
+      clientPhone: enriched.client_phone,
+      locationName: enriched.location?.name || '',
+      createdAt: Date.now(),
       read: false,
-      booking,
+      raw: enriched,
     };
-    setNotifications((prev) => [n, ...prev].slice(0, 50));
-    setUnreadCount((c) => c + 1);
+
+    setNotifications((prev) => {
+      if (prev.some((x) => x.bookingId === n.bookingId)) return prev;
+      return [n, ...prev].slice(0, 50);
+    });
   }, []);
 
   const markAllRead = useCallback(() => {
     setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
+  }, []);
+
+  const markOneRead = useCallback((id) => {
+    setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)));
+  }, []);
+
+  const removeNotification = useCallback((id) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  }, []);
+
+  const clearAll = useCallback(() => {
+    setNotifications([]);
   }, []);
 
   useEffect(() => {
@@ -35,5 +74,14 @@ export const useRealtimeNotifications = () => {
     return () => { supabase.removeChannel(channel); };
   }, [addNotification]);
 
-  return { notifications, unreadCount, markAllRead };
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  return {
+    notifications,
+    unreadCount,
+    markAllRead,
+    markOneRead,
+    removeNotification,
+    clearAll,
+  };
 };
