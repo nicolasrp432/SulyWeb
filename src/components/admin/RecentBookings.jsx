@@ -1,215 +1,162 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { format, parseISO } from 'date-fns';
-import { es } from 'date-fns/locale';
-import { Check, X, Phone, CalendarDays, Loader2, MapPin, Scissors, Sparkles, MessageSquare } from 'lucide-react';
+import { format } from 'date-fns';
+import { CalendarDays, Sparkles, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import BookingActionMenu from './calendar/BookingActionMenu';
+import BookingDetailDialog from './calendar/BookingDetailDialog';
+import EmailComposeModal from './calendar/EmailComposeModal';
+import { useBookingActions } from '@/hooks/useBookingActions';
+import { STATUS_CHIP, STATUS_LABEL } from './calendar/statusStyles';
+import { getInitials } from '@/lib/avatar';
 
-const STATUS_STYLES = {
-  confirmed: 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20',
-  pending:   'bg-amber-500/15 text-amber-400 border border-amber-500/20',
-  cancelled: 'bg-red-500/15 text-red-400 border border-red-500/20 line-through',
-  completed: 'bg-blue-500/15 text-blue-400 border border-blue-500/20',
-};
-
-const STATUS_LABELS = {
-  confirmed: 'Confirmada',
-  pending:   'Pendiente',
-  cancelled: 'Cancelada',
-  completed: 'Completada',
-};
-
-const RecentBookings = ({ bookings: initialBookings, loading: initialLoading }) => {
+const RecentBookings = () => {
   const [todayBookings, setTodayBookings] = useState([]);
-  const [localLoading, setLocalLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [locations, setLocations] = useState([]);
+  const [selectedBooking, setSelectedBooking] = useState(null);
+  const [waBooking, setWaBooking] = useState(null);
+  const [emailBooking, setEmailBooking] = useState(null);
 
   const fetchTodayBookings = useCallback(async () => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
-    try {
-      const { data, error } = await supabase
-        .from('bookings')
-        .select(`
-          id,
-          client_name,
-          client_phone,
-          client_email,
-          booking_date,
-          booking_time,
-          status,
-          origin,
-          locations (id, name),
-          booking_services (
-            services (id, name, price, duration_minutes)
-          )
-        `)
-        .eq('booking_date', todayStr)
-        .order('booking_time', { ascending: true });
+    const { data, error } = await supabase
+      .from('bookings')
+      .select(`
+        id, client_name, client_phone, client_email, booking_date, booking_time,
+        status, origin, location_id, duration_minutes, notes, notes_admin,
+        assigned_to, appointment_type,
+        locations(id, name),
+        booking_services(service_id, services(id, name, price, duration_minutes))
+      `)
+      .eq('booking_date', todayStr)
+      .order('booking_time', { ascending: true });
 
-      if (error) throw error;
-      setTodayBookings(data || []);
-    } catch (e) {
-      console.error('Error fetching today\'s bookings:', e);
-    } finally {
-      setLocalLoading(false);
-    }
+    if (!error) setTodayBookings(data || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    supabase.from('locations').select('id,name').then(({ data }) => setLocations(data ?? []));
   }, []);
 
   useEffect(() => {
     fetchTodayBookings();
-
     const channel = supabase
-      .channel('dashboard-agenda-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
-        fetchTodayBookings();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, () => {
-        fetchTodayBookings();
-      })
+      .channel('recent-bookings-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, fetchTodayBookings)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, fetchTodayBookings)
       .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    return () => supabase.removeChannel(channel);
   }, [fetchTodayBookings]);
 
-  const handleUpdateStatus = async (bookingId, newStatus) => {
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: newStatus })
-        .eq('id', bookingId);
-
-      if (error) throw error;
-      
-      setTodayBookings((prev) =>
-        prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
-      );
-    } catch (e) {
-      console.error('Error updating status:', e);
-    }
-  };
-
   const handleWhatsApp = (b) => {
-    if (!b.client_phone) return;
-    
+    if (!b?.client_phone) return;
     let cleanPhone = b.client_phone.replace(/\D/g, '');
-    if (!cleanPhone.startsWith('34') && cleanPhone.length === 9) {
-      cleanPhone = '34' + cleanPhone;
-    }
-
+    if (!cleanPhone.startsWith('34') && cleanPhone.length === 9) cleanPhone = '34' + cleanPhone;
     const timeStr = b.booking_time?.slice(0, 5);
     const sedeName = b.locations?.name || 'Suly Pretty Nails';
-    const servicesList = (b.booking_services || [])
-      .map(bs => bs.services?.name)
-      .filter(Boolean)
-      .join(', ');
-      
-    const message = `¡Hola! Te escribimos de Suly Pretty Nails 🌸 para recordarte tu cita de hoy a las ${timeStr} en nuestra sede de ${sedeName}${servicesList ? ` para ${servicesList}` : ''}. ¡Te esperamos!`;
-    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
+    const servicesList = (b.booking_services || []).map((bs) => bs.services?.name).filter(Boolean).join(', ');
+    const message = `¡Hola ${b.client_name}! Te escribimos de Suly Pretty Nails 🌸 para recordarte tu cita de hoy a las ${timeStr} en nuestra sede de ${sedeName}${servicesList ? ` para ${servicesList}` : ''}. ¡Te esperamos!`;
+    window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
+  const actions = useBookingActions({
+    locations,
+    onChange: fetchTodayBookings,
+    openWa: (b) => { setWaBooking(b); handleWhatsApp(b); },
+    openEmail: (b) => setEmailBooking(b),
+  });
+
   return (
-    <div className="bg-admin-sidebar border border-admin-surface rounded-2xl overflow-hidden h-full flex flex-col min-h-[400px]">
-      <div className="px-5 py-4 border-b border-admin-surface flex items-center justify-between bg-admin-surface/10">
-        <div className="flex items-center gap-2">
-          <CalendarDays className="h-4 w-4 text-pink-500" />
-          <h3 className="font-semibold text-admin-text text-sm">Agenda de Hoy</h3>
+    <>
+      <div className="bg-white border border-admin-border rounded-2xl overflow-hidden h-full flex flex-col min-h-[400px] shadow-rose-xs">
+        <div className="px-5 py-4 border-b border-admin-border flex items-center justify-between bg-gradient-to-r from-brand-rose-50/60 to-amber-50/40">
+          <div className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4 text-brand-rose" />
+            <h3 className="font-bold text-admin-text text-sm">Agenda de hoy</h3>
+          </div>
+          <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full border border-emerald-200 uppercase tracking-wider">
+            En vivo
+          </span>
         </div>
-        <span className="text-[10px] bg-pink-500/10 text-pink-400 font-bold px-2 py-0.5 rounded-full border border-pink-500/10 uppercase tracking-wider">
-          En vivo
-        </span>
+
+        {loading ? (
+          <div className="flex-1 flex items-center justify-center p-8 text-admin-muted gap-2">
+            <Loader2 className="h-5 w-5 animate-spin text-brand-rose" />
+            <span className="text-xs">Cargando agenda...</span>
+          </div>
+        ) : todayBookings.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-admin-muted">
+            <Sparkles className="h-7 w-7 text-brand-rose/40 mb-2" />
+            <p className="text-sm font-semibold text-admin-text">Sin citas hoy</p>
+            <p className="text-xs text-admin-muted mt-1">Las reservas de hoy aparecerán aquí.</p>
+          </div>
+        ) : (
+          <div className="flex-1 divide-y divide-admin-border overflow-y-auto max-h-[500px]">
+            {todayBookings.map((b) => {
+              const status = b.status || 'pending';
+              const services = (b.booking_services || []).map((bs) => bs.services?.name).filter(Boolean).join(', ');
+              return (
+                <div key={b.id} className="px-4 py-3 flex items-center gap-3 hover:bg-admin-surface/30 transition-colors">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBooking(b)}
+                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  >
+                    <div className="w-10 h-10 rounded-full bg-gradient-rose-gold flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-rose-sm">
+                      {getInitials(b.client_name)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-sm font-semibold text-admin-text truncate">{b.client_name}</span>
+                        <span className="text-xs font-bold text-brand-rose bg-brand-rose-50 px-1.5 py-0.5 rounded border border-brand-rose/20 shrink-0">
+                          {b.booking_time?.slice(0, 5)}
+                        </span>
+                      </div>
+                      {services && (
+                        <p className="text-[11px] text-admin-muted truncate mt-0.5">{services}</p>
+                      )}
+                    </div>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded border shrink-0 hidden sm:inline-flex ${STATUS_CHIP[status] || STATUS_CHIP.pending}`}>
+                      {STATUS_LABEL[status] || 'Pendiente'}
+                    </span>
+                  </button>
+                  <BookingActionMenu
+                    booking={b}
+                    onConfirm={actions.confirmBooking}
+                    onComplete={actions.completeBooking}
+                    onCancel={actions.cancelBooking}
+                    onWa={actions.waBooking}
+                    onCall={actions.callBooking}
+                    onEmail={actions.emailBooking}
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {localLoading ? (
-        <div className="flex-1 flex items-center justify-center p-8 text-admin-muted gap-2">
-          <Loader2 className="h-5 w-5 animate-spin text-pink-500" />
-          <span className="text-xs">Cargando agenda...</span>
-        </div>
-      ) : todayBookings.length === 0 ? (
-        <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-admin-muted">
-          <Sparkles className="h-6 w-6 text-pink-500/40 mb-2" />
-          <p className="text-sm font-medium text-admin-text">Sin citas programadas</p>
-          <p className="text-xs text-admin-muted mt-1">Las reservas de hoy aparecerán aquí.</p>
-        </div>
-      ) : (
-        <div className="flex-1 divide-y divide-admin-surface overflow-y-auto max-h-[500px] scrollbar-none">
-          {todayBookings.map((b) => {
-            const timeStr = b.booking_time?.slice(0, 5);
-            const servicesList = (b.booking_services || [])
-              .map(bs => bs.services?.name)
-              .filter(Boolean)
-              .join(', ');
+      <BookingDetailDialog
+        open={!!selectedBooking}
+        onClose={() => setSelectedBooking(null)}
+        booking={selectedBooking}
+        locations={locations}
+        responsibleOptions={[]}
+        onConfirm={actions.confirmBooking}
+        onComplete={actions.completeBooking}
+        onCancel={actions.cancelBooking}
+        onOpenWa={actions.waBooking}
+        onOpenEmail={actions.emailBooking}
+        onSave={async () => { fetchTodayBookings(); setSelectedBooking(null); }}
+      />
 
-            return (
-              <div key={b.id} className="px-5 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-admin-surface/30 transition-colors">
-                <div className="flex items-start gap-3 min-w-0">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-500/20 to-rose-500/20 border border-pink-500/10 flex items-center justify-center text-pink-500 text-sm font-bold shrink-0 shadow-sm mt-0.5">
-                    {b.client_name?.[0]?.toUpperCase()}
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <p className="text-sm font-bold text-admin-text truncate">{b.client_name}</p>
-                      <span className="text-xs font-semibold text-pink-500 bg-pink-500/5 px-2 py-0.5 rounded-lg border border-pink-500/10">
-                        {timeStr}
-                      </span>
-                    </div>
-                    {servicesList && (
-                      <p className="text-xs text-admin-muted mt-1 flex items-center gap-1.5 truncate">
-                        <Scissors className="h-3 w-3 text-pink-500/60 shrink-0" />
-                        <span className="truncate">{servicesList}</span>
-                      </p>
-                    )}
-                    <p className="text-xs text-admin-muted mt-0.5 flex items-center gap-1.5">
-                      <MapPin className="h-3 w-3 text-pink-500/60 shrink-0" />
-                      <span>{b.locations?.name || 'Sede'}</span>
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 justify-end sm:justify-start">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${STATUS_STYLES[b.status] ?? STATUS_STYLES.confirmed}`}>
-                    {STATUS_LABELS[b.status] ?? 'Confirmada'}
-                  </span>
-
-                  <div className="flex items-center gap-1 ml-2">
-                    {/* WhatsApp */}
-                    <button
-                      onClick={() => handleWhatsApp(b)}
-                      title="Enviar recordatorio por WhatsApp"
-                      className="p-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/10 transition-colors shadow-sm"
-                    >
-                      <Phone className="h-3.5 w-3.5" />
-                    </button>
-
-                    {/* Complete button */}
-                    {b.status !== 'completed' && b.status !== 'cancelled' && (
-                      <button
-                        onClick={() => handleUpdateStatus(b.id, 'completed')}
-                        title="Marcar como completada"
-                        className="p-1.5 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/10 transition-colors shadow-sm"
-                      >
-                        <Check className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-
-                    {/* Cancel button */}
-                    {b.status !== 'cancelled' && (
-                      <button
-                        onClick={() => handleUpdateStatus(b.id, 'cancelled')}
-                        title="Cancelar cita"
-                        className="p-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/10 transition-colors shadow-sm"
-                      >
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+      <EmailComposeModal
+        open={!!emailBooking}
+        onClose={() => setEmailBooking(null)}
+        booking={emailBooking}
+      />
+    </>
   );
 };
 

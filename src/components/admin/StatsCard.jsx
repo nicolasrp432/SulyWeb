@@ -2,31 +2,34 @@ import React from 'react';
 import { motion } from 'framer-motion';
 
 const COLOR_MAP = {
-  rose:    { bg: 'bg-brand-rose/10',    icon: 'text-brand-rose',   ring: 'ring-brand-rose/20'   },
-  amber:   { bg: 'bg-amber-500/10',     icon: 'text-amber-400',    ring: 'ring-amber-500/20'    },
-  emerald: { bg: 'bg-emerald-500/10',   icon: 'text-emerald-400',  ring: 'ring-emerald-500/20'  },
-  blue:    { bg: 'bg-blue-500/10',      icon: 'text-blue-400',     ring: 'ring-blue-500/20'     },
+  rose:    { bg: 'bg-brand-rose-50',   icon: 'text-brand-rose'   },
+  amber:   { bg: 'bg-amber-50',        icon: 'text-amber-600'    },
+  emerald: { bg: 'bg-emerald-50',      icon: 'text-emerald-600'  },
+  blue:    { bg: 'bg-blue-50',         icon: 'text-blue-600'     },
 };
 
-const StatsCard = ({ title, value, icon: Icon, color = 'rose', loading }) => {
+const StatsCard = ({ title, value, icon: Icon, color = 'rose', loading, hint }) => {
   const c = COLOR_MAP[color] ?? COLOR_MAP.rose;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
+      initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-admin-sidebar border border-admin-surface rounded-2xl p-5"
+      className="bg-white border border-admin-border rounded-2xl p-4 sm:p-5 shadow-rose-xs hover:shadow-rose-sm transition-shadow"
     >
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-semibold text-admin-muted uppercase tracking-wider mb-1">{title}</p>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-[10px] sm:text-xs font-bold text-admin-muted uppercase tracking-wider mb-1">{title}</p>
           {loading ? (
             <div className="h-8 w-16 rounded-lg bg-admin-surface animate-pulse mt-1" />
           ) : (
-            <p className="text-3xl font-bold text-admin-text">{value}</p>
+            <p className="text-2xl sm:text-3xl font-bold text-admin-text">{value}</p>
+          )}
+          {hint && !loading && (
+            <p className="text-[10px] text-admin-muted mt-1 truncate">{hint}</p>
           )}
         </div>
-        <div className={`w-10 h-10 rounded-xl ${c.bg} ring-1 ${c.ring} flex items-center justify-center shrink-0`}>
+        <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
           <Icon className={`h-5 w-5 ${c.icon}`} />
         </div>
       </div>

@@ -21,15 +21,27 @@ const Gallery = () => {
   const [galleryItems, setGalleryItems] = useState(STATIC_ITEMS);
 
   useEffect(() => {
-    supabase
-      .from('gallery_images')
-      .select('*')
-      .eq('active', true)
-      .order('display_order', { ascending: true })
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data && data.length > 0) setGalleryItems(data);
-      });
+    const fetchGallery = () => {
+      supabase
+        .from('gallery_images')
+        .select('*')
+        .eq('active', true)
+        .order('display_order', { ascending: true })
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          if (data && data.length > 0) setGalleryItems(data);
+          else setGalleryItems(STATIC_ITEMS);
+        });
+    };
+
+    fetchGallery();
+
+    const channel = supabase
+      .channel('public-gallery-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery_images' }, fetchGallery)
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
   }, []);
 
   const categories = [

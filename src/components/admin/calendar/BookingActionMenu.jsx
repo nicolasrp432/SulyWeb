@@ -1,7 +1,11 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Check, CheckCheck, Mail, MessageCircle, MoreVertical, Phone, X,
 } from 'lucide-react';
+
+const MENU_WIDTH = 176; // w-44
+const MENU_GAP = 4;
 
 const BookingActionMenu = ({
   booking,
@@ -14,18 +18,43 @@ const BookingActionMenu = ({
   className = '',
 }) => {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
+  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const buttonRef = useRef(null);
+  const menuRef = useRef(null);
+
+  useLayoutEffect(() => {
+    if (!open || !buttonRef.current) return;
+    const rect = buttonRef.current.getBoundingClientRect();
+    const top = rect.bottom + MENU_GAP;
+    let left = rect.right - MENU_WIDTH;
+    // Clamp to viewport
+    if (left < 8) left = 8;
+    if (left + MENU_WIDTH > window.innerWidth - 8) {
+      left = window.innerWidth - MENU_WIDTH - 8;
+    }
+    setCoords({ top, left });
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
     const onDoc = (e) => {
-      if (!ref.current?.contains(e.target)) setOpen(false);
+      if (
+        !buttonRef.current?.contains(e.target) &&
+        !menuRef.current?.contains(e.target)
+      ) {
+        setOpen(false);
+      }
     };
+    const onEsc = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('touchstart', onDoc);
+    document.addEventListener('keydown', onEsc);
+    window.addEventListener('scroll', () => setOpen(false), true);
     return () => {
       document.removeEventListener('mousedown', onDoc);
       document.removeEventListener('touchstart', onDoc);
+      document.removeEventListener('keydown', onEsc);
+      window.removeEventListener('scroll', () => setOpen(false), true);
     };
   }, [open]);
 
@@ -87,19 +116,28 @@ const BookingActionMenu = ({
   ];
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <>
       <button
+        ref={buttonRef}
         type="button"
         onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-        className="w-8 h-8 flex items-center justify-center rounded-full text-admin-muted hover:text-admin-text hover:bg-admin-surface transition-colors"
+        className={`w-8 h-8 flex items-center justify-center rounded-full text-admin-muted hover:text-admin-text hover:bg-admin-surface transition-colors ${className}`}
         aria-label="Acciones"
       >
         <MoreVertical className="w-4 h-4" />
       </button>
 
-      {open && (
+      {open && createPortal(
         <div
-          className="absolute right-0 top-9 z-50 w-44 rounded-xl border border-admin-border bg-white shadow-2xl py-1 overflow-hidden"
+          ref={menuRef}
+          style={{
+            position: 'fixed',
+            top: coords.top,
+            left: coords.left,
+            width: MENU_WIDTH,
+            zIndex: 200,
+          }}
+          className="rounded-xl border border-admin-border bg-white shadow-2xl py-1 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {items.map((it) => {
@@ -117,9 +155,10 @@ const BookingActionMenu = ({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body
       )}
-    </div>
+    </>
   );
 };
 

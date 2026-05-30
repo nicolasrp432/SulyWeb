@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   Activity, Calendar as CalendarIcon, Check, CheckCheck, ChevronDown, ChevronUp,
-  Clock, FileText, Globe, Loader2, Mail, MessageCircle, Phone, Scissors, Store,
+  Clock, FileText, Globe, Loader2, Mail, MessageCircle, Phone, Store,
   Timer, User, UserCheck, X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -146,7 +146,7 @@ const BookingDetailDialog = ({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose?.(); }}>
       <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto rounded-2xl border border-admin-border bg-white shadow-2xl p-0">
         {/* Header gradient */}
-        <div className="relative bg-gradient-to-br from-brand-rose-50 via-white to-amber-50 px-5 pt-5 pb-4 border-b border-admin-border">
+        <div className="relative bg-gradient-to-br from-brand-rose-50 via-white to-amber-50 px-5 pt-5 pb-4 pr-14 border-b border-admin-border">
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-rose-gold flex items-center justify-center text-white text-base font-bold shadow-rose-sm shrink-0">
               {getInitials(form.client_name || booking?.client_name)}
@@ -165,13 +165,6 @@ const BookingDetailDialog = ({
                 {statusLabel}
               </span>
             </div>
-            <button
-              onClick={onClose}
-              className="text-admin-muted hover:text-admin-text p-1.5 rounded-lg hover:bg-white/60 transition-colors shrink-0"
-              aria-label="Cerrar"
-            >
-              <X className="w-5 h-5" />
-            </button>
           </div>
         </div>
 

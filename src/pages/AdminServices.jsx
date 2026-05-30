@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { Plus, Trash2, Edit3, Check, X, Loader2, ToggleLeft, ToggleRight, AlertCircle } from 'lucide-react';
+import {
+  Plus, Trash2, Edit3, Check, X, Loader2, AlertCircle, Scissors, Sparkles,
+  Tag, Clock as ClockIcon, Eye, EyeOff,
+} from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import PageHeader from '@/components/admin/PageHeader';
 
 const CATEGORIES = [
-  { id: 'nails',  label: 'Manicura y Pedicura' },
-  { id: 'beauty', label: 'Pestañas y Depilación' },
-  { id: 'paquetes', label: 'Paquetes' },
+  { id: 'nails',    label: 'Manicura y Pedicura', icon: Scissors },
+  { id: 'beauty',   label: 'Pestañas y Depilación', icon: Sparkles },
+  { id: 'paquetes', label: 'Paquetes', icon: Tag },
 ];
 
 const DEFAULT_SERVICES = [
@@ -27,8 +31,19 @@ const DEFAULT_SERVICES = [
   { name: 'Depilación labio',         price: '5,00€',  duration_minutes: 10, category: 'beauty', active: true, display_order: 15 },
 ];
 
-const EmptyRow = () => (
-  <div className="h-12 rounded-xl bg-admin-surface/50 animate-pulse" />
+const inputCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
+const inputClsPlain = 'w-full h-10 px-3 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
+
+const Switch = ({ checked, onChange }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    onClick={onChange}
+    className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${checked ? 'bg-emerald-500' : 'bg-zinc-300'}`}
+  >
+    <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow-sm transition-transform ${checked ? 'translate-x-4' : 'translate-x-0.5'}`} />
+  </button>
 );
 
 const AdminServices = () => {
@@ -39,14 +54,15 @@ const AdminServices = () => {
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [showAdd, setShowAdd] = useState(false);
-  const [newService, setNewService] = useState({ name: '', price: '', duration_minutes: 30, category: 'nails', image_url: '' });
+  const [newService, setNewService] = useState({ name: '', price: '', duration_minutes: 30, category: 'nails' });
   const [flash, setFlash] = useState('');
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(''), 2500); };
   const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 4000); };
 
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     setLoading(true);
     const { data, error: fetchErr } = await supabase
       .from('services')
@@ -56,9 +72,16 @@ const AdminServices = () => {
     if (fetchErr) showError('Error al cargar servicios: ' + fetchErr.message);
     setServices(data ?? []);
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { fetchServices(); }, []);
+  useEffect(() => {
+    fetchServices();
+    const channel = supabase
+      .channel('admin-services-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, fetchServices)
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [fetchServices]);
 
   const seedServices = async () => {
     if (!window.confirm('Esto insertará los servicios predeterminados. ¿Continuar?')) return;
@@ -71,7 +94,12 @@ const AdminServices = () => {
 
   const startEdit = (svc) => {
     setEditingId(svc.id);
-    setEditValues({ name: svc.name, price: svc.price ?? '', duration_minutes: svc.duration_minutes ?? 30, category: svc.category ?? 'nails', image_url: svc.image_url ?? '' });
+    setEditValues({
+      name: svc.name,
+      price: svc.price ?? '',
+      duration_minutes: svc.duration_minutes ?? 30,
+      category: svc.category ?? 'nails',
+    });
   };
 
   const saveEdit = async (id) => {
@@ -83,260 +111,307 @@ const AdminServices = () => {
         price: editValues.price,
         duration_minutes: Number(editValues.duration_minutes),
         category: editValues.category,
-        image_url: editValues.image_url || null,
       })
       .eq('id', id);
     if (updateErr) showError('Error al guardar: ' + updateErr.message);
-    else {
-      setServices((prev) => prev.map((s) => s.id === id ? { ...s, ...editValues, duration_minutes: Number(editValues.duration_minutes) } : s));
-      showFlash('Servicio actualizado');
-    }
+    else showFlash('Servicio actualizado');
     setSaving(false);
     setEditingId(null);
   };
 
   const toggleActive = async (svc) => {
-    const { error: toggleErr } = await supabase
-      .from('services')
-      .update({ active: !svc.active })
-      .eq('id', svc.id);
-    if (toggleErr) showError('Error al cambiar estado');
-    else setServices((prev) => prev.map((s) => s.id === svc.id ? { ...s, active: !s.active } : s));
+    await supabase.from('services').update({ active: !svc.active }).eq('id', svc.id);
   };
 
   const deleteService = async (id) => {
     if (!window.confirm('¿Eliminar este servicio?')) return;
     const { error: deleteErr } = await supabase.from('services').delete().eq('id', id);
     if (deleteErr) showError('Error al eliminar: ' + deleteErr.message);
-    else { setServices((prev) => prev.filter((s) => s.id !== id)); showFlash('Servicio eliminado'); }
+    else showFlash('Servicio eliminado');
   };
 
   const addService = async () => {
     if (!newService.name) return;
     setSaving(true);
-    const { data, error: addErr } = await supabase
+    const { error: addErr } = await supabase
       .from('services')
-      .insert([{ ...newService, duration_minutes: Number(newService.duration_minutes), active: true }])
-      .select()
-      .single();
+      .insert([{ ...newService, duration_minutes: Number(newService.duration_minutes), active: true }]);
     if (addErr) showError('Error al añadir: ' + addErr.message);
     else {
-      setServices((prev) => [...prev, data]);
-      setNewService({ name: '', price: '', duration_minutes: 30, category: 'nails', image_url: '' });
+      setNewService({ name: '', price: '', duration_minutes: 30, category: 'nails' });
       setShowAdd(false);
       showFlash('Servicio añadido');
     }
     setSaving(false);
   };
 
-  const gridData = CATEGORIES.map((cat) => ({
-    ...cat,
-    items: services.filter((s) => (s.category ?? 'nails') === cat.id),
-  })).filter((g) => g.items.length > 0);
+  const visibleServices = useMemo(() => {
+    if (activeTab === 'all') return services;
+    return services.filter((s) => (s.category ?? 'nails') === activeTab);
+  }, [services, activeTab]);
+
+  const countByCat = useMemo(() => {
+    const c = { all: services.length };
+    CATEGORIES.forEach((cat) => { c[cat.id] = services.filter((s) => (s.category ?? 'nails') === cat.id).length; });
+    return c;
+  }, [services]);
 
   return (
     <>
       <Helmet><title>Servicios — Admin Suly</title></Helmet>
-      <div className="max-w-4xl mx-auto space-y-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-admin-text">Servicios</h1>
-            <p className="text-sm text-admin-muted mt-0.5">{services.length} servicios en total</p>
-          </div>
-          <div className="flex gap-2 shrink-0">
-            {services.length === 0 && !loading && (
+      <div className="max-w-5xl mx-auto space-y-5">
+        <PageHeader
+          icon={Scissors}
+          title="Servicios"
+          subtitle={`${services.length} servicios · ${services.filter((s) => s.active).length} activos`}
+          actions={
+            <div className="flex gap-2">
+              {services.length === 0 && !loading && (
+                <button
+                  onClick={seedServices}
+                  disabled={seeding}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold bg-amber-50 border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-100 transition-colors disabled:opacity-50"
+                >
+                  {seeding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                  Cargar predeterminados
+                </button>
+              )}
               <button
-                onClick={seedServices}
-                disabled={seeding}
-                className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold bg-amber-50 border border-amber-200 text-amber-700 rounded-xl hover:bg-amber-100 transition-colors disabled:opacity-50"
+                onClick={() => setShowAdd((v) => !v)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-rose-gold text-white text-xs font-bold rounded-xl shadow-rose-sm hover:shadow-rose-md transition-all"
               >
-                {seeding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <AlertCircle className="h-3.5 w-3.5" />}
-                Cargar servicios por defecto
+                <Plus className="h-3.5 w-3.5" /> Nuevo
               </button>
-            )}
-            <button
-              onClick={() => setShowAdd((v) => !v)}
-              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-rose-gold text-white text-xs font-semibold rounded-xl shadow-rose-sm hover:brightness-105 transition-all"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Nuevo servicio
-            </button>
-          </div>
-        </div>
+            </div>
+          }
+        />
 
-        {flash && <p className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2">{flash}</p>}
-        {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">{error}</p>}
+        {flash && <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2 flex items-center gap-2"><Check className="w-3.5 h-3.5" /> {flash}</p>}
+        {error && <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl px-3 py-2 flex items-center gap-2"><AlertCircle className="w-3.5 h-3.5" /> {error}</p>}
 
         {/* Add form */}
         {showAdd && (
-          <div className="bg-admin-sidebar border border-admin-border rounded-2xl p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-admin-text">Nuevo servicio</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input
-                value={newService.name}
-                onChange={(e) => setNewService((p) => ({ ...p, name: e.target.value }))}
-                placeholder="Nombre del servicio *"
-                className="px-3 py-2 bg-admin-bg border border-admin-border rounded-xl text-sm text-admin-text placeholder:text-admin-muted focus:outline-none focus:border-brand-rose transition-colors"
-              />
-              <input
-                value={newService.price}
-                onChange={(e) => setNewService((p) => ({ ...p, price: e.target.value }))}
-                placeholder="Precio (ej: 15,90€)"
-                className="px-3 py-2 bg-admin-bg border border-admin-border rounded-xl text-sm text-admin-text placeholder:text-admin-muted focus:outline-none focus:border-brand-rose transition-colors"
-              />
-              <div className="flex items-center gap-2">
+          <div className="bg-white border border-admin-border rounded-2xl p-4 sm:p-5 space-y-3 shadow-rose-xs">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-bold text-admin-text flex items-center gap-2">
+                <Plus className="w-4 h-4 text-brand-rose" /> Nuevo servicio
+              </h3>
+              <button onClick={() => setShowAdd(false)} className="text-admin-muted hover:text-admin-text">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="relative">
+                <Scissors className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+                <input
+                  value={newService.name}
+                  onChange={(e) => setNewService((p) => ({ ...p, name: e.target.value }))}
+                  placeholder="Nombre del servicio *"
+                  className={inputCls}
+                />
+              </div>
+              <div className="relative">
+                <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+                <input
+                  value={newService.price}
+                  onChange={(e) => setNewService((p) => ({ ...p, price: e.target.value }))}
+                  placeholder="Precio (ej: 15,90€)"
+                  className={inputCls}
+                />
+              </div>
+              <div className="relative">
+                <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
                 <input
                   type="number"
                   min="5"
                   max="300"
+                  step="5"
                   value={newService.duration_minutes}
                   onChange={(e) => setNewService((p) => ({ ...p, duration_minutes: e.target.value }))}
-                  className="w-24 px-3 py-2 bg-admin-bg border border-admin-border rounded-xl text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                  placeholder="Duración (min)"
+                  className={inputCls}
                 />
-                <span className="text-sm text-admin-muted">min</span>
               </div>
               <select
                 value={newService.category}
                 onChange={(e) => setNewService((p) => ({ ...p, category: e.target.value }))}
-                className="px-3 py-2 bg-admin-bg border border-admin-border rounded-xl text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                className={inputClsPlain}
               >
                 {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </div>
-            <input
-              value={newService.image_url}
-              onChange={(e) => setNewService((p) => ({ ...p, image_url: e.target.value }))}
-              placeholder="URL de imagen (opcional)"
-              className="w-full px-3 py-2 bg-admin-bg border border-admin-border rounded-xl text-sm text-admin-text placeholder:text-admin-muted focus:outline-none focus:border-brand-rose transition-colors"
-            />
-            <div className="flex gap-2">
+            <div className="flex gap-2 justify-end pt-1">
+              <button
+                onClick={() => setShowAdd(false)}
+                className="px-4 py-2 text-xs font-bold text-admin-muted hover:text-admin-text border border-admin-border rounded-xl hover:bg-admin-surface transition-colors"
+              >
+                Cancelar
+              </button>
               <button
                 onClick={addService}
                 disabled={!newService.name || saving}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gradient-rose-gold text-white text-xs font-semibold rounded-xl disabled:opacity-50 hover:brightness-105 transition-all"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-rose-gold text-white text-xs font-bold rounded-xl disabled:opacity-50 hover:shadow-rose-md transition-all"
               >
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Check className="h-3.5 w-3.5" />}
                 Guardar
-              </button>
-              <button
-                onClick={() => setShowAdd(false)}
-                className="px-4 py-2 text-xs font-semibold text-admin-muted hover:text-admin-text border border-admin-border rounded-xl hover:bg-admin-surface transition-colors"
-              >
-                Cancelar
               </button>
             </div>
           </div>
         )}
 
+        {/* Tabs */}
+        <div className="flex items-center gap-1.5 bg-white border border-admin-border rounded-xl p-1 shadow-rose-xs overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`h-9 px-3 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+              activeTab === 'all'
+                ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
+                : 'text-admin-muted hover:text-admin-text hover:bg-admin-surface'
+            }`}
+          >
+            Todos
+            <span className="ml-1.5 opacity-80">({countByCat.all})</span>
+          </button>
+          {CATEGORIES.map((cat) => {
+            const Icon = cat.icon;
+            const active = activeTab === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setActiveTab(cat.id)}
+                className={`h-9 px-3 text-xs font-bold rounded-lg transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                  active
+                    ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
+                    : 'text-admin-muted hover:text-admin-text hover:bg-admin-surface'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                {cat.label}
+                <span className="opacity-80">({countByCat[cat.id] || 0})</span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* List */}
         {loading ? (
-          <div className="space-y-3">
-            {[...Array(6)].map((_, i) => <EmptyRow key={i} />)}
+          <div className="grid sm:grid-cols-2 gap-3">
+            {[...Array(6)].map((_, i) => <div key={i} className="h-20 rounded-2xl bg-admin-surface animate-pulse" />)}
           </div>
-        ) : services.length === 0 ? (
-          <div className="bg-admin-sidebar border border-admin-border rounded-2xl p-10 text-center">
-            <p className="text-sm text-admin-muted mb-4">No hay servicios. Usa el botón "Cargar servicios por defecto" para empezar.</p>
+        ) : visibleServices.length === 0 ? (
+          <div className="bg-white border border-admin-border rounded-2xl p-12 text-center shadow-rose-xs">
+            <Scissors className="w-10 h-10 text-admin-muted/40 mx-auto mb-3" />
+            <p className="text-sm font-semibold text-admin-text">Sin servicios en esta categoría</p>
+            <p className="text-xs text-admin-muted mt-1">Añade uno con el botón "Nuevo".</p>
           </div>
         ) : (
-          gridData.map((group) => (
-            <div key={group.id} className="bg-admin-sidebar border border-admin-border rounded-2xl overflow-hidden">
-              <div className="px-5 py-3.5 border-b border-admin-border bg-admin-surface/30">
-                <h2 className="text-xs font-bold uppercase tracking-widest text-admin-muted">{group.label}</h2>
-              </div>
-              <div className="divide-y divide-admin-border">
-                {group.items.map((svc) => {
-                  const isEditing = editingId === svc.id;
-                  return (
-                    <div key={svc.id} className={`px-5 py-3.5 transition-colors ${!svc.active ? 'opacity-50' : ''}`}>
-                      {isEditing ? (
-                        <div className="space-y-2">
-                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <input
-                              value={editValues.name}
-                              onChange={(e) => setEditValues((p) => ({ ...p, name: e.target.value }))}
-                              className="px-3 py-2 bg-admin-bg border border-brand-rose/40 rounded-lg text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors sm:col-span-2"
-                            />
-                            <input
-                              value={editValues.price}
-                              onChange={(e) => setEditValues((p) => ({ ...p, price: e.target.value }))}
-                              placeholder="Precio"
-                              className="px-3 py-2 bg-admin-bg border border-brand-rose/40 rounded-lg text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
-                            />
-                          </div>
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <div className="flex items-center gap-1.5">
-                              <input
-                                type="number"
-                                min="5"
-                                max="300"
-                                value={editValues.duration_minutes}
-                                onChange={(e) => setEditValues((p) => ({ ...p, duration_minutes: e.target.value }))}
-                                className="w-20 px-2 py-1.5 bg-admin-bg border border-brand-rose/40 rounded-lg text-sm text-admin-text focus:outline-none"
-                              />
-                              <span className="text-xs text-admin-muted">min</span>
-                            </div>
-                            <select
-                              value={editValues.category}
-                              onChange={(e) => setEditValues((p) => ({ ...p, category: e.target.value }))}
-                              className="px-2 py-1.5 bg-admin-bg border border-brand-rose/40 rounded-lg text-sm text-admin-text focus:outline-none"
-                            >
-                              {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
-                            </select>
-                            <button
-                              onClick={() => saveEdit(svc.id)}
-                              disabled={saving}
-                              className="flex items-center gap-1 px-3 py-1.5 bg-gradient-rose-gold text-white text-xs font-semibold rounded-lg disabled:opacity-50"
-                            >
-                              {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                              Guardar
-                            </button>
-                            <button
-                              onClick={() => setEditingId(null)}
-                              className="px-3 py-1.5 text-xs text-admin-muted border border-admin-border rounded-lg hover:bg-admin-surface transition-colors"
-                            >
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-admin-text">{svc.name}</p>
-                            <p className="text-xs text-admin-muted">
-                              {svc.duration_minutes ? `${svc.duration_minutes} min` : '—'}
-                              {svc.price ? ` · ${svc.price}` : ''}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <button
-                              onClick={() => toggleActive(svc)}
-                              title={svc.active ? 'Desactivar' : 'Activar'}
-                              className="p-1.5 text-admin-muted hover:text-brand-rose transition-colors"
-                            >
-                              {svc.active
-                                ? <ToggleRight className="h-5 w-5 text-emerald-500" />
-                                : <ToggleLeft className="h-5 w-5" />}
-                            </button>
-                            <button
-                              onClick={() => startEdit(svc)}
-                              className="p-1.5 text-admin-muted hover:text-brand-rose transition-colors"
-                            >
-                              <Edit3 className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => deleteService(svc.id)}
-                              className="p-1.5 text-admin-muted hover:text-red-500 transition-colors"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      )}
+          <div className="grid sm:grid-cols-2 gap-3">
+            {visibleServices.map((svc) => {
+              const isEditing = editingId === svc.id;
+              const cat = CATEGORIES.find((c) => c.id === (svc.category ?? 'nails')) || CATEGORIES[0];
+              const CatIcon = cat.icon;
+              return (
+                <div
+                  key={svc.id}
+                  className={`bg-white border border-admin-border rounded-2xl p-4 shadow-rose-xs hover:shadow-rose-sm transition-shadow ${!svc.active ? 'opacity-60' : ''}`}
+                >
+                  {isEditing ? (
+                    <div className="space-y-2">
+                      <input
+                        value={editValues.name}
+                        onChange={(e) => setEditValues((p) => ({ ...p, name: e.target.value }))}
+                        className={inputClsPlain}
+                        placeholder="Nombre"
+                      />
+                      <div className="grid grid-cols-2 gap-2">
+                        <input
+                          value={editValues.price}
+                          onChange={(e) => setEditValues((p) => ({ ...p, price: e.target.value }))}
+                          placeholder="Precio"
+                          className={inputClsPlain}
+                        />
+                        <input
+                          type="number"
+                          min="5"
+                          max="300"
+                          step="5"
+                          value={editValues.duration_minutes}
+                          onChange={(e) => setEditValues((p) => ({ ...p, duration_minutes: e.target.value }))}
+                          placeholder="min"
+                          className={inputClsPlain}
+                        />
+                      </div>
+                      <select
+                        value={editValues.category}
+                        onChange={(e) => setEditValues((p) => ({ ...p, category: e.target.value }))}
+                        className={inputClsPlain}
+                      >
+                        {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                      </select>
+                      <div className="flex justify-end gap-2 pt-1">
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="px-3 py-1.5 text-xs font-bold text-admin-muted hover:text-admin-text border border-admin-border rounded-lg hover:bg-admin-surface transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => saveEdit(svc.id)}
+                          disabled={saving}
+                          className="inline-flex items-center gap-1 px-3 py-1.5 bg-gradient-rose-gold text-white text-xs font-bold rounded-lg disabled:opacity-50"
+                        >
+                          {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                          Guardar
+                        </button>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))
+                  ) : (
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-rose-gold/15 text-brand-rose flex items-center justify-center shrink-0">
+                        <CatIcon className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-admin-text truncate">{svc.name}</p>
+                        <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                          {svc.price && (
+                            <span className="text-[10px] font-bold text-brand-rose bg-brand-rose-50 px-2 py-0.5 rounded-full border border-brand-rose/20">
+                              {svc.price}
+                            </span>
+                          )}
+                          {svc.duration_minutes && (
+                            <span className="text-[10px] font-bold text-admin-muted bg-admin-surface px-2 py-0.5 rounded-full border border-admin-border inline-flex items-center gap-1">
+                              <ClockIcon className="w-2.5 h-2.5" /> {svc.duration_minutes} min
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <Switch checked={svc.active} onChange={() => toggleActive(svc)} />
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => startEdit(svc)}
+                            title="Editar"
+                            className="p-1 text-admin-muted hover:text-brand-rose transition-colors"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={() => deleteService(svc.id)}
+                            title="Eliminar"
+                            className="p-1 text-admin-muted hover:text-red-500 transition-colors"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
     </>

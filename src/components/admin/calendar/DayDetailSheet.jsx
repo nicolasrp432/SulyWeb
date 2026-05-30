@@ -183,12 +183,11 @@ const DayDetailSheet = ({
           />
           <motion.div
             key="sheet"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
+            initial={{ y: '100%', height: `${SnapPoints.collapsed * 100}vh` }}
+            animate={{ y: 0, height: `${heightVh}vh` }}
             exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 340, damping: 34 }}
+            transition={{ type: 'spring', stiffness: 240, damping: 32, mass: 0.8 }}
             className="fixed inset-x-0 bottom-0 z-[75] bg-white rounded-t-2xl shadow-2xl flex flex-col"
-            style={{ height: `${heightVh}vh` }}
           >
             <motion.div
               drag="y"

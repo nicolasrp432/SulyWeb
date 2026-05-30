@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { Plus, Trash2, Star, Upload, Loader2, X, Image } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
+import PageHeader from '@/components/admin/PageHeader';
 
 const CATEGORIES = [
   { id: 'manicure',   label: 'Manicura' },
@@ -20,12 +21,13 @@ const GalleryAdminPage = () => {
   const [form, setForm] = useState({ title: '', description: '', category: 'manicure', featured: false });
   const [selectedFile, setSelectedFile] = useState(null);
   const [preview, setPreview] = useState('');
+  const [activeTab, setActiveTab] = useState('all');
   const fileInputRef = useRef();
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(''), 3000); };
   const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 5000); };
 
-  const fetchImages = async () => {
+  const fetchImages = useCallback(async () => {
     setLoading(true);
     const { data, error: fetchErr } = await supabase
       .from('gallery_images')
@@ -35,9 +37,27 @@ const GalleryAdminPage = () => {
     if (fetchErr) showError('Error al cargar imágenes: ' + fetchErr.message);
     setImages(data ?? []);
     setLoading(false);
-  };
+  }, []);
 
-  useEffect(() => { fetchImages(); }, []);
+  useEffect(() => {
+    fetchImages();
+    const channel = supabase
+      .channel('admin-gallery-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery_images' }, fetchImages)
+      .subscribe();
+    return () => supabase.removeChannel(channel);
+  }, [fetchImages]);
+
+  const visibleImages = useMemo(() => {
+    if (activeTab === 'all') return images;
+    return images.filter((i) => i.category === activeTab);
+  }, [images, activeTab]);
+
+  const countByCat = useMemo(() => {
+    const c = { all: images.length };
+    CATEGORIES.forEach((cat) => { c[cat.id] = images.filter((i) => i.category === cat.id).length; });
+    return c;
+  }, [images]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -120,19 +140,19 @@ const GalleryAdminPage = () => {
     <>
       <Helmet><title>Galería — Admin Suly</title></Helmet>
       <div className="max-w-5xl mx-auto space-y-5">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-xl font-bold text-admin-text">Galería</h1>
-            <p className="text-sm text-admin-muted mt-0.5">{images.length} imágenes publicadas</p>
-          </div>
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-rose-gold text-white text-xs font-semibold rounded-xl shadow-rose-sm hover:brightness-105 transition-all shrink-0"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Subir imagen
-          </button>
-        </div>
+        <PageHeader
+          icon={Image}
+          title="Galería"
+          subtitle={`${images.length} imágenes · ${images.filter((i) => i.active).length} publicadas`}
+          actions={
+            <button
+              onClick={() => setShowForm((v) => !v)}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-rose-gold text-white text-xs font-bold rounded-xl shadow-rose-sm hover:shadow-rose-md transition-all"
+            >
+              <Plus className="h-3.5 w-3.5" /> Subir imagen
+            </button>
+          }
+        />
 
         {flash && <p className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-2">{flash}</p>}
         {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-2">{error}</p>}
@@ -221,6 +241,38 @@ const GalleryAdminPage = () => {
           </div>
         )}
 
+        {/* Tabs por categoría */}
+        <div className="flex items-center gap-1.5 bg-white border border-admin-border rounded-xl p-1 shadow-rose-xs overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveTab('all')}
+            className={`h-9 px-3 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+              activeTab === 'all'
+                ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
+                : 'text-admin-muted hover:text-admin-text hover:bg-admin-surface'
+            }`}
+          >
+            Todas <span className="ml-1 opacity-80">({countByCat.all})</span>
+          </button>
+          {CATEGORIES.map((cat) => {
+            const active = activeTab === cat.id;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setActiveTab(cat.id)}
+                className={`h-9 px-3 text-xs font-bold rounded-lg transition-all whitespace-nowrap ${
+                  active
+                    ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
+                    : 'text-admin-muted hover:text-admin-text hover:bg-admin-surface'
+                }`}
+              >
+                {cat.label} <span className="opacity-80">({countByCat[cat.id] || 0})</span>
+              </button>
+            );
+          })}
+        </div>
+
         {/* Image grid */}
         {loading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
@@ -228,14 +280,15 @@ const GalleryAdminPage = () => {
               <div key={i} className="aspect-square rounded-2xl bg-admin-surface animate-pulse" />
             ))}
           </div>
-        ) : images.length === 0 ? (
-          <div className="bg-admin-sidebar border border-admin-border rounded-2xl p-12 text-center">
+        ) : visibleImages.length === 0 ? (
+          <div className="bg-white border border-admin-border rounded-2xl p-12 text-center shadow-rose-xs">
             <Image className="h-10 w-10 text-admin-muted/40 mx-auto mb-3" />
-            <p className="text-sm text-admin-muted">No hay imágenes. Sube la primera.</p>
+            <p className="text-sm font-semibold text-admin-text">Sin imágenes en esta categoría</p>
+            <p className="text-xs text-admin-muted mt-1">Sube la primera con el botón "Subir imagen".</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {images.map((img) => (
+            {visibleImages.map((img) => (
               <div
                 key={img.id}
                 className={`relative group rounded-2xl overflow-hidden bg-admin-surface aspect-square ${!img.active ? 'opacity-50' : ''}`}

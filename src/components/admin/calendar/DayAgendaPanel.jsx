@@ -47,21 +47,9 @@ const DayAgendaPanel = ({
           <p className="text-[10px] font-bold text-admin-muted uppercase tracking-wider">Agenda del día</p>
           <p className="text-sm font-bold text-admin-text capitalize truncate">{label}</p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[11px] font-bold text-admin-muted">
-            {dayBookings.length} {dayBookings.length === 1 ? 'cita' : 'citas'}
-          </span>
-          {onNewBooking && (
-            <button
-              type="button"
-              onClick={() => onNewBooking(date)}
-              className="h-8 w-8 flex items-center justify-center rounded-full bg-gradient-rose-gold text-white shadow-rose-sm hover:shadow-rose-md transition-all"
-              aria-label="Nueva cita"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        <span className="text-[11px] font-bold text-admin-muted shrink-0">
+          {dayBookings.length} {dayBookings.length === 1 ? 'cita' : 'citas'}
+        </span>
       </div>
 
       <div className="divide-y divide-admin-border/50 max-h-[420px] overflow-y-auto">
