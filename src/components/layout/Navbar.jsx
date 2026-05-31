@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Calendar, Home, Scissors, Image, Phone } from 'lucide-react';
+import { Menu, X, Calendar, Home, Scissors, Image, Phone, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Logo from '@/components/Logo';
 
@@ -83,7 +83,14 @@ const Navbar = () => {
             </div>
 
             {/* Desktop CTA */}
-            <div className="hidden lg:block">
+            <div className="hidden lg:flex items-center gap-3">
+              <Link
+                to="/admin/login"
+                className="p-2 rounded-lg text-brand-mid/60 hover:text-brand-rose hover:bg-brand-rose-50 transition-colors"
+                title="Panel Admin"
+              >
+                <Settings className="h-4 w-4" />
+              </Link>
               <Button
                 asChild
                 className="bg-gradient-rose-gold text-white px-6 rounded-full shadow-rose-sm hover:shadow-rose-md hover:brightness-105 transition-all duration-200"
@@ -171,6 +178,21 @@ const Navbar = () => {
                     </motion.div>
                   );
                 })}
+                
+                {/* Admin link in mobile menu */}
+                <motion.div
+                  initial={{ opacity: 0, x: 24 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: navItems.length * 0.055 + 0.08 }}
+                >
+                  <Link
+                    to="/admin/login"
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 text-brand-mid/60 hover:text-brand-rose hover:bg-brand-rose-50"
+                  >
+                    <Settings className="h-5 w-5 shrink-0" />
+                    Panel Admin
+                  </Link>
+                </motion.div>
               </nav>
 
               {/* Drawer footer CTA */}

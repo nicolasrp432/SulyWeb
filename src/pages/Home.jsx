@@ -1,22 +1,21 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, LayoutGroup } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
-  Sparkles,
   Calendar,
-  Award,
-  Heart,
   ArrowRight,
   CheckCircle,
   MapPin,
   Star,
   Clock,
-  Shield
+  Heart,
+  Sparkles
 } from 'lucide-react';
 import CommonNinjaReviews from "../components/CommonNinjaReviews";
 import SEOHead from '../components/SEO/SEOHead';
 import WhyChooseUsSlider from '../components/WhyChooseUsSlider';
 import { Button } from '@/components/ui/button';
+import { TextRotate } from '@/components/ui/text-rotate';
 
 /* ── Animation helpers ─────────────────────────── */
 const fadeUp = (delay = 0) => ({
@@ -65,177 +64,190 @@ const Home = () => {
       <SEOHead
         page="home"
         customTitle="Suly Pretty Nails - Mejor Salón de Uñas en Bilbao | Manicura Basauri y Galdakao"
-        customDescription="✨ Salón de uñas líder en Bilbao. Manicura profesional, pedicura spa, uñas de gel y lifting de pestañas en Basauri y Galdakao. ¡Reserva tu cita online desde 9,90€!"
+        customDescription="Salón de uñas líder en Bilbao. Manicura profesional, pedicura spa, uñas de gel y lifting de pestañas en Basauri y Galdakao. ¡Reserva tu cita online desde 9,90€!"
         customKeywords="salón uñas Bilbao, manicura Basauri, pedicura Galdakao, uñas gel Bilbao, centro belleza Vizcaya, manicura profesional Bilbao, salón belleza Basauri"
         canonicalUrl="/"
       />
 
-      {/* ===== HERO v2 ===== */}
-      <section className="hero-v2">
-        {/* Background image */}
-        <div className="hero-v2-bg">
-          <img
-            src="https://images.unsplash.com/photo-1633681926019-03bd9325ec20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80"
-            alt="Elegant nail salon interior with modern pink and gold decor"
-            loading="eager"
-          />
-          <div className="hero-v2-overlay" />
-        </div>
+      {/* ===== NEW HERO - Inspired by Relaxe Spa ===== */}
+      <section className="hero-relaxe">
+        {/* Soft gradient background */}
+        <div className="hero-relaxe-bg" />
+        
+        {/* Decorative blur shapes */}
+        <div className="hero-relaxe-shape hero-relaxe-shape-1" />
+        <div className="hero-relaxe-shape hero-relaxe-shape-2" />
+        <div className="hero-relaxe-shape hero-relaxe-shape-3" />
 
-        {/* Floating particles */}
-        <motion.div
-          className="hero-v2-particle"
-          style={{ top: '15%', left: '8%', width: 80, height: 80, background: 'radial-gradient(circle, rgba(248,180,196,0.4), transparent)' }}
-          animate={{ y: [0, -25, 0], x: [0, 10, 0] }}
-          transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="hero-v2-particle"
-          style={{ top: '60%', right: '5%', width: 120, height: 120, background: 'radial-gradient(circle, rgba(212,175,55,0.25), transparent)' }}
-          animate={{ y: [0, 20, 0], x: [0, -15, 0] }}
-          transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div
-          className="hero-v2-particle"
-          style={{ bottom: '20%', left: '30%', width: 60, height: 60, background: 'radial-gradient(circle, rgba(233,30,99,0.2), transparent)' }}
-          animate={{ y: [0, -15, 0] }}
-          transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut', delay: 2 }}
-        />
-
-        {/* Content grid */}
-        <div className="hero-v2-content">
-          {/* Left: text */}
+        {/* Content */}
+        <div className="hero-relaxe-content">
+          {/* Left: Text content */}
           <motion.div
-            className="hero-v2-text"
+            className="hero-relaxe-text"
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Badge */}
-            <motion.div
-              className="hero-v2-badge"
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-            >
-              <Sparkles size={14} />
-              Salón de Belleza Premium
-            </motion.div>
-
-            <h1 className="hero-v2-heading">
-              Tu Belleza,{' '}
-              <span className="accent">Nuestra Pasión</span>
+            <h1 className="hero-relaxe-heading">
+              <span className="hero-relaxe-heading-line">Relaja tu cuerpo</span>
+              <span className="hero-relaxe-heading-line">y alma en{' '}</span>
+              <LayoutGroup>
+                <motion.span layout className="hero-relaxe-animated-text">
+                  <TextRotate
+                    texts={[
+                      "Suly Pretty",
+                      "tu salón",
+                      "buenas manos",
+                      "confianza",
+                    ]}
+                    mainClassName="overflow-hidden text-brand-rose"
+                    staggerDuration={0.025}
+                    staggerFrom="last"
+                    rotationInterval={3000}
+                    transition={{ type: "spring", damping: 28, stiffness: 280 }}
+                  />
+                </motion.span>
+              </LayoutGroup>
             </h1>
 
-            <p className="hero-v2-desc">
-              Descubre la experiencia única en <strong>Suly Pretty Nails</strong>.
-              El mejor salón de uñas en <strong>Bilbao</strong>, con sedes en{' '}
-              <strong>Basauri</strong> y <strong>Galdakao</strong>.
-            </p>
+            <motion.p 
+              className="hero-relaxe-desc"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+            >
+              Te ofrecemos la comodidad de consentirte con tratamientos profesionales de manicura, pedicura y belleza en nuestros salones de Basauri y Galdakao.
+            </motion.p>
 
-            <div className="hero-v2-buttons">
+            <motion.div 
+              className="hero-relaxe-buttons"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
               <Button
                 asChild
-                variant="gradient"
                 size="lg"
-                className="px-8 rounded-full text-base font-bold shadow-rose-lg hover:shadow-rose-xl pulse-glow"
+                className="bg-brand-dark text-white hover:bg-brand-dark/90 px-8 py-6 rounded-full text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
               >
                 <Link to="/reservas" className="flex items-center gap-2">
                   <Calendar size={18} />
                   Reservar Cita
                 </Link>
               </Button>
+              
               <Button
                 asChild
+                variant="ghost"
                 size="lg"
-                className="border-2 border-white/70 bg-white/12 text-white hover:bg-white hover:text-brand-rose px-8 rounded-full text-base font-bold backdrop-blur-sm transition-all duration-200"
+                className="text-brand-mid hover:text-brand-rose hover:bg-transparent px-6 py-6 rounded-full text-base font-medium"
               >
                 <Link to="/servicios" className="flex items-center gap-2">
+                  <span className="w-10 h-10 rounded-full border-2 border-brand-mid/30 flex items-center justify-center group-hover:border-brand-rose transition-colors">
+                    <ArrowRight size={16} />
+                  </span>
                   Ver Servicios
-                  <ArrowRight size={18} />
                 </Link>
               </Button>
-            </div>
+            </motion.div>
 
-            {/* Stats strip */}
-            <motion.div
-              className="hero-v2-stats"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
+            {/* Feature pills - hidden on mobile */}
+            <motion.div 
+              className="hero-relaxe-features hidden lg:flex"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.7, duration: 0.5 }}
             >
-              <div className="hero-v2-stat">
-                <span className="hero-v2-stat-num">500+</span>
-                <span className="hero-v2-stat-label">Clientas</span>
+              <div className="hero-feature-pill">
+                <Heart size={16} className="text-brand-rose" />
+                <div>
+                  <span className="hero-feature-title">Relajación</span>
+                  <span className="hero-feature-sub">Calma tu cuerpo y mente</span>
+                </div>
               </div>
-              <div className="hero-v2-stat">
-                <span className="hero-v2-stat-num">4.9★</span>
-                <span className="hero-v2-stat-label">Valoración</span>
+              <div className="hero-feature-pill">
+                <Star size={16} className="text-brand-gold" />
+                <div>
+                  <span className="hero-feature-title">Satisfacción</span>
+                  <span className="hero-feature-sub">Clientas felices siempre</span>
+                </div>
               </div>
-              <div className="hero-v2-stat">
-                <span className="hero-v2-stat-num">2</span>
-                <span className="hero-v2-stat-label">Sedes</span>
+              <div className="hero-feature-pill">
+                <Sparkles size={16} className="text-brand-rose" />
+                <div>
+                  <span className="hero-feature-title">Belleza</span>
+                  <span className="hero-feature-sub">Resultados profesionales</span>
+                </div>
               </div>
             </motion.div>
           </motion.div>
 
-          {/* Right: glass card */}
+          {/* Right: Hero image */}
           <motion.div
-            className="hero-v2-visual"
-            initial={{ opacity: 0, x: 60 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.4, duration: 0.8, type: 'spring' }}
+            className="flex lg:hidden items-center justify-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
-            <motion.div
-              className="hero-v2-card"
-              animate={{ y: [0, -8, 0] }}
-              transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}
-            >
-              <div className="hero-v2-card-ring" />
-              <Star size={32} color="#D4AF37" style={{ margin: '0 auto 1rem' }} />
-              <h3>Experiencia Premium</h3>
-              <p>
-                Servicio de primera con productos de máxima calidad y un ambiente diseñado para ti.
-              </p>
-              <div className="hero-v2-card-features">
-                <div className="hero-v2-card-feature">
-                  <CheckCircle size={16} />
-                  <span>Productos certificados</span>
+            <div className="hero-relaxe-image-wrapper w-full max-w-sm">
+              <img
+                src="https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+                alt="Mujer relajada disfrutando de tratamiento de belleza"
+                className="hero-relaxe-image"
+              />
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="hero-relaxe-visual hidden lg:flex"
+            initial={{ opacity: 0, scale: 0.95, x: 40 }}
+            animate={{ opacity: 1, scale: 1, x: 0 }}
+            transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="hero-relaxe-image-wrapper">
+              <img
+                src="https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+                alt="Mujer relajada disfrutando de tratamiento de belleza"
+                className="hero-relaxe-image"
+              />
+              {/* Floating stats card - desktop only */}
+              <motion.div 
+                className="hero-floating-card hidden md:block"
+                animate={{ y: [0, -8, 0] }}
+                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+              >
+                <div className="hero-floating-card-inner">
+                  <div className="hero-floating-stat">
+                    <span className="hero-floating-num">500+</span>
+                    <span className="hero-floating-label">Clientas</span>
+                  </div>
+                  <div className="hero-floating-divider" />
+                  <div className="hero-floating-stat">
+                    <span className="hero-floating-num">4.9</span>
+                    <span className="hero-floating-label flex items-center gap-1">
+                      <Star size={12} className="fill-brand-gold text-brand-gold" />
+                      Rating
+                    </span>
+                  </div>
                 </div>
-                <div className="hero-v2-card-feature">
-                  <Clock size={16} />
-                  <span>Reserva en 2 minutos</span>
-                </div>
-                <div className="hero-v2-card-feature">
-                  <Shield size={16} />
-                  <span>Profesionales expertas</span>
-                </div>
-                <div className="hero-v2-card-feature">
-                  <MapPin size={16} />
-                  <span>Basauri y Galdakao</span>
-                </div>
-              </div>
-            </motion.div>
+              </motion.div>
+            </div>
           </motion.div>
         </div>
 
         {/* Scroll indicator */}
         <motion.div
+          className="hero-scroll-indicator"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ delay: 1.5 }}
-          style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', zIndex: 10 }}
+          transition={{ delay: 1.2 }}
         >
           <motion.div
-            animate={{ y: [0, 10, 0] }}
-            transition={{ duration: 2, repeat: Infinity }}
-            style={{ width: 24, height: 40, border: '2px solid rgba(255,255,255,0.4)', borderRadius: 9999, display: 'flex', justifyContent: 'center' }}
+            className="hero-scroll-mouse"
+            animate={{ y: [0, 8, 0] }}
+            transition={{ duration: 1.5, repeat: Infinity }}
           >
-            <motion.div
-              animate={{ y: [0, 12, 0] }}
-              transition={{ duration: 2, repeat: Infinity }}
-              style={{ width: 4, height: 12, background: 'rgba(255,255,255,0.6)', borderRadius: 9999, marginTop: 8 }}
-            />
+            <motion.div className="hero-scroll-wheel" />
           </motion.div>
         </motion.div>
       </section>
@@ -334,7 +346,7 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ===== CTA FINAL ===== */}
+      {/* ===== CTA FINAL - Unified ===== */}
       <section className="relative py-20 sm:py-28 overflow-hidden">
         {/* Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-brand-rose via-rose-600 to-brand-rose-dark" />
@@ -356,7 +368,7 @@ const Home = () => {
               Reserva tu cita hoy mismo en tu sede más cercana y déjate consentir.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="flex justify-center">
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                 <Button
                   asChild
@@ -366,19 +378,6 @@ const Home = () => {
                   <Link to="/reservas" className="flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
                     Reservar Ahora
-                  </Link>
-                </Button>
-              </motion.div>
-
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                <Button
-                  asChild
-                  size="lg"
-                  className="border-2 border-white/60 bg-white/10 text-white hover:bg-white hover:text-brand-rose px-8 rounded-full font-bold backdrop-blur-sm"
-                >
-                  <Link to="/contacto" className="flex items-center gap-2">
-                    Contáctanos
-                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </motion.div>

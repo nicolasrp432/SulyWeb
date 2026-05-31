@@ -14,6 +14,7 @@ import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/customSupabaseClient';
 import { sendBookingNotificationToAdmin, sendBookingConfirmationToUser } from '@/lib/emailService';
 import SEOHead from '@/components/SEO/SEOHead';
+import { getServiceImageFromObj } from '@/lib/serviceImages';
 
 /* ── Time slot grid ──────────────────────────── */
 const TIME_SLOTS = [];
@@ -63,46 +64,50 @@ const StepIndicator = ({ step }) => {
 };
 
 /* ── Service card ───────────────────────────── */
-const ServiceCard = ({ service, selected, onToggle }) => (
-  <motion.button
-    whileHover={{ scale: 1.02 }}
-    whileTap={{ scale: 0.98 }}
-    onClick={() => onToggle(service)}
-    className={`relative text-left w-full rounded-2xl overflow-hidden shadow-card transition-all duration-200 ${
-      selected ? 'ring-2 ring-brand-rose shadow-rose-md' : 'hover:shadow-card-hover'
-    }`}
-  >
-    {selected && (
-      <div className="absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-full bg-gradient-rose-gold flex items-center justify-center shadow-rose-sm">
-        <Check className="h-3.5 w-3.5 text-white" />
+const ServiceCard = ({ service, selected, onToggle }) => {
+  const imageUrl = getServiceImageFromObj(service);
+  
+  return (
+    <motion.button
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => onToggle(service)}
+      className={`relative text-left w-full rounded-2xl overflow-hidden shadow-card transition-all duration-200 ${
+        selected ? 'ring-2 ring-brand-rose shadow-rose-md' : 'hover:shadow-card-hover'
+      }`}
+    >
+      {selected && (
+        <div className="absolute top-2.5 right-2.5 z-10 w-6 h-6 rounded-full bg-gradient-rose-gold flex items-center justify-center shadow-rose-sm">
+          <Check className="h-3.5 w-3.5 text-white" />
+        </div>
+      )}
+      <div className="relative aspect-[4/3] overflow-hidden bg-brand-rose-50">
+        <img
+          src={imageUrl}
+          alt={service.name}
+          className="w-full h-full object-cover"
+          onError={(e) => { e.target.src = '/serviciosimg/manicura-expres.jpg'; }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
       </div>
-    )}
-    <div className="relative aspect-[4/3] overflow-hidden bg-brand-rose-50">
-      <img
-        src={service.image_url || '/serviciosimg/manicura-expres.jpg'}
-        alt={service.name}
-        className="w-full h-full object-cover"
-        onError={(e) => { e.target.src = '/serviciosimg/manicura-expres.jpg'; }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-    </div>
-    <div className={`p-3 transition-colors ${selected ? 'bg-brand-rose-50' : 'bg-white'}`}>
-      <p className={`text-sm font-bold leading-tight transition-colors ${selected ? 'text-brand-rose' : 'text-brand-dark'}`}>
-        {service.name}
-      </p>
-      <div className="flex items-center justify-between mt-1 gap-2">
-        {service.duration_minutes && (
-          <span className="flex items-center gap-1 text-[11px] text-brand-mid">
-            <Clock className="h-3 w-3" /> {service.duration_minutes} min
-          </span>
-        )}
-        {service.price && (
-          <span className="text-sm font-bold gradient-text">{service.price}</span>
-        )}
+      <div className={`p-3 transition-colors ${selected ? 'bg-brand-rose-50' : 'bg-white'}`}>
+        <p className={`text-sm font-bold leading-tight transition-colors ${selected ? 'text-brand-rose' : 'text-brand-dark'}`}>
+          {service.name}
+        </p>
+        <div className="flex items-center justify-between mt-1 gap-2">
+          {service.duration_minutes && (
+            <span className="flex items-center gap-1 text-[11px] text-brand-mid">
+              <Clock className="h-3 w-3" /> {service.duration_minutes} min
+            </span>
+          )}
+          {service.price && (
+            <span className="text-sm font-bold gradient-text">{service.price}</span>
+          )}
+        </div>
       </div>
-    </div>
-  </motion.button>
-);
+    </motion.button>
+  );
+};
 
 /* ── Mini calendar ──────────────────────────── */
 const MiniCalendar = ({ selectedDate, blockedDates, businessHours, onSelect }) => {

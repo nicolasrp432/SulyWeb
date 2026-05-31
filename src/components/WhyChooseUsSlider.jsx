@@ -1,6 +1,7 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { motion, useMotionValue, useTransform, animate } from 'framer-motion';
-import { Award, Sparkles, Heart, MapPin, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Award, Sparkles, Heart, MapPin, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 const FEATURES = [
   {
@@ -9,8 +10,6 @@ const FEATURES = [
     description: 'Equipo especializado con años de experiencia y formación continua en las últimas tendencias.',
     stat: '+8 años',
     statLabel: 'de experiencia',
-    color: '#E91E63',
-    accent: '#FCE4EC',
   },
   {
     icon: Sparkles,
@@ -18,8 +17,6 @@ const FEATURES = [
     description: 'Trabajamos exclusivamente con las mejores marcas del mercado para garantizar resultados duraderos.',
     stat: '100%',
     statLabel: 'calidad certificada',
-    color: '#D4AF37',
-    accent: '#FFF8E1',
   },
   {
     icon: Heart,
@@ -27,8 +24,6 @@ const FEATURES = [
     description: 'Cada clienta recibe un trato único y especial, adaptado a sus gustos y necesidades.',
     stat: '500+',
     statLabel: 'clientas felices',
-    color: '#E91E63',
-    accent: '#FCE4EC',
   },
   {
     icon: MapPin,
@@ -36,185 +31,175 @@ const FEATURES = [
     description: 'Encuéntranos en Basauri y Galdakao. Elige la sede más cercana a ti y disfruta.',
     stat: '2',
     statLabel: 'ubicaciones',
-    color: '#D4AF37',
-    accent: '#FFF8E1',
   },
 ];
 
-const CARD_WIDTH = 340;
-const CARD_GAP = 24;
-const CARD_TOTAL = CARD_WIDTH + CARD_GAP;
+const fadeUp = (delay = 0) => ({
+  initial: { opacity: 0, y: 32 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true },
+  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] },
+});
 
 const FeatureCard = ({ feature, index }) => {
   const Icon = feature.icon;
 
   return (
     <motion.div
-      className="why-slider-card"
-      style={{
-        width: CARD_WIDTH,
-        minWidth: CARD_WIDTH,
-        '--card-color': feature.color,
-        '--card-accent': feature.accent,
-      }}
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: index * 0.08 }}
-      viewport={{ once: true }}
+      className="why-card-new flex-shrink-0 w-[280px] sm:w-auto"
+      {...fadeUp(index * 0.1)}
     >
-      {/* Glow background */}
-      <div className="why-card-glow" />
-
       {/* Icon */}
-      <div className="why-card-icon-wrap">
-        <div className="why-card-icon-bg">
-          <Icon size={28} color="#fff" strokeWidth={2} />
-        </div>
+      <div className="why-card-icon-new">
+        <Icon size={24} strokeWidth={2} />
       </div>
 
       {/* Content */}
-      <h3 className="why-card-title">{feature.title}</h3>
-      <p className="why-card-desc">{feature.description}</p>
+      <h3 className="why-card-title-new">{feature.title}</h3>
+      <p className="why-card-desc-new">{feature.description}</p>
 
-      {/* Stat badge */}
-      <div className="why-card-stat">
-        <span className="why-card-stat-number">{feature.stat}</span>
-        <span className="why-card-stat-label">{feature.statLabel}</span>
+      {/* Stat */}
+      <div className="why-card-stat-new">
+        <span className="why-card-stat-num-new">{feature.stat}</span>
+        <span className="why-card-stat-label-new">{feature.statLabel}</span>
       </div>
     </motion.div>
   );
 };
 
 const WhyChooseUsSlider = () => {
-  const trackRef = useRef(null);
-  const containerRef = useRef(null);
-  const x = useMotionValue(0);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [maxIndex, setMaxIndex] = useState(0);
-  const [isDragging, setIsDragging] = useState(false);
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Calculate max scroll index based on container width
-  const calcMaxIndex = useCallback(() => {
-    if (!containerRef.current) return;
-    const containerW = containerRef.current.offsetWidth;
-    const totalCards = FEATURES.length;
-    const visibleCards = Math.floor(containerW / CARD_TOTAL) || 1;
-    setMaxIndex(Math.max(0, totalCards - visibleCards));
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  useEffect(() => {
-    calcMaxIndex();
-    window.addEventListener('resize', calcMaxIndex);
-    return () => window.removeEventListener('resize', calcMaxIndex);
-  }, [calcMaxIndex]);
-
-  const goTo = useCallback((idx) => {
-    const clamped = Math.max(0, Math.min(idx, maxIndex));
-    setActiveIndex(clamped);
-    animate(x, -clamped * CARD_TOTAL, {
-      type: 'spring',
-      stiffness: 300,
-      damping: 30,
-    });
-  }, [maxIndex, x]);
-
-  const handleDragEnd = (_, info) => {
-    setIsDragging(false);
-    const offset = info.offset.x;
-    const velocity = info.velocity.x;
-    const swipeThreshold = CARD_TOTAL / 3;
-
-    let newIndex = activeIndex;
-    if (offset < -swipeThreshold || velocity < -500) {
-      newIndex = activeIndex + 1;
-    } else if (offset > swipeThreshold || velocity > 500) {
-      newIndex = activeIndex - 1;
+  // Check scroll position
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
     }
-    goTo(newIndex);
   };
 
-  // Progress bar
-  const progress = maxIndex > 0 ? activeIndex / maxIndex : 0;
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScroll);
+      return () => el.removeEventListener('scroll', checkScroll);
+    }
+  }, []);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 300;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
 
   return (
-    <section className="why-choose-section">
-      <div className="why-choose-inner">
+    <section className="why-section-new">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <motion.div
-          className="why-choose-header"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.7 }}
-          viewport={{ once: true }}
+          className="text-center mb-12 lg:mb-16"
+          {...fadeUp()}
         >
-          <span className="why-choose-badge">
-            <Sparkles size={14} />
+          <span className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-brand-rose mb-4">
+            <span className="w-6 h-px bg-brand-rose" />
             Nuestras Fortalezas
+            <span className="w-6 h-px bg-brand-rose" />
           </span>
-          <h2 className="why-choose-title">
-            ¿Por qué <span className="gradient-text">Elegirnos</span>?
-          </h2>
-          <p className="why-choose-subtitle">
-            Nos distinguimos por nuestra pasión, profesionalismo y dedicación
-            para brindarte la mejor experiencia de belleza.
+          <h2 className="gradient-text mb-4">¿Por qué Elegirnos?</h2>
+          <p className="text-brand-mid max-w-2xl mx-auto leading-relaxed">
+            Nos distinguimos por nuestra pasión, profesionalismo y dedicación para brindarte la mejor experiencia de belleza.
           </p>
         </motion.div>
 
-        {/* Slider */}
-        <div className="why-slider-container" ref={containerRef}>
-          <motion.div
-            ref={trackRef}
-            className="why-slider-track"
-            style={{ x }}
-            drag="x"
-            dragConstraints={{
-              left: -maxIndex * CARD_TOTAL,
-              right: 0,
-            }}
-            dragElastic={0.1}
-            onDragStart={() => setIsDragging(true)}
-            onDragEnd={handleDragEnd}
-          >
-            {FEATURES.map((feature, i) => (
-              <FeatureCard key={i} feature={feature} index={i} />
-            ))}
-          </motion.div>
-        </div>
-
-        {/* Controls */}
-        <div className="why-slider-controls">
-          {/* Progress bar */}
-          <div className="why-slider-progress-bar">
-            <motion.div
-              className="why-slider-progress-fill"
-              animate={{ width: `${((activeIndex + 1) / FEATURES.length) * 100}%` }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-            />
-          </div>
-
-          {/* Arrows */}
-          <div className="why-slider-arrows">
+        {/* Mobile: Horizontal Slider */}
+        <div className="sm:hidden relative">
+          {/* Scroll buttons */}
+          {canScrollLeft && (
             <button
-              className="why-slider-arrow"
-              onClick={() => goTo(activeIndex - 1)}
-              disabled={activeIndex === 0}
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center text-brand-rose hover:bg-white transition-colors"
               aria-label="Anterior"
             >
               <ChevronLeft size={20} />
             </button>
-            <span className="why-slider-counter">
-              {activeIndex + 1} / {FEATURES.length}
-            </span>
+          )}
+          {canScrollRight && (
             <button
-              className="why-slider-arrow"
-              onClick={() => goTo(activeIndex + 1)}
-              disabled={activeIndex >= maxIndex}
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center text-brand-rose hover:bg-white transition-colors"
               aria-label="Siguiente"
             >
               <ChevronRight size={20} />
             </button>
+          )}
+
+          {/* Scrollable container */}
+          <div
+            ref={scrollRef}
+            className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
+            {FEATURES.map((feature, i) => (
+              <div key={i} className="snap-start">
+                <FeatureCard feature={feature} index={i} />
+              </div>
+            ))}
+          </div>
+
+          {/* Scroll indicator dots */}
+          <div className="flex justify-center gap-2 mt-4">
+            {FEATURES.map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-brand-rose/30"
+              />
+            ))}
           </div>
         </div>
+
+        {/* Desktop: Grid */}
+        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+          {FEATURES.map((feature, i) => (
+            <FeatureCard key={i} feature={feature} index={i} />
+          ))}
+        </div>
+
+        {/* CTA */}
+        <motion.div 
+          className="text-center mt-12 lg:mt-16"
+          {...fadeUp(0.4)}
+        >
+          <Link 
+            to="/reservas" 
+            className="inline-flex items-center gap-2 text-brand-rose font-semibold hover:gap-3 transition-all duration-300"
+          >
+            Reserva tu cita ahora
+            <ArrowRight size={18} />
+          </Link>
+        </motion.div>
       </div>
     </section>
   );
