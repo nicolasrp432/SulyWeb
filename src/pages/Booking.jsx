@@ -15,6 +15,7 @@ import { supabase } from '@/lib/customSupabaseClient';
 import { sendBookingNotificationToAdmin, sendBookingConfirmationToUser } from '@/lib/emailService';
 import SEOHead from '@/components/SEO/SEOHead';
 import { getServiceImageFromObj } from '@/lib/serviceImages';
+import { generateDaySlots, isDayClosed, timeToMinutes } from '@/lib/businessHours';
 
 /* ── Time slot grid ──────────────────────────── */
 const TIME_SLOTS = [];
@@ -120,13 +121,9 @@ const MiniCalendar = ({ selectedDate, blockedDates, businessHours, onSelect }) =
   const days     = eachDayOfInterval({ start: calStart, end: calEnd });
 
   const isDisabled = (d) => {
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayName = dayNames[d.getDay()];
-    const isDayClosed = businessHours?.[dayName]?.closed ?? (d.getDay() === 0);
-
     return isBefore(d, today) ||
       isBefore(maxDate, d) ||
-      isDayClosed ||
+      isDayClosed(d, businessHours) ||
       blockedDates.some((bd) => isSameDay(parseISO(bd), d));
   };
 
@@ -196,8 +193,10 @@ const Booking = () => {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
   const [blockedDates, setBlockedDates] = useState([]);
-  const [bookedTimes, setBookedTimes] = useState([]);
+  const [bookedSlots, setBookedSlots] = useState([]); // [{ booking_time, duration_minutes, staff_id }]
   const [blockedTimes, setBlockedTimes] = useState([]);
+  const [capacity, setCapacity] = useState(0); // nº de manicuristas reservables en la sede
+  const [team, setTeam] = useState([]); // equipo de la sede (gestionable desde admin)
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -214,31 +213,7 @@ const Booking = () => {
   });
 
   const getAvailableTimeSlots = useCallback((date) => {
-    if (!date) return [];
-    const dayNames = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const dayKey = dayNames[date.getDay()];
-    const config = businessHours[dayKey] || { open: '10:00', close: '20:00', closed: false };
-
-    if (config.closed) return [];
-
-    const slots = [];
-    try {
-      const [openHour, openMin] = config.open.split(':').map(Number);
-      const [closeHour, closeMin] = config.close.split(':').map(Number);
-
-      const openMinutes = openHour * 60 + openMin;
-      const closeMinutes = closeHour * 60 + closeMin;
-
-      for (let minutes = openMinutes; minutes < closeMinutes; minutes += 30) {
-        const h = Math.floor(minutes / 60);
-        const m = minutes % 60;
-        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-      }
-    } catch (e) {
-      console.error("Error generating time slots:", e);
-    }
-    
-    return slots;
+    return generateDaySlots(date, businessHours, 30);
   }, [businessHours]);
 
   /* Fetch services and locations on mount with real-time subscription */
@@ -330,13 +305,21 @@ const Booking = () => {
     };
   }, [selectedLocation]);
 
-  /* Fetch booked + blocked times when date + location change */
+  /* Fetch the team of the selected location (example data, managed from admin) */
+  useEffect(() => {
+    if (!selectedLocation) { setTeam([]); return; }
+    supabase
+      .rpc('get_team_public', { p_location_id: selectedLocation.id })
+      .then(({ data }) => setTeam(data ?? []));
+  }, [selectedLocation]);
+
+  /* Fetch booked + blocked times + team capacity when date + location change */
   const loadSlots = useCallback(async () => {
     if (!selectedDate || !selectedLocation) return;
     setLoadingSlots(true);
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    const [{ data: bookingData }, { data: blockData }] = await Promise.all([
+    const [{ data: bookingData }, { data: blockData }, { data: capData }] = await Promise.all([
       supabase.rpc('get_booked_slots', { p_location_id: selectedLocation.id, p_date: dateStr }),
       supabase
         .from('schedule_blocks')
@@ -344,10 +327,12 @@ const Booking = () => {
         .eq('block_date', dateStr)
         .not('start_time', 'is', null)
         .or(`location_id.eq.${selectedLocation.id},location_id.is.null`),
+      supabase.rpc('get_location_capacity', { p_location_id: selectedLocation.id }),
     ]);
 
-    setBookedTimes((bookingData ?? []).map((b) => b.booking_time?.slice(0, 5)));
+    setBookedSlots(bookingData ?? []);
     setBlockedTimes(blockData ?? []);
+    setCapacity(typeof capData === 'number' ? capData : 0);
     setLoadingSlots(false);
   }, [selectedDate, selectedLocation]);
 
@@ -365,16 +350,66 @@ const Booking = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => loadSlots())
       .subscribe();
 
+    // Las citas (bookings) tienen RLS y anon no recibe sus eventos realtime,
+    // así que refrescamos la disponibilidad al volver a la pestaña y con un
+    // intervalo ligero para que una hora recién ocupada deje de aparecer libre.
+    const onFocus = () => { if (!document.hidden) loadSlots(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    const interval = setInterval(() => { if (!document.hidden) loadSlots(); }, 25000);
+
     return () => {
       supabase.removeChannel(channel);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+      clearInterval(interval);
     };
   }, [selectedDate, selectedLocation, loadSlots]);
 
+  /* Duración total de la reserva en curso (mín. 30) — el slot debe quedar
+     libre durante todo ese intervalo, igual que valida el servidor. */
+  const newBookingDuration = Math.max(
+    30,
+    selectedServices.reduce((a, s) => a + (s.duration_minutes || 0), 0) || 30
+  );
+
+  /* ¿El intervalo [slot, slot+duración) solapa un bloqueo de agenda? */
   const isTimeBlocked = (slot) => {
-    return blockedTimes.some((b) => b.start_time <= slot + ':00' && (b.end_time ?? '23:59') > slot + ':00');
+    const start = timeToMinutes(slot);
+    const end = start + newBookingDuration;
+    return blockedTimes.some((b) => {
+      const bs = timeToMinutes(b.start_time);
+      const be = b.end_time ? timeToMinutes(b.end_time) : 24 * 60;
+      return bs < end && be > start;
+    });
   };
 
-  const isTimeUnavailable = (slot) => bookedTimes.includes(slot) || isTimeBlocked(slot);
+  /* Capacidad: el slot está ocupado solo cuando NO queda ninguna manicurista
+     libre durante todo el intervalo. Las citas sin manicurista asignada
+     (alta manual) consumen una unidad de capacidad. */
+  const isTimeUnavailable = (slot) => {
+    if (isTimeBlocked(slot)) return true;
+
+    const start = timeToMinutes(slot);
+    const end = start + newBookingDuration;
+
+    if (capacity <= 0) {
+      // Sin equipo configurado: 1 cita por slot exacto (comportamiento legacy).
+      return bookedSlots.some((b) => timeToMinutes(b.booking_time) === start);
+    }
+
+    const busyStaff = new Set();
+    let nullBusy = 0;
+    for (const b of bookedSlots) {
+      const bs = timeToMinutes(b.booking_time);
+      const be = bs + (b.duration_minutes || 30);
+      if (bs < end && be > start) {
+        if (b.staff_id != null) busyStaff.add(b.staff_id);
+        else nullBusy += 1;
+      }
+    }
+    return busyStaff.size + nullBusy >= capacity;
+  };
 
   /* Service toggle */
   const toggleService = (svc) => {
@@ -656,6 +691,34 @@ const Booking = () => {
                       </button>
                     ))}
                   </div>
+
+                  {/* Nuestro equipo — datos de ejemplo, gestionables desde el admin */}
+                  {team.length > 0 && (
+                    <div className="mt-4 pt-4 border-t border-brand-rose-100">
+                      <p className="text-xs font-semibold text-brand-mid mb-2.5 flex items-center gap-1.5">
+                        <Sparkles className="h-3.5 w-3.5 text-brand-rose" />
+                        Nuestro equipo en {selectedLocation?.name}
+                      </p>
+                      <div className="flex flex-wrap gap-2.5">
+                        {team.map((m) => (
+                          <div key={m.id} className="flex items-center gap-2 bg-brand-rose-50 rounded-full pl-1 pr-3 py-1">
+                            <div className="w-7 h-7 rounded-full bg-gradient-rose-gold flex items-center justify-center overflow-hidden shrink-0">
+                              {m.avatar_url ? (
+                                <img src={m.avatar_url} alt={m.full_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <span className="text-[11px] font-bold text-white">{m.full_name?.[0]}</span>
+                              )}
+                            </div>
+                            <div className="leading-tight">
+                              <p className="text-xs font-bold text-brand-dark">{m.full_name}</p>
+                              {m.specialty && <p className="text-[10px] text-brand-mid">{m.specialty}</p>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <p className="text-[10px] text-brand-mid mt-2">Te asignaremos automáticamente a una profesional disponible.</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Calendar */}

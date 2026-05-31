@@ -4,7 +4,7 @@ import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Phone, Clock, Mail, Store, UserCheck, Activity, Timer, Globe, FileText,
-  ChevronDown, ChevronUp, X, Loader2,
+  ChevronDown, ChevronUp, X, Loader2, Lock, CalendarPlus,
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
@@ -41,11 +41,17 @@ const NewBookingSheet = ({
   defaultAssignedTo = '',
   locations = [],
   responsibleOptions = [],
+  staffMembers = [],
   onCreated,
+  onBlock,
 }) => {
   const { toast } = useToast();
 
   const todayIso = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
+
+  // 'booking' = nueva cita · 'block' = cerrar ese horario
+  const [mode, setMode] = useState('booking');
+  const [blockForm, setBlockForm] = useState({ duration: 30, reason: '' });
 
   const [form, setForm] = useState({
     client_name: '',
@@ -57,6 +63,7 @@ const NewBookingSheet = ({
     client_email: '',
     location_id: '',
     assigned_to: defaultAssignedTo || '',
+    staff_id: '',
     status: 'pending',
     duration_minutes: 30,
     source: 'admin',
@@ -67,11 +74,14 @@ const NewBookingSheet = ({
 
   useEffect(() => {
     if (!open) return;
+    setMode('booking');
+    setBlockForm({ duration: 30, reason: '' });
     setForm((prev) => ({
       ...prev,
       booking_time: defaultTime || prev.booking_time || '10:00',
       booking_date: defaultDate || prev.booking_date || todayIso,
       assigned_to: defaultAssignedTo || '',
+      staff_id: '',
       client_name: '',
       client_phone: '',
       client_email: '',
@@ -87,6 +97,13 @@ const NewBookingSheet = ({
   }, [open, defaultTime, defaultDate, defaultAssignedTo, locations, todayIso]);
 
   const setField = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e?.target ? e.target.value : e }));
+
+  // Al elegir manicurista guardamos id (capacidad) y nombre (compatibilidad).
+  const onStaffChange = (e) => {
+    const id = e.target.value;
+    const member = staffMembers.find((m) => String(m.id) === String(id));
+    setForm((prev) => ({ ...prev, staff_id: id, assigned_to: member?.full_name || '' }));
+  };
 
   const valid =
     form.client_name.trim().length > 0 &&
@@ -104,9 +121,10 @@ const NewBookingSheet = ({
         client_email: form.client_email.trim() || null,
         booking_date: form.booking_date,
         booking_time: form.booking_time.length === 5 ? form.booking_time + ':00' : form.booking_time,
-        location_id: form.location_id ? Number(form.location_id) : (locations[0]?.id ?? null),
+        location_id: form.location_id || locations[0]?.id || null,
         status: form.status || 'pending',
         assigned_to: form.assigned_to || null,
+        staff_id: form.staff_id ? Number(form.staff_id) : null,
         duration_minutes: Number(form.duration_minutes) || 30,
         appointment_type: form.otherService.trim() || null,
         origin: form.source || 'admin',
@@ -134,7 +152,41 @@ const NewBookingSheet = ({
       onClose?.();
     } catch (err) {
       console.error('Error creando cita:', err);
-      toast({ variant: 'destructive', title: 'No se pudo crear la cita', description: err.message || 'Error inesperado' });
+      const msg = err.message || '';
+      const friendly = msg.includes('STAFF_OVERLAP')
+        ? 'Esa manicurista ya tiene una cita que se solapa a esa hora.'
+        : msg.includes('SLOT_BLOCKED')
+        ? 'Ese horario está cerrado/bloqueado.'
+        : msg.includes('uq_bookings_active_slot')
+        ? 'Ya existe una cita para esa manicurista a esa hora.'
+        : msg || 'Error inesperado';
+      toast({ variant: 'destructive', title: 'No se pudo crear la cita', description: friendly });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const start = form.booking_time.length === 5 ? form.booking_time + ':00' : form.booking_time;
+      let end = null; // null = resto del día
+      if (blockForm.duration > 0) {
+        const [h, m] = form.booking_time.split(':').map(Number);
+        const total = h * 60 + m + Number(blockForm.duration);
+        end = `${String(Math.floor(total / 60) % 24).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}:00`;
+      }
+      await onBlock?.({
+        block_date: form.booking_date,
+        start_time: start,
+        end_time: end,
+        reason: blockForm.reason.trim() || 'Horario cerrado',
+      });
+      onClose?.();
+    } catch (err) {
+      console.error('Error cerrando horario:', err);
+      toast({ variant: 'destructive', title: 'No se pudo cerrar el horario', description: err.message || 'Error inesperado' });
     } finally {
       setSaving(false);
     }
@@ -180,21 +232,100 @@ const NewBookingSheet = ({
               </div>
             )}
 
-            <div className="px-5 pt-3 pb-3 border-b border-admin-border shrink-0 flex items-start justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-admin-text">Nueva cita</h3>
-                <p className="text-xs text-admin-muted mt-0.5 capitalize">{dateLabel}</p>
+            <div className="px-5 pt-3 pb-3 border-b border-admin-border shrink-0">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-admin-text">
+                    {mode === 'block' ? 'Cerrar horario' : 'Nueva cita'}
+                  </h3>
+                  <p className="text-xs text-admin-muted mt-0.5 capitalize">{dateLabel}</p>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="text-admin-muted hover:text-admin-text p-1.5 rounded-lg hover:bg-admin-surface transition-colors"
+                  aria-label="Cerrar"
+                >
+                  <X className="w-5 h-5" />
+                </button>
               </div>
-              <button
-                onClick={onClose}
-                className="text-admin-muted hover:text-admin-text p-1.5 rounded-lg hover:bg-admin-surface transition-colors"
-                aria-label="Cerrar"
-              >
-                <X className="w-5 h-5" />
-              </button>
+
+              {/* Selector de modo: nueva cita o cerrar horario */}
+              {onBlock && (
+                <div className="mt-3 grid grid-cols-2 gap-1 p-1 bg-admin-surface rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setMode('booking')}
+                    className={`flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${
+                      mode === 'booking' ? 'bg-white text-brand-rose shadow-sm' : 'text-admin-muted hover:text-admin-text'
+                    }`}
+                  >
+                    <CalendarPlus className="w-3.5 h-3.5" /> Nueva cita
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMode('block')}
+                    className={`flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${
+                      mode === 'block' ? 'bg-white text-amber-600 shadow-sm' : 'text-admin-muted hover:text-admin-text'
+                    }`}
+                  >
+                    <Lock className="w-3.5 h-3.5" /> Cerrar horario
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+              {mode === 'block' ? (
+                <div className="space-y-4">
+                  <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3">
+                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+                    <p className="text-xs text-amber-800">
+                      Cierra este horario para que <strong>nadie</strong> pueda reservar (toda la sede). Útil para comidas, descansos o imprevistos.
+                    </p>
+                  </div>
+
+                  <div className="relative">
+                    <FieldIcon icon={Clock} />
+                    <input type="time" value={form.booking_time} onChange={setField('booking_time')} className={inputCls} />
+                  </div>
+
+                  <div>
+                    <p className="text-xs font-bold text-admin-text mb-2">Duración del cierre</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[
+                        { label: '30 min', value: 30 },
+                        { label: '1 h', value: 60 },
+                        { label: '2 h', value: 120 },
+                        { label: 'Resto del día', value: 0 },
+                      ].map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setBlockForm((p) => ({ ...p, duration: opt.value }))}
+                          className={`h-10 rounded-xl text-xs font-bold border transition-all ${
+                            blockForm.duration === opt.value
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                              : 'bg-white text-admin-muted border-admin-border hover:border-amber-300'
+                          }`}
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="relative">
+                    <FileText className="absolute left-3 top-3 w-4 h-4 text-admin-muted pointer-events-none" />
+                    <input
+                      value={blockForm.reason}
+                      onChange={(e) => setBlockForm((p) => ({ ...p, reason: e.target.value }))}
+                      placeholder="Motivo (opcional): comida, descanso…"
+                      className={inputCls}
+                    />
+                  </div>
+                </div>
+              ) : (
+              <>
               <div className="relative">
                 <FieldIcon icon={User} />
                 <input
@@ -273,13 +404,22 @@ const NewBookingSheet = ({
 
                   <div className="relative">
                     <FieldIcon icon={UserCheck} />
-                    <input
-                      list="np-staff-options"
-                      value={form.assigned_to}
-                      onChange={setField('assigned_to')}
-                      placeholder="Especialista (opcional)"
-                      className={inputCls}
-                    />
+                    {staffMembers.length > 0 ? (
+                      <select value={form.staff_id} onChange={onStaffChange} className={selectCls}>
+                        <option value="">Asignar manicurista (auto si vacío)</option>
+                        {staffMembers.map((m) => (
+                          <option key={m.id} value={String(m.id)}>{m.full_name}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        list="np-staff-options"
+                        value={form.assigned_to}
+                        onChange={setField('assigned_to')}
+                        placeholder="Especialista (opcional)"
+                        className={inputCls}
+                      />
+                    )}
                     <datalist id="np-staff-options">
                       {responsibleOptions.map((name) => <option key={name} value={name} />)}
                     </datalist>
@@ -327,6 +467,8 @@ const NewBookingSheet = ({
                   </div>
                 </motion.div>
               )}
+              </>
+              )}
             </div>
 
             <div className="px-5 py-3 border-t border-admin-border bg-admin-bg shrink-0 flex items-center gap-2">
@@ -337,15 +479,27 @@ const NewBookingSheet = ({
               >
                 Cancelar
               </button>
-              <button
-                type="button"
-                disabled={!valid || saving}
-                onClick={handleSubmit}
-                className="flex-1 h-11 rounded-xl text-sm font-bold text-white bg-gradient-rose-gold shadow-rose-sm hover:shadow-rose-md disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-              >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                Guardar cita
-              </button>
+              {mode === 'block' ? (
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={handleBlock}
+                  className="flex-1 h-11 rounded-xl text-sm font-bold text-white bg-amber-500 shadow-sm hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                  Cerrar horario
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={!valid || saving}
+                  onClick={handleSubmit}
+                  className="flex-1 h-11 rounded-xl text-sm font-bold text-white bg-gradient-rose-gold shadow-rose-sm hover:shadow-rose-md disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Guardar cita
+                </button>
+              )}
             </div>
           </motion.div>
         </>

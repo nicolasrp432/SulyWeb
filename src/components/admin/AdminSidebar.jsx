@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Calendar, ClipboardList, Users,
-  Scissors, Settings, X, LogOut, ChevronRight, Image
+  Scissors, Settings, X, LogOut, ChevronRight, Image, UserCog
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -14,6 +14,7 @@ const navItems = [
   { label: 'Citas',         path: '/admin/citas',        icon: ClipboardList },
   { label: 'Clientes',      path: '/admin/clientes',     icon: Users },
   { label: 'Servicios',     path: '/admin/servicios',    icon: Scissors },
+  { label: 'Equipo',        path: '/admin/equipo',       icon: UserCog },
   { label: 'Galería',       path: '/admin/galeria',      icon: Image },
   { label: 'Configuración', path: '/admin/configuracion',icon: Settings },
 ];

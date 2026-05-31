@@ -51,6 +51,7 @@ import BookingDetailDialog from '@/components/admin/calendar/BookingDetailDialog
 import EmailComposeModal from '@/components/admin/calendar/EmailComposeModal';
 import DayAgendaPanel from '@/components/admin/calendar/DayAgendaPanel';
 import { sendBookingConfirmationToUser } from '@/lib/emailService';
+import { normalizeDayConfig } from '@/lib/businessHours';
 
 const VIEW_MODES = {
   day: 'day',
@@ -560,6 +561,7 @@ const CalendarPage = () => {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, () => fetchCalendarData())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => fetchCalendarData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_staff' }, () => fetchStaffMembers())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
         supabase
           .from('settings')
@@ -580,15 +582,19 @@ const CalendarPage = () => {
       supabase.removeChannel(channel);
       setRealtimeConnected(false);
     };
-  }, [fetchCalendarData, user]);
+  }, [fetchCalendarData, fetchStaffMembers, user]);
 
   const saveBusinessHours = useCallback(async () => {
     try {
+      // Normaliza todos los días al esquema de tramos antes de guardar.
+      const normalized = Object.fromEntries(
+        Object.entries(businessHours).map(([day, cfg]) => [day, normalizeDayConfig(cfg)])
+      );
       const { error } = await supabase
         .from('settings')
         .upsert([{
           key: 'business_hours',
-          value: businessHours,
+          value: normalized,
           updated_at: new Date().toISOString()
         }], { onConflict: 'key' });
 
@@ -1621,7 +1627,21 @@ const CalendarPage = () => {
         defaultAssignedTo={newBookingSheet?.assignedTo}
         locations={locations}
         responsibleOptions={responsibleOptions}
+        staffMembers={staffMembers}
         onCreated={() => fetchCalendarData()}
+        onBlock={async (payload) => {
+          if (!blocksTableAvailable) {
+            toast({ variant: 'destructive', title: 'Migración pendiente', description: 'La tabla schedule_blocks no está disponible.' });
+            throw new Error('schedule_blocks no disponible');
+          }
+          const { error } = await supabase.from('schedule_blocks').insert([{
+            ...payload,
+            location_id: filterLocation === 'all' ? null : filterLocation,
+          }]);
+          if (error) throw error;
+          toast({ title: 'Horario cerrado', description: `${payload.block_date} · ${payload.start_time?.slice(0, 5)}` });
+          fetchCalendarData();
+        }}
       />
 
       <DayDetailSheet
@@ -1849,22 +1869,29 @@ const CalendarPage = () => {
               saturday: 'Sábado',
               sunday: 'Domingo'
             }).map(([dayKey, dayLabel]) => {
-              const config = businessHours[dayKey] || { open: '10:00', close: '20:00', closed: false };
+              const config = normalizeDayConfig(businessHours[dayKey]);
+              const updateDay = (next) =>
+                setBusinessHours((prev) => ({ ...prev, [dayKey]: next }));
+              const updateShift = (idx, key, val) =>
+                updateDay({
+                  closed: false,
+                  shifts: config.shifts.map((s, i) => (i === idx ? { ...s, [key]: val } : s)),
+                });
 
               return (
-                <div key={dayKey} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 first:pt-0">
+                <div key={dayKey} className="flex flex-col gap-2 pt-3 first:pt-0">
                   <div className="flex items-center gap-3 shrink-0">
                     <input
                       type="checkbox"
                       id={`closed-${dayKey}`}
                       checked={!config.closed}
-                      onChange={(e) => {
-                        const openStatus = e.target.checked;
-                        setBusinessHours((prev) => ({
-                          ...prev,
-                          [dayKey]: { ...config, closed: !openStatus }
-                        }));
-                      }}
+                      onChange={(e) =>
+                        updateDay(
+                          e.target.checked
+                            ? { closed: false, shifts: config.shifts.length ? config.shifts : [{ open: '10:00', close: '20:00' }] }
+                            : { closed: true, shifts: [] }
+                        )
+                      }
                       className="h-4 w-4 rounded border-gray-300 text-brand-rose focus:ring-brand-rose cursor-pointer"
                     />
                     <label htmlFor={`closed-${dayKey}`} className="text-xs font-bold text-admin-text cursor-pointer select-none min-w-[70px]">
@@ -1878,35 +1905,42 @@ const CalendarPage = () => {
                   </div>
 
                   {!config.closed && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-admin-muted font-medium">Abre:</span>
-                        <Input
-                          type="time"
-                          value={config.open}
-                          onChange={(e) => {
-                            setBusinessHours((prev) => ({
-                              ...prev,
-                              [dayKey]: { ...config, open: e.target.value }
-                            }));
-                          }}
-                          className="h-8 w-[95px] text-xs py-1 px-2"
-                        />
-                      </div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[10px] text-admin-muted font-medium">Cierra:</span>
-                        <Input
-                          type="time"
-                          value={config.close}
-                          onChange={(e) => {
-                            setBusinessHours((prev) => ({
-                              ...prev,
-                              [dayKey]: { ...config, close: e.target.value }
-                            }));
-                          }}
-                          className="h-8 w-[95px] text-xs py-1 px-2"
-                        />
-                      </div>
+                    <div className="space-y-2 pl-7">
+                      {config.shifts.map((sh, idx) => (
+                        <div key={idx} className="flex items-center gap-2 flex-wrap">
+                          <span className="text-[10px] text-admin-muted font-medium">Abre:</span>
+                          <Input
+                            type="time"
+                            value={sh.open}
+                            onChange={(e) => updateShift(idx, 'open', e.target.value)}
+                            className="h-8 w-[95px] text-xs py-1 px-2"
+                          />
+                          <span className="text-[10px] text-admin-muted font-medium">Cierra:</span>
+                          <Input
+                            type="time"
+                            value={sh.close}
+                            onChange={(e) => updateShift(idx, 'close', e.target.value)}
+                            className="h-8 w-[95px] text-xs py-1 px-2"
+                          />
+                          {config.shifts.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => updateDay({ closed: false, shifts: config.shifts.filter((_, i) => i !== idx) })}
+                              className="text-rose-500 hover:bg-rose-50 rounded-md p-1 transition-colors"
+                              aria-label="Eliminar tramo"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => updateDay({ closed: false, shifts: [...config.shifts, { open: '16:00', close: '20:00' }] })}
+                        className="flex items-center gap-1 text-[11px] font-bold text-brand-rose hover:bg-brand-rose-50 rounded-md px-2 py-1 transition-colors"
+                      >
+                        <Plus className="w-3 h-3" /> Añadir tramo (cierre a mediodía)
+                      </button>
                     </div>
                   )}
                 </div>

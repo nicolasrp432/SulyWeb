@@ -44,17 +44,27 @@ CREATE POLICY admin_profiles_select_authenticated ON public.admin_profiles
   FOR SELECT TO authenticated USING (true);
 
 -- Solo owners pueden INSERT/UPDATE/DELETE perfiles admin.
-DROP POLICY IF EXISTS admin_profiles_write_owner ON public.admin_profiles;
-CREATE POLICY admin_profiles_write_owner ON public.admin_profiles
-  FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM public.admin_profiles
-    WHERE id = auth.uid() AND role = 'owner' AND is_active
-  ))
-  WITH CHECK (EXISTS (
-    SELECT 1 FROM public.admin_profiles
-    WHERE id = auth.uid() AND role = 'owner' AND is_active
-  ));
+-- IMPORTANTE: NO usar FOR ALL aquí — incluiría SELECT y la sub-consulta a
+-- admin_profiles dentro del USING generaría recursión infinita en la policy.
+-- Separamos por comando y delegamos el check a public.is_admin_owner()
+-- (SECURITY DEFINER, que bypasea RLS evitando la recursión).
+DROP POLICY IF EXISTS admin_profiles_write_owner  ON public.admin_profiles;
+DROP POLICY IF EXISTS admin_profiles_insert_owner ON public.admin_profiles;
+DROP POLICY IF EXISTS admin_profiles_update_owner ON public.admin_profiles;
+DROP POLICY IF EXISTS admin_profiles_delete_owner ON public.admin_profiles;
+
+CREATE POLICY admin_profiles_insert_owner ON public.admin_profiles
+  FOR INSERT TO authenticated
+  WITH CHECK (public.is_admin_owner());
+
+CREATE POLICY admin_profiles_update_owner ON public.admin_profiles
+  FOR UPDATE TO authenticated
+  USING (public.is_admin_owner())
+  WITH CHECK (public.is_admin_owner());
+
+CREATE POLICY admin_profiles_delete_owner ON public.admin_profiles
+  FOR DELETE TO authenticated
+  USING (public.is_admin_owner());
 
 -- ============================================================================
 -- Helpers
@@ -72,6 +82,19 @@ $$;
 
 REVOKE ALL ON FUNCTION public.is_admin_active() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_admin_active() TO authenticated;
+
+-- Igual que is_admin_active() pero exige role='owner'. Usada por las RLS
+-- policies de admin_profiles para evitar recursión (SECURITY DEFINER bypasea RLS).
+CREATE OR REPLACE FUNCTION public.is_admin_owner() RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
+  SELECT EXISTS (
+    SELECT 1 FROM public.admin_profiles
+    WHERE id = auth.uid() AND role = 'owner' AND is_active
+  )
+$$;
+
+REVOKE ALL ON FUNCTION public.is_admin_owner() FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.is_admin_owner() TO authenticated;
 
 -- Resuelve email -> user_id consultando auth.users (que el cliente no puede leer
 -- directamente). Necesario para activar admins desde la UI sin service_role key.

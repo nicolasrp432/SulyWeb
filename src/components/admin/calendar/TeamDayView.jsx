@@ -5,6 +5,7 @@ import { Lock, Unlock, UserX } from 'lucide-react';
 import StaffColumnHeader from './StaffColumnHeader';
 import BookingCard from './BookingCard';
 import NowIndicator from './NowIndicator';
+import { getDayConfig } from '@/lib/businessHours';
 
 const HOUR_START = 8;
 const HOUR_END = 20;
@@ -47,19 +48,22 @@ const TeamDayView = ({
 
   const hasFullDayBlock = dayBlocks.some((b) => !b.start_time);
 
+  // Config normalizada (soporta tramos partidos). null = sin configuración.
   const todayHours = useMemo(() => {
     if (!businessHours) return null;
-    const dayName = DAY_KEYS[date.getDay()];
-    return businessHours[dayName] || null;
+    return getDayConfig(date, businessHours);
   }, [businessHours, date]);
 
-  const isClosedToday = todayHours?.closed === true;
+  const isClosedToday = !!todayHours && (todayHours.closed || todayHours.shifts.length === 0);
 
   const isHourInBusinessRange = (h) => {
     if (!todayHours || todayHours.closed) return false;
-    const openH = parseInt(todayHours.open?.slice(0, 2) || '8', 10);
-    const closeH = parseInt(todayHours.close?.slice(0, 2) || '20', 10);
-    return h >= openH && h < closeH;
+    const mins = h * 60;
+    return todayHours.shifts.some((s) => {
+      const o = timeToMinutes(s.open);
+      const c = timeToMinutes(s.close);
+      return mins >= o && mins < c;
+    });
   };
 
   const isHourBlocked = (h) => {

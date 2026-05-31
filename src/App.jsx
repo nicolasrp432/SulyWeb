@@ -29,6 +29,7 @@ import CustomersPage from '@/pages/admin/CustomersPage';
 import AdminServices from '@/pages/AdminServices';
 import SettingsPage from '@/pages/admin/SettingsPage';
 import GalleryAdminPage from '@/pages/admin/GalleryAdminPage';
+import TeamPage from '@/pages/admin/TeamPage';
 
 const PublicLayout = () => (
   <div className="min-h-screen flex flex-col font-body">
@@ -66,6 +67,7 @@ function App() {
             <Route path="/admin/citas" element={<BookingsPage />} />
             <Route path="/admin/clientes" element={<CustomersPage />} />
             <Route path="/admin/servicios" element={<AdminServices />} />
+            <Route path="/admin/equipo" element={<TeamPage />} />
             <Route path="/admin/configuracion" element={<SettingsPage />} />
             <Route path="/admin/galeria" element={<GalleryAdminPage />} />
           </Route>

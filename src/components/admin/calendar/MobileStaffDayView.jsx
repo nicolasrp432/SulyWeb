@@ -2,9 +2,10 @@ import React, { useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Lock, UserX } from 'lucide-react';
+import { Lock, UserX, Calendar } from 'lucide-react';
 import BookingCard from './BookingCard';
 import NowIndicator from './NowIndicator';
+import { getDayConfig } from '@/lib/businessHours';
 
 const HOUR_START = 8;
 const HOUR_END = 20;
@@ -52,19 +53,22 @@ const MobileStaffDayView = ({
 
   const hasFullDayBlock = dayBlocks.some((b) => !b.start_time);
 
+  // Config normalizada (soporta tramos partidos). null = sin configuración.
   const todayHours = useMemo(() => {
     if (!businessHours) return null;
-    const dayName = DAY_KEYS[date.getDay()];
-    return businessHours[dayName] || null;
+    return getDayConfig(date, businessHours);
   }, [businessHours, date]);
 
-  const isClosedToday = todayHours?.closed === true;
+  const isClosedToday = !!todayHours && (todayHours.closed || todayHours.shifts.length === 0);
 
   const isHourInBusinessRange = (h) => {
     if (!todayHours || todayHours.closed) return false;
-    const openH = parseInt(todayHours.open?.slice(0, 2) || '8', 10);
-    const closeH = parseInt(todayHours.close?.slice(0, 2) || '20', 10);
-    return h >= openH && h < closeH;
+    const mins = h * 60;
+    return todayHours.shifts.some((s) => {
+      const o = timeToMinutes(s.open);
+      const c = timeToMinutes(s.close);
+      return mins >= o && mins < c;
+    });
   };
 
   const isHourBlocked = (h) => {
@@ -148,7 +152,7 @@ const MobileStaffDayView = ({
           <div className="flex gap-3 overflow-x-auto px-4 py-3 snap-x snap-mandatory scrollbar-hide">
             {columns.map((col, idx) => {
               const active = idx === safeIdx;
-              const name = col.staff?.full_name || (col.isUnassigned ? 'Sin asignar' : '—');
+              const name = col.staff?.full_name || (col.isUnassigned ? 'General' : '—');
               return (
                 <button
                   key={col.key}
@@ -158,11 +162,13 @@ const MobileStaffDayView = ({
                 >
                   <div className={`relative w-11 h-11 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-rose-sm overflow-hidden transition-all ${
                     active ? 'ring-2 ring-brand-rose ring-offset-2 scale-105' : 'opacity-60'
-                  } ${col.isUnassigned ? 'bg-gradient-to-br from-zinc-300 to-zinc-400' : 'bg-gradient-rose-gold'}`}>
+                  } ${col.isUnassigned ? 'bg-gradient-to-br from-brand-rose-300 to-brand-rose-400' : 'bg-gradient-rose-gold'}`}>
                     {col.staff?.avatar_url ? (
                       <img src={col.staff.avatar_url} alt={name} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : col.isUnassigned ? (
+                      <Calendar className="w-5 h-5" />
                     ) : (
-                      <span>{col.isUnassigned ? '?' : getInitials(name)}</span>
+                      <span>{getInitials(name)}</span>
                     )}
                     {col.bookings.length > 0 && (
                       <span className="absolute -bottom-1 -right-1 bg-brand-rose text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center border border-white">
