@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Award, Sparkles, Heart, MapPin, ArrowRight } from 'lucide-react';
+import { Award, Sparkles, Heart, MapPin, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const FEATURES = [
@@ -46,7 +46,7 @@ const FeatureCard = ({ feature, index }) => {
 
   return (
     <motion.div
-      className="why-card-new"
+      className="why-card-new flex-shrink-0 w-[280px] sm:w-auto"
       {...fadeUp(index * 0.1)}
     >
       {/* Icon */}
@@ -68,6 +68,49 @@ const FeatureCard = ({ feature, index }) => {
 };
 
 const WhyChooseUsSlider = () => {
+  const scrollRef = useRef(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Check scroll position
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScroll);
+      return () => el.removeEventListener('scroll', checkScroll);
+    }
+  }, []);
+
+  const scroll = (direction) => {
+    if (scrollRef.current) {
+      const scrollAmount = 300;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth',
+      });
+    }
+  };
+
   return (
     <section className="why-section-new">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -87,8 +130,58 @@ const WhyChooseUsSlider = () => {
           </p>
         </motion.div>
 
-        {/* Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+        {/* Mobile: Horizontal Slider */}
+        <div className="sm:hidden relative">
+          {/* Scroll buttons */}
+          {canScrollLeft && (
+            <button
+              onClick={() => scroll('left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center text-brand-rose hover:bg-white transition-colors"
+              aria-label="Anterior"
+            >
+              <ChevronLeft size={20} />
+            </button>
+          )}
+          {canScrollRight && (
+            <button
+              onClick={() => scroll('right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-lg flex items-center justify-center text-brand-rose hover:bg-white transition-colors"
+              aria-label="Siguiente"
+            >
+              <ChevronRight size={20} />
+            </button>
+          )}
+
+          {/* Scrollable container */}
+          <div
+            ref={scrollRef}
+            className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide snap-x snap-mandatory"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
+            {FEATURES.map((feature, i) => (
+              <div key={i} className="snap-start">
+                <FeatureCard feature={feature} index={i} />
+              </div>
+            ))}
+          </div>
+
+          {/* Scroll indicator dots */}
+          <div className="flex justify-center gap-2 mt-4">
+            {FEATURES.map((_, i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-brand-rose/30"
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Desktop: Grid */}
+        <div className="hidden sm:grid sm:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
           {FEATURES.map((feature, i) => (
             <FeatureCard key={i} feature={feature} index={i} />
           ))}

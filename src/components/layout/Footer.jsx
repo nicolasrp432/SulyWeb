@@ -72,22 +72,6 @@ const Footer = () => {
   return (
     <footer className="bg-gradient-to-br from-brand-dark via-[#17101f] to-brand-dark text-white font-body">
 
-      {/* ── CTA strip ── */}
-      <div className="bg-gradient-rose-gold">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <p className="text-white font-semibold text-sm sm:text-base text-center sm:text-left">
-            ¿Lista para lucir unas uñas perfectas? Reserva en segundos.
-          </p>
-          <Link
-            to="/reservas"
-            className="shrink-0 inline-flex items-center gap-2 bg-white text-brand-rose font-bold px-6 py-2.5 rounded-full text-sm shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
-          >
-            <Calendar className="h-4 w-4" />
-            Reservar ahora
-          </Link>
-        </div>
-      </div>
-
       {/* ── Main content ── */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">

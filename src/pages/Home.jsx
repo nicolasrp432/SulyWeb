@@ -151,9 +151,9 @@ const Home = () => {
               </Button>
             </motion.div>
 
-            {/* Feature pills */}
+            {/* Feature pills - hidden on mobile */}
             <motion.div 
-              className="hero-relaxe-features"
+              className="hero-relaxe-features hidden lg:flex"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.7, duration: 0.5 }}
