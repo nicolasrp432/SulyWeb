@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   MapPin, Phone, Mail, Clock,
-  Instagram, Facebook, Heart, ChevronDown, Calendar
+  Instagram, Facebook, Heart, ChevronDown, Calendar, Settings
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 
@@ -17,6 +17,7 @@ const quickLinks = [
   { name: 'Galería',   path: '/galeria' },
   { name: 'Reservas',  path: '/reservas' },
   { name: 'Contacto',  path: '/contacto' },
+  { name: 'Panel Admin', path: '/admin/login', icon: Settings },
 ];
 
 const locations = [
