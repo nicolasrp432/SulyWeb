@@ -197,8 +197,10 @@ logger.error = (msg, options) => {
 
 export default defineConfig({
 	customLogger: logger,
-	// Rutas relativas para producción (funciona en raíz o subcarpetas)
-	base: './',
+	// Rutas absolutas: imprescindible para una SPA con rutas anidadas (p. ej.
+	// /admin/calendario). Con './' el navegador pide /admin/assets/... al recargar
+	// una ruta profunda, recibe el index.html (text/html) y falla el módulo JS.
+	base: '/',
 	plugins: [
 		// Dev-only plugins e index.html injections
 		...(isDev ? [inlineEditPlugin(), editModeDevPlugin(), addTransformIndexHtml].filter(Boolean) : []),
