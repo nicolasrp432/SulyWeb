@@ -184,7 +184,22 @@ const Home = () => {
 
           {/* Right: Hero image */}
           <motion.div
-            className="hero-relaxe-visual"
+            className="flex lg:hidden items-center justify-center"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="hero-relaxe-image-wrapper w-full max-w-sm">
+              <img
+                src="https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
+                alt="Mujer relajada disfrutando de tratamiento de belleza"
+                className="hero-relaxe-image"
+              />
+            </div>
+          </motion.div>
+
+          <motion.div
+            className="hero-relaxe-visual hidden lg:flex"
             initial={{ opacity: 0, scale: 0.95, x: 40 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
             transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
@@ -195,9 +210,9 @@ const Home = () => {
                 alt="Mujer relajada disfrutando de tratamiento de belleza"
                 className="hero-relaxe-image"
               />
-              {/* Floating stats card */}
+              {/* Floating stats card - desktop only */}
               <motion.div 
-                className="hero-floating-card"
+                className="hero-floating-card hidden md:block"
                 animate={{ y: [0, -8, 0] }}
                 transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
               >
@@ -353,7 +368,7 @@ const Home = () => {
               Reserva tu cita hoy mismo en tu sede más cercana y déjate consentir.
             </p>
 
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <div className="flex justify-center">
               <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
                 <Button
                   asChild
@@ -363,19 +378,6 @@ const Home = () => {
                   <Link to="/reservas" className="flex items-center gap-2">
                     <Calendar className="h-5 w-5" />
                     Reservar Ahora
-                  </Link>
-                </Button>
-              </motion.div>
-
-              <motion.div whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
-                <Button
-                  asChild
-                  size="lg"
-                  className="border-2 border-white/60 bg-white/10 text-white hover:bg-white hover:text-brand-rose px-8 rounded-full font-bold backdrop-blur-sm"
-                >
-                  <Link to="/contacto" className="flex items-center gap-2">
-                    Contáctanos
-                    <ArrowRight className="h-4 w-4" />
                   </Link>
                 </Button>
               </motion.div>
