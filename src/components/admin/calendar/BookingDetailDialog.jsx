@@ -227,13 +227,13 @@ const BookingDetailDialog = ({
             </button>
             {showBookingData && (
               <div className="space-y-2 pt-1">
-                {/* Date and Time: Stacks on mobile with vertical margins, side-by-side on desktop */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="relative">
+                {/* Date and Time: Stacks on mobile, side-by-side on desktop */}
+                <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
+                  <div className="relative min-w-0">
                     <FieldIcon icon={CalendarIcon} />
                     <input type="date" value={form.booking_date} onChange={setField('booking_date')} className={`${inputCls} text-xs sm:text-sm px-2`} />
                   </div>
-                  <div className="relative">
+                  <div className="relative min-w-0">
                     <FieldIcon icon={Clock} />
                     <input type="time" value={form.booking_time} onChange={setField('booking_time')} className={`${inputCls} text-xs sm:text-sm px-2`} />
                   </div>
@@ -260,7 +260,7 @@ const BookingDetailDialog = ({
           {/* Quick action bar - Located under client and appointment details for mobile ergonomic ease */}
           <div className="pt-2 border-t border-admin-border/30">
             <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider mb-2">Acciones rápidas</p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -288,7 +288,7 @@ const BookingDetailDialog = ({
                 <X className="w-3.5 h-3.5 mr-1" /> Cancelar
               </Button>
             </div>
-            <div className="grid grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 mt-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -350,8 +350,8 @@ const BookingDetailDialog = ({
                   {responsibleOptions.map((name) => <option key={name} value={name} />)}
                 </datalist>
               </div>
-              <div className="grid grid-cols-2 gap-2">
-                <div className="relative">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
+                <div className="relative min-w-0">
                   <FieldIcon icon={Activity} />
                   <select value={status} disabled className={`${selectCls} opacity-70`}>
                     {STATUS_OPTIONS.map((s) => (
@@ -359,7 +359,7 @@ const BookingDetailDialog = ({
                     ))}
                   </select>
                 </div>
-                <div className="relative">
+                <div className="relative min-w-0">
                   <FieldIcon icon={Timer} />
                   <input
                     type="number"

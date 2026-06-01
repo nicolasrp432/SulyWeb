@@ -456,10 +456,10 @@ const Services = () => {
                     <Button
                       onClick={(e) => { e.stopPropagation(); setSelectedService(service); }}
                       size="sm"
-                      className="flex-1 border border-brand-rose/40 bg-transparent text-brand-rose hover:bg-brand-rose-50 rounded-full text-xs sm:text-sm h-9"
+                      className="flex-1 min-w-0 border border-brand-rose/40 bg-transparent text-brand-rose hover:bg-brand-rose-50 rounded-full text-xs sm:text-sm h-9 px-2"
                     >
-                      <Eye className="h-3.5 w-3.5 mr-1.5" />
-                      <span className="hidden sm:inline">Ver </span>Detalles
+                      <Eye className="h-3.5 w-3.5 mr-1 sm:mr-1.5 shrink-0" />
+                      <span className="truncate"><span className="hidden sm:inline">Ver </span>Detalles</span>
                     </Button>
                     <Button
                       onClick={(e) => {
@@ -469,10 +469,10 @@ const Services = () => {
                       }}
                       size="sm"
                       variant="gradient"
-                      className="flex-1 rounded-full text-xs sm:text-sm h-9"
+                      className="flex-1 min-w-0 rounded-full text-xs sm:text-sm h-9 px-2"
                     >
-                      <Plus className="h-3.5 w-3.5 mr-1.5" />
-                      Añadir
+                      <Plus className="h-3.5 w-3.5 mr-1 sm:mr-1.5 shrink-0" />
+                      <span className="truncate">Añadir</span>
                     </Button>
                   </div>
                 </div>
