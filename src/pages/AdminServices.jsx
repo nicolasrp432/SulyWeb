@@ -168,7 +168,7 @@ const AdminServices = () => {
   return (
     <>
       <Helmet><title>Servicios — Admin Suly</title></Helmet>
-      <div className="max-w-5xl mx-auto px-4 sm:px-0 space-y-5">
+      <div className="max-w-5xl mx-auto px-4 sm:px-0 space-y-5 w-full overflow-hidden">
         <PageHeader
           icon={Scissors}
           title="Servicios"
@@ -269,7 +269,7 @@ const AdminServices = () => {
         )}
 
         {/* Tabs */}
-        <div className="flex items-center gap-1.5 bg-white border border-admin-border rounded-xl p-1 shadow-rose-xs overflow-x-auto">
+        <div className="w-full max-w-full flex items-center gap-1.5 bg-white border border-admin-border rounded-xl p-1 shadow-rose-xs overflow-x-auto">
           <button
             type="button"
             onClick={() => setActiveTab('all')}
@@ -316,7 +316,7 @@ const AdminServices = () => {
             <p className="text-xs text-admin-muted mt-1">Añade uno con el botón "Nuevo".</p>
           </div>
         ) : (
-          <div className="grid sm:grid-cols-2 gap-3">
+          <div className="grid sm:grid-cols-2 gap-3 w-full">
             {visibleServices.map((svc) => {
               const isEditing = editingId === svc.id;
               const cat = CATEGORIES.find((c) => c.id === (svc.category ?? 'nails')) || CATEGORIES[0];
@@ -324,7 +324,7 @@ const AdminServices = () => {
               return (
                 <div
                   key={svc.id}
-                  className={`bg-white border border-admin-border rounded-2xl p-4 shadow-rose-xs hover:shadow-rose-sm transition-shadow ${!svc.active ? 'opacity-60' : ''}`}
+                  className={`bg-white border border-admin-border rounded-2xl p-4 shadow-rose-xs hover:shadow-rose-sm transition-shadow ${!svc.active ? 'opacity-60' : ''} w-full min-w-0`}
                 >
                   {isEditing ? (
                     <div className="space-y-2">

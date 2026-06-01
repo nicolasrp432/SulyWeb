@@ -228,7 +228,7 @@ const BookingDetailDialog = ({
             {showBookingData && (
               <div className="space-y-2 pt-1">
                 {/* Date and Time: Stacks on mobile with vertical margins, side-by-side on desktop */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <div className="relative">
                     <FieldIcon icon={CalendarIcon} />
                     <input type="date" value={form.booking_date} onChange={setField('booking_date')} className={`${inputCls} text-xs sm:text-sm px-2`} />
