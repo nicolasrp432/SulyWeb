@@ -13,6 +13,24 @@ const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY');
 const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'sulyprettynails@gmail.com';
 // Teléfono de WhatsApp de la tienda en formato internacional, p.ej. "34XXXXXXXXX" (sin +)
 const BUSINESS_WHATSAPP = (Deno.env.get('BUSINESS_WHATSAPP') || '').replace(/[^0-9]/g, '');
+const LOGO_URL = Deno.env.get('LOGO_URL') || 'https://sulyprettynails.com/logosuly.jpeg';
+
+// CORS para permitir llamadas desde el frontend (local y prod)
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS'
+};
+
+// Escapa HTML para insertar texto plano del admin de forma segura
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // Función para formatear la fecha
 function formatDate(dateStr) {
@@ -206,6 +224,45 @@ function generateContactConfirmationHtml(contact) {
   `;
 }
 
+// NUEVO: Plantilla para correos personalizados que el admin escribe a mano
+// (botón "Enviar correo al cliente"). Respeta el texto del admin (saltos de
+// línea) y lo envuelve en la identidad visual de la marca.
+function generateCustomEmailHtml(booking) {
+  const title = escapeHtml(booking?.customSubject || 'Suly Pretty Nails');
+  const bodyHtml = escapeHtml(booking?.customMessage || '').replace(/\r?\n/g, '<br>');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>${title}</title>
+      <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #111827; background: #f9fafb; margin: 0; padding: 0; }
+        .container { max-width: 640px; margin: 0 auto; padding: 24px; }
+        .header { background: #ffffff; border-radius: 12px; padding: 24px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .logo { height: 56px; margin-bottom: 8px; }
+        h1 { color: #e11d48; margin: 0; font-size: 22px; }
+        .card { background: #ffffff; border-radius: 12px; padding: 24px; margin-top: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .footer { text-align: center; font-size: 12px; color: #6b7280; margin-top: 24px; padding-top: 16px; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <img class="logo" alt="Suly Pretty Nails" src="${LOGO_URL}" />
+          <h1>Suly Pretty Nails</h1>
+        </div>
+        <div class="card">
+          <p>${bodyHtml}</p>
+        </div>
+        <div class="footer">© ${new Date().getFullYear()} Suly Pretty Nails. Todos los derechos reservados.</div>
+      </div>
+    </body>
+    </html>
+  `;
+}
+
 // Función para enviar el correo usando Resend
 async function sendEmail(to, subject, htmlContent) {
   if (!RESEND_API_KEY) return { success: false, error: 'Missing RESEND_API_KEY' };
@@ -285,52 +342,70 @@ async function sendAdminNotification(booking) {
 
 // Manejador principal actualizado
 Deno.serve(async (req) => {
+  // Preflight CORS
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
+  const jsonHeaders = { 'Content-Type': 'application/json', ...corsHeaders };
+
   // Verificar método
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: { 'Content-Type': 'application/json' }
+      headers: jsonHeaders
     });
   }
-  
+
   try {
     // Obtener datos del cuerpo de la solicitud
     const { to, subject, booking } = await req.json();
-    
+
     // Validar datos requeridos
     if (!to || !subject || !booking) {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders
       });
     }
-    
+
     // Generar HTML del correo según el tipo de payload
-    const htmlContent = booking?.isContact
-      ? (booking?.forUser ? generateContactConfirmationHtml(booking) : generateContactEmailHtml(booking))
-      : generateEmailHtml(booking);
-    
+    let htmlContent;
+    if (booking?.forCustomEmail) {
+      // Correo personalizado escrito por el admin desde el panel
+      htmlContent = generateCustomEmailHtml(booking);
+    } else if (booking?.isContact) {
+      htmlContent = booking?.forUser
+        ? generateContactConfirmationHtml(booking)
+        : generateContactEmailHtml(booking);
+    } else {
+      htmlContent = generateEmailHtml(booking);
+    }
+
+    // Asunto: para correos personalizados respetamos el customSubject si viene
+    const finalSubject = booking?.forCustomEmail
+      ? (booking?.customSubject || subject)
+      : subject;
+
     // Enviar correo
-    const result = await sendEmail(to, subject, htmlContent);
-    
+    const result = await sendEmail(to, finalSubject, htmlContent);
+
     if (result.success) {
-      return new Response(JSON.stringify({ success: true }), {
+      return new Response(JSON.stringify({ success: true, data: result.data }), {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders
       });
     } else {
       return new Response(JSON.stringify({ error: result.error }), {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders
       });
     }
-
-    // Nota: el código inferior era inalcanzable anteriormente y se mantiene fuera de flujo
   } catch (error) {
     console.error('Error processing request:', error);
     return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
-      headers: { 'Content-Type': 'application/json' }
+      headers: jsonHeaders
     });
   }
 });

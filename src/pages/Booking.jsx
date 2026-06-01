@@ -16,6 +16,7 @@ import { sendBookingNotificationToAdmin, sendBookingConfirmationToUser } from '@
 import SEOHead from '@/components/SEO/SEOHead';
 import { getServiceImageFromObj } from '@/lib/serviceImages';
 import { generateDaySlots, isDayClosed, timeToMinutes } from '@/lib/businessHours';
+import { useBookingCart } from '@/contexts/BookingCartContext';
 
 /* ── Time slot grid ──────────────────────────── */
 const TIME_SLOTS = [];
@@ -202,6 +203,10 @@ const Booking = () => {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null);
 
+  /* Carrito global (servicios elegidos en /servicios, persistidos en localStorage) */
+  const { selectedServices: cartServices, clearServices } = useBookingCart();
+  const [cartPreloaded, setCartPreloaded] = useState(false);
+
   const [businessHours, setBusinessHours] = useState({
     monday: { open: '10:00', close: '20:00', closed: false },
     tuesday: { open: '10:00', close: '20:00', closed: false },
@@ -244,6 +249,20 @@ const Booking = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  /* Precargar en el paso 1 los servicios que el cliente ya añadió en /servicios.
+     Cruzamos por id contra los servicios de la BD para usar la forma correcta
+     (name, price, duration_minutes). Solo una vez, para no pisar su selección. */
+  useEffect(() => {
+    if (cartPreloaded) return;
+    if (!services.length || !cartServices.length) return;
+    const cartIds = new Set(cartServices.map((s) => s.id));
+    const matched = services.filter((s) => cartIds.has(s.id));
+    if (matched.length > 0) {
+      setSelectedServices((prev) => (prev.length === 0 ? matched : prev));
+    }
+    setCartPreloaded(true);
+  }, [services, cartServices, cartPreloaded]);
 
   /* Fetch and subscribe to business hours */
   useEffect(() => {
@@ -342,21 +361,27 @@ const Booking = () => {
   useEffect(() => {
     if (!selectedDate || !selectedLocation) return;
 
-    // Note: anonymous clients can only subscribe to tables they may read under
-    // RLS. Booking PII is locked down, so live updates come from schedule_blocks;
-    // slot conflicts are additionally enforced server-side by create_public_booking.
+    const dateStr = format(selectedDate, 'yyyy-MM-dd');
+
+    // Note: anonymous clients can't read bookings under RLS (PII lockdown), so
+    // they don't receive postgres_changes for bookings. En su lugar, un trigger
+    // emite un broadcast público (sin PII) al topic 'slots:<location_id>' cada
+    // vez que cambia una cita, y aquí refrescamos al instante si afecta al día
+    // mostrado. Los bloqueos de agenda sí llegan por postgres_changes.
     const channel = supabase
-      .channel('booking-slots-live')
+      .channel(`slots:${selectedLocation.id}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => loadSlots())
+      .on('broadcast', { event: 'slots_changed' }, ({ payload }) => {
+        if (!payload || payload.date === dateStr) loadSlots();
+      })
       .subscribe();
 
-    // Las citas (bookings) tienen RLS y anon no recibe sus eventos realtime,
-    // así que refrescamos la disponibilidad al volver a la pestaña y con un
-    // intervalo ligero para que una hora recién ocupada deje de aparecer libre.
+    // Fallback ligero: refrescar al volver a la pestaña y con un intervalo
+    // amplio (el broadcast ya cubre el tiempo real en el caso normal).
     const onFocus = () => { if (!document.hidden) loadSlots(); };
     window.addEventListener('focus', onFocus);
     document.addEventListener('visibilitychange', onFocus);
-    const interval = setInterval(() => { if (!document.hidden) loadSlots(); }, 25000);
+    const interval = setInterval(() => { if (!document.hidden) loadSlots(); }, 60000);
 
     return () => {
       supabase.removeChannel(channel);
@@ -384,31 +409,21 @@ const Booking = () => {
     });
   };
 
-  /* Capacidad: el slot está ocupado solo cuando NO queda ninguna manicurista
-     libre durante todo el intervalo. Las citas sin manicurista asignada
-     (alta manual) consumen una unidad de capacidad. */
+  /* Ocupación single-capacity: una hora se considera ocupada en cuanto exista
+     CUALQUIER cita no cancelada que solape el intervalo [slot, slot+duración)
+     en la sede, sin importar la manicurista. Esto evita que dos clientes tomen
+     la misma hora. El servidor (create_public_booking) aplica la misma regla. */
   const isTimeUnavailable = (slot) => {
     if (isTimeBlocked(slot)) return true;
 
     const start = timeToMinutes(slot);
     const end = start + newBookingDuration;
 
-    if (capacity <= 0) {
-      // Sin equipo configurado: 1 cita por slot exacto (comportamiento legacy).
-      return bookedSlots.some((b) => timeToMinutes(b.booking_time) === start);
-    }
-
-    const busyStaff = new Set();
-    let nullBusy = 0;
-    for (const b of bookedSlots) {
+    return bookedSlots.some((b) => {
       const bs = timeToMinutes(b.booking_time);
       const be = bs + (b.duration_minutes || 30);
-      if (bs < end && be > start) {
-        if (b.staff_id != null) busyStaff.add(b.staff_id);
-        else nullBusy += 1;
-      }
-    }
-    return busyStaff.size + nullBusy >= capacity;
+      return bs < end && be > start;
+    });
   };
 
   /* Service toggle */
@@ -487,6 +502,7 @@ const Booking = () => {
 
     setSubmitted({ booking, date: selectedDate, time: selectedTime, location: selectedLocation, services: selectedServices, name: form.name });
     setSubmitting(false);
+    clearServices(); // vaciar el carrito tras reservar con éxito
   };
 
   /* ── Success screen ─────────────────────── */
