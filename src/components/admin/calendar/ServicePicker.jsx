@@ -10,19 +10,33 @@ const ServicePicker = ({ selectedIds = [], onChange, otherText = '', onOtherChan
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
-    supabase
-      .from('services')
-      .select('id,name,duration_minutes,price,category')
-      .eq('active', true)
-      .order('display_order', { ascending: true })
-      .order('name', { ascending: true })
-      .then(({ data, error }) => {
-        if (!active) return;
+    const fetchServices = async () => {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('services')
+        .select('id,name,duration_minutes,price,category')
+        .eq('active', true)
+        .order('display_order', { ascending: true })
+        .order('name', { ascending: true });
+      if (active) {
         if (!error) setServices(data || []);
         setLoading(false);
-      });
-    return () => { active = false; };
+      }
+    };
+
+    fetchServices();
+
+    const channel = supabase
+      .channel('service-picker-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'services' }, () => {
+        fetchServices();
+      })
+      .subscribe();
+
+    return () => {
+      active = false;
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const toggle = (id) => {

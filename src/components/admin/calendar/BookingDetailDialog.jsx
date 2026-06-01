@@ -81,6 +81,8 @@ const BookingDetailDialog = ({
   });
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [showClientData, setShowClientData] = useState(true);
+  const [showBookingData, setShowBookingData] = useState(true);
 
   useEffect(() => {
     if (!open || !booking) return;
@@ -103,6 +105,8 @@ const BookingDetailDialog = ({
         [],
     });
     setShowAdvanced(false);
+    setShowClientData(true);
+    setShowBookingData(true);
   }, [open, booking]);
 
   const setField = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e?.target ? e.target.value : e }));
@@ -144,7 +148,7 @@ const BookingDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose?.(); }}>
-      <DialogContent className="max-w-xl p-0 sm:max-w-xl pb-6 sm:pb-0 overflow-hidden sm:overflow-visible">
+      <DialogContent className="max-w-xl p-0 sm:max-w-xl pb-6 sm:pb-0 overflow-y-auto sm:overflow-visible">
         {/* Drag handle for mobile */}
         <div className="w-12 h-1.5 bg-gray-300/70 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
         {/* Header gradient */}
@@ -172,64 +176,85 @@ const BookingDetailDialog = ({
 
         {/* Body */}
         <div className="px-5 py-4 space-y-4">
+          {/* Collapsible Client Details */}
           <div>
-            <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider mb-2">Datos del cliente</p>
-            <div className="space-y-2">
-              <div className="relative">
-                <FieldIcon icon={User} />
-                <input value={form.client_name} onChange={setField('client_name')} placeholder="Nombre del cliente" className={inputCls} />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setShowClientData(!showClientData)}
+              className="w-full flex items-center justify-between font-bold text-admin-text text-left pb-1 border-b border-admin-border/30 mb-2 transition-all hover:opacity-80"
+            >
+              <span className="text-[11px] uppercase tracking-wider">Datos del cliente</span>
+              {showClientData ? <ChevronUp className="w-3.5 h-3.5 text-brand-rose" /> : <ChevronDown className="w-3.5 h-3.5 text-admin-muted" />}
+            </button>
+            {showClientData && (
+              <div className="space-y-2 pt-1">
                 <div className="relative">
-                  <FieldIcon icon={Phone} />
-                  <input value={form.client_phone} onChange={setField('client_phone')} placeholder="Teléfono" className={inputCls} />
+                  <FieldIcon icon={User} />
+                  <input value={form.client_name} onChange={setField('client_name')} placeholder="Nombre del cliente" className={inputCls} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="relative">
+                    <FieldIcon icon={Phone} />
+                    <input value={form.client_phone} onChange={setField('client_phone')} placeholder="Teléfono" className={inputCls} />
+                  </div>
+                  <div className="relative">
+                    <FieldIcon icon={Mail} />
+                    <input type="email" value={form.client_email} onChange={setField('client_email')} placeholder="Email (opcional)" className={inputCls} />
+                  </div>
                 </div>
                 <div className="relative">
-                  <FieldIcon icon={Mail} />
-                  <input type="email" value={form.client_email} onChange={setField('client_email')} placeholder="Email (opcional)" className={inputCls} />
+                  <FieldIcon icon={Store} />
+                  <select value={form.location_id} onChange={setField('location_id')} className={selectCls}>
+                    <option value="">Selecciona sede</option>
+                    {locations.map((l) => (
+                      <option key={l.id} value={String(l.id)}>{l.name}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              <div className="relative">
-                <FieldIcon icon={Store} />
-                <select value={form.location_id} onChange={setField('location_id')} className={selectCls}>
-                  <option value="">Selecciona sede</option>
-                  {locations.map((l) => (
-                    <option key={l.id} value={String(l.id)}>{l.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
+            )}
           </div>
 
+          {/* Collapsible Appointment Details */}
           <div>
-            <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider mb-2">Detalles de la cita</p>
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-2">
-                <div className="relative">
-                  <FieldIcon icon={CalendarIcon} />
-                  <input type="date" value={form.booking_date} onChange={setField('booking_date')} className={inputCls} />
+            <button
+              type="button"
+              onClick={() => setShowBookingData(!showBookingData)}
+              className="w-full flex items-center justify-between font-bold text-admin-text text-left pb-1 border-b border-admin-border/30 mb-2 transition-all hover:opacity-80"
+            >
+              <span className="text-[11px] uppercase tracking-wider">Detalles de la cita</span>
+              {showBookingData ? <ChevronUp className="w-3.5 h-3.5 text-brand-rose" /> : <ChevronDown className="w-3.5 h-3.5 text-admin-muted" />}
+            </button>
+            {showBookingData && (
+              <div className="space-y-2 pt-1">
+                {/* Date and Time: Stacks on mobile with vertical margins, side-by-side on desktop */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-2">
+                  <div className="relative">
+                    <FieldIcon icon={CalendarIcon} />
+                    <input type="date" value={form.booking_date} onChange={setField('booking_date')} className={`${inputCls} text-xs sm:text-sm px-2`} />
+                  </div>
+                  <div className="relative">
+                    <FieldIcon icon={Clock} />
+                    <input type="time" value={form.booking_time} onChange={setField('booking_time')} className={`${inputCls} text-xs sm:text-sm px-2`} />
+                  </div>
                 </div>
-                <div className="relative">
-                  <FieldIcon icon={Clock} />
-                  <input type="time" value={form.booking_time} onChange={setField('booking_time')} className={inputCls} />
-                </div>
-              </div>
-              <ServicePicker
-                selectedIds={form.selectedServiceIds}
-                onChange={(ids) => setForm((prev) => ({ ...prev, selectedServiceIds: ids }))}
-                otherText={form.appointment_type}
-                onOtherChange={(t) => setForm((prev) => ({ ...prev, appointment_type: t }))}
-              />
-              <div className="relative">
-                <FileText className="absolute left-3 top-3 w-4 h-4 text-admin-muted pointer-events-none" />
-                <textarea
-                  value={form.notes}
-                  onChange={setField('notes')}
-                  placeholder="Notas del cliente (opcional)"
-                  className="w-full pl-9 pt-2 pr-3 pb-2 min-h-[60px] rounded-xl border border-admin-border bg-white text-sm text-admin-text font-medium placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
+                <ServicePicker
+                  selectedIds={form.selectedServiceIds}
+                  onChange={(ids) => setForm((prev) => ({ ...prev, selectedServiceIds: ids }))}
+                  otherText={form.appointment_type}
+                  onOtherChange={(t) => setForm((prev) => ({ ...prev, appointment_type: t }))}
                 />
+                <div className="relative">
+                  <FileText className="absolute left-3 top-3 w-4 h-4 text-admin-muted pointer-events-none" />
+                  <textarea
+                    value={form.notes}
+                    onChange={setField('notes')}
+                    placeholder="Notas del cliente (opcional)"
+                    className="w-full pl-9 pt-2 pr-3 pb-2 min-h-[60px] rounded-xl border border-admin-border bg-white text-sm text-admin-text font-medium placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
+                  />
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Quick action bar - Located under client and appointment details for mobile ergonomic ease */}

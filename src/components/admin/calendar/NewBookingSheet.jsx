@@ -284,9 +284,25 @@ const NewBookingSheet = ({
                     </p>
                   </div>
 
-                  <div className="relative">
-                    <FieldIcon icon={Clock} />
-                    <input type="time" value={form.booking_time} onChange={setField('booking_time')} className={inputCls} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+                      <input
+                        type="date"
+                        value={form.booking_date}
+                        onChange={setField('booking_date')}
+                        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                      />
+                    </div>
+                    <div className="relative">
+                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+                      <input
+                        type="time"
+                        value={form.booking_time}
+                        onChange={setField('booking_time')}
+                        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                      />
+                    </div>
                   </div>
 
                   <div>
@@ -349,14 +365,25 @@ const NewBookingSheet = ({
                 />
               </div>
 
-              <div className="relative">
-                <FieldIcon icon={Clock} />
-                <input
-                  type="time"
-                  value={form.booking_time}
-                  onChange={setField('booking_time')}
-                  className={inputCls}
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="relative">
+                  <CalendarPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+                  <input
+                    type="date"
+                    value={form.booking_date}
+                    onChange={setField('booking_date')}
+                    className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                  />
+                </div>
+                <div className="relative">
+                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+                  <input
+                    type="time"
+                    value={form.booking_time}
+                    onChange={setField('booking_time')}
+                    className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                  />
+                </div>
               </div>
 
               <ServicePicker

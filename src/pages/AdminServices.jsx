@@ -168,7 +168,7 @@ const AdminServices = () => {
   return (
     <>
       <Helmet><title>Servicios — Admin Suly</title></Helmet>
-      <div className="max-w-5xl mx-auto space-y-5">
+      <div className="max-w-5xl mx-auto px-4 sm:px-0 space-y-5">
         <PageHeader
           icon={Scissors}
           title="Servicios"

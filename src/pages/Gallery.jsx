@@ -23,23 +23,52 @@ const Gallery = () => {
   useEffect(() => {
     const fetchGallery = () => {
       supabase
-        .from('gallery_images')
+        .from('gallery')
         .select('*')
-        .eq('active', true)
-        .order('display_order', { ascending: true })
-        .order('created_at', { ascending: false })
-        .then(({ data }) => {
-          if (data && data.length > 0) setGalleryItems(data);
-          else setGalleryItems(STATIC_ITEMS);
+        .then(({ data, error }) => {
+          if (error) {
+            console.error('Error fetching gallery:', error);
+            setGalleryItems(STATIC_ITEMS);
+            return;
+          }
+          if (data && data.length > 0) {
+            const mapped = data.map((item) => {
+              // Normalize category mapping
+              let cat = 'manicure';
+              const dbCat = item.category?.toLowerCase() || '';
+              if (dbCat.includes('pedi')) cat = 'pedicure';
+              else if (dbCat.includes('dise') || dbCat.includes('art')) cat = 'nail-art';
+              else if (dbCat.includes('trata') || dbCat.includes('option')) cat = 'treatments';
+
+              // Likes support via LocalStorage
+              const localLikesKey = `suly_gallery_likes_${item.id}`;
+              const hasLiked = localStorage.getItem(localLikesKey) === 'true';
+              const baseLikes = item.likes || Math.floor(Math.abs(Math.sin(item.id)) * 40) + 15;
+
+              return {
+                id: item.id,
+                category: cat,
+                title: item.title || 'Trabajo Suly Nails',
+                description: item.description || 'Acabado profesional de alta calidad.',
+                image_url: item.url || item.image_url || '/Gallery/manicura1.jpeg',
+                featured: item.featured || false,
+                likes: hasLiked ? baseLikes + 1 : baseLikes,
+                liked: hasLiked,
+              };
+            });
+            setGalleryItems(mapped);
+          } else {
+            setGalleryItems(STATIC_ITEMS);
+          }
         });
     };
 
     fetchGallery();
 
     const channel = supabase
-      .channel('public-gallery-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery_images' }, fetchGallery)
-      .subscribe();
+        .channel('public-gallery-realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'gallery' }, fetchGallery)
+        .subscribe();
 
     return () => { supabase.removeChannel(channel); };
   }, []);
@@ -56,13 +85,73 @@ const Gallery = () => {
     ? galleryItems
     : galleryItems.filter((item) => item.category === selectedCategory);
 
-  const handleActionClick = (e) => {
+  const handleLikeClick = (e, item) => {
     e.stopPropagation();
+    const localLikesKey = `suly_gallery_likes_${item.id}`;
+    const alreadyLiked = localStorage.getItem(localLikesKey) === 'true';
+    const nextLiked = !alreadyLiked;
+
+    localStorage.setItem(localLikesKey, String(nextLiked));
+
+    setGalleryItems((prev) =>
+      prev.map((x) => {
+        if (x.id === item.id) {
+          return {
+            ...x,
+            liked: nextLiked,
+            likes: nextLiked ? x.likes + 1 : x.likes - 1,
+          };
+        }
+        return x;
+      })
+    );
+
+    if (selectedImage?.id === item.id) {
+      setSelectedImage((prev) => ({
+        ...prev,
+        liked: nextLiked,
+        likes: nextLiked ? prev.likes + 1 : prev.likes - 1,
+      }));
+    }
+
     toast({
-      title: "Función en desarrollo",
-      description: "Esta interacción estará disponible muy pronto.",
+      title: nextLiked ? "¡Te gusta esta foto!" : "Me gusta eliminado",
+      description: nextLiked 
+        ? "¡Gracias por tu valoración! Nos alegra que te guste nuestro trabajo. 🌸"
+        : "Hemos quitado tu like de esta imagen.",
       duration: 3000,
     });
+  };
+
+  const handleShareClick = (e, item) => {
+    e.stopPropagation();
+    const shareUrl = `${window.location.origin}/galeria`;
+    const shareTitle = item.title;
+    const shareText = `Mira este hermoso trabajo de manicura/pedicura "${item.title}" en Suly Pretty Nails:`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: shareTitle,
+        text: shareText,
+        url: shareUrl,
+      }).catch((err) => console.log('Error sharing:', err));
+    } else {
+      navigator.clipboard.writeText(`${shareText} ${shareUrl}`)
+        .then(() => {
+          toast({
+            title: "¡Enlace copiado!",
+            description: "Hemos copiado el enlace al portapapeles. ¡Compártelo con tus amigas! 🌸",
+            duration: 3000,
+          });
+        })
+        .catch(() => {
+          toast({
+            title: "No se pudo compartir",
+            description: "Inténtalo de nuevo.",
+            variant: "destructive",
+          });
+        });
+    }
   };
 
   const navigateLightbox = (direction) => {
@@ -165,16 +254,18 @@ const Gallery = () => {
                     </div>
                     <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-75">
                       <button
-                        onClick={handleActionClick}
-                        className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+                        onClick={(e) => handleLikeClick(e, item)}
+                        className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors shadow-sm ${
+                          item.liked ? 'bg-brand-rose text-white' : 'bg-white/90 hover:bg-white text-brand-rose'
+                        }`}
                       >
-                        <Heart className="h-3.5 w-3.5 text-brand-rose" />
+                        <Heart className={`h-3.5 w-3.5 ${item.liked ? 'fill-current' : ''}`} />
                       </button>
                       <button
-                        onClick={handleActionClick}
-                        className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white transition-colors shadow-sm"
+                        onClick={(e) => handleShareClick(e, item)}
+                        className="w-8 h-8 bg-white/90 rounded-full flex items-center justify-center hover:bg-white text-brand-mid transition-colors shadow-sm"
                       >
-                        <Share2 className="h-3.5 w-3.5 text-brand-mid" />
+                        <Share2 className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
@@ -250,15 +341,30 @@ const Gallery = () => {
                     <p className="text-sm text-brand-mid mt-0.5">{selectedImage.description}</p>
                   </div>
                   <div className="flex items-center gap-1 text-brand-rose ml-4 shrink-0">
-                    <Heart className="h-4 w-4 fill-current" />
+                    <Heart className={`h-4 w-4 ${selectedImage.liked ? 'fill-current' : ''}`} />
                     <span className="text-sm font-semibold">{selectedImage.likes}</span>
                   </div>
                 </div>
                 <div className="flex gap-3">
-                  <Button onClick={handleActionClick} variant="outline" size="sm" className="rounded-full border-brand-rose/40 text-brand-rose">
-                    <Heart className="h-4 w-4 mr-1.5" /> Me Gusta
+                  <Button
+                    onClick={(e) => handleLikeClick(e, selectedImage)}
+                    variant={selectedImage.liked ? "gradient" : "outline"}
+                    size="sm"
+                    className={`rounded-full ${
+                      selectedImage.liked 
+                        ? 'bg-gradient-rose-gold text-white border-transparent shadow-rose-sm' 
+                        : 'border-brand-rose/40 text-brand-rose hover:bg-brand-rose-50'
+                    }`}
+                  >
+                    <Heart className={`h-4 w-4 mr-1.5 ${selectedImage.liked ? 'fill-current' : ''}`} />
+                    {selectedImage.liked ? 'Te gusta' : 'Me Gusta'}
                   </Button>
-                  <Button onClick={handleActionClick} variant="gradient" size="sm" className="rounded-full">
+                  <Button
+                    onClick={(e) => handleShareClick(e, selectedImage)}
+                    variant="gradient"
+                    size="sm"
+                    className="rounded-full bg-gradient-rose-gold text-white shadow-rose-sm"
+                  >
                     <Share2 className="h-4 w-4 mr-1.5" /> Compartir
                   </Button>
                 </div>
