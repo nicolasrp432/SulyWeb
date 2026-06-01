@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Calendar, ClipboardList, Users,
-  Scissors, Settings, X, LogOut, ChevronRight, Image, UserCog
+  Scissors, Settings, X, LogOut, ChevronRight, Image, UserCog, Globe
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -69,6 +69,13 @@ const AdminSidebar = ({ mobileOpen, onMobileClose }) => {
 
       {/* User / logout */}
       <div className="px-3 py-4 border-t border-admin-border">
+        <Link
+          to="/"
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-admin-muted hover:bg-admin-surface hover:text-admin-text transition-all duration-150 mb-3 border border-dashed border-admin-border hover:border-brand-rose/30"
+        >
+          <Globe className="h-4 w-4 text-brand-rose shrink-0" />
+          <span className="flex-1 text-left">Volver al sitio web</span>
+        </Link>
         <div className="flex items-center gap-3 px-3 py-2 mb-1">
           <div className="w-8 h-8 rounded-full bg-gradient-rose-gold flex items-center justify-center text-white text-xs font-bold shadow-rose-sm">
             {user?.email?.[0]?.toUpperCase() ?? 'A'}

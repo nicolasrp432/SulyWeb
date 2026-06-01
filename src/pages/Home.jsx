@@ -28,10 +28,10 @@ const fadeUp = (delay = 0) => ({
 
 /* ── Hero Image Carousel (Premium Crossfade Slider) ── */
 const HERO_IMAGES = [
-  "https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-  "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
-  "https://images.unsplash.com/photo-1560869713-7d0a29430f13?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+  "/serviciosimg/manicura-expres.jpg",
+  "/serviciosimg/pedicura-completa.jpg",
+  "/serviciosimg/lifting-pestañas.jpg",
+  "/serviciosimg/depilar-cejas.jpg"
 ];
 
 const HeroImageCarousel = () => {
@@ -61,20 +61,6 @@ const HeroImageCarousel = () => {
       
       {/* Soft overlay gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/20 via-transparent to-transparent pointer-events-none" />
-
-      {/* Navigation dots */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20 bg-white/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/40">
-        {HERO_IMAGES.map((_, i) => (
-          <button
-            key={i}
-            onClick={() => setIndex(i)}
-            className={`w-2 h-2 rounded-full transition-all duration-300 ${
-              index === i ? 'bg-brand-rose w-4' : 'bg-brand-dark/30 hover:bg-brand-dark/60'
-            }`}
-            aria-label={`Go to slide ${i + 1}`}
-          />
-        ))}
-      </div>
     </div>
   );
 };
@@ -342,21 +328,7 @@ const Home = () => {
           </motion.div>
         </div>
 
-        {/* Scroll indicator */}
-        <motion.div
-          className="hero-scroll-indicator"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1.2 }}
-        >
-          <motion.div
-            className="hero-scroll-mouse"
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
-            <motion.div className="hero-scroll-wheel" />
-          </motion.div>
-        </motion.div>
+
       </section>
 
       {/* ===== WHY CHOOSE US — Slider ===== */}
