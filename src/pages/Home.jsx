@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, LayoutGroup } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, LayoutGroup, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import {
   Calendar,
@@ -16,6 +16,7 @@ import SEOHead from '../components/SEO/SEOHead';
 import WhyChooseUsSlider from '../components/WhyChooseUsSlider';
 import { Button } from '@/components/ui/button';
 import { TextRotate } from '@/components/ui/text-rotate';
+import { supabase } from '@/lib/customSupabaseClient';
 
 /* ── Animation helpers ─────────────────────────── */
 const fadeUp = (delay = 0) => ({
@@ -25,31 +26,149 @@ const fadeUp = (delay = 0) => ({
   transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] },
 });
 
+/* ── Hero Image Carousel (Premium Crossfade Slider) ── */
+const HERO_IMAGES = [
+  "https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1519014816548-bf5fe059798b?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80",
+  "https://images.unsplash.com/photo-1560869713-7d0a29430f13?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
+];
+
+const HeroImageCarousel = () => {
+  const [index, setIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setIndex((prev) => (prev + 1) % HERO_IMAGES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="relative w-full h-[300px] sm:h-[380px] md:h-[420px] lg:h-[460px] rounded-[2rem] overflow-hidden shadow-2xl border-4 border-white/90 bg-brand-rose-50 select-none">
+      <AnimatePresence mode="wait">
+        <motion.img
+          key={index}
+          src={HERO_IMAGES[index]}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.8, ease: "easeInOut" }}
+          alt="Suly Pretty Nails - Tratamiento de belleza"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+      </AnimatePresence>
+      
+      {/* Soft overlay gradient */}
+      <div className="absolute inset-0 bg-gradient-to-t from-brand-dark/20 via-transparent to-transparent pointer-events-none" />
+
+      {/* Navigation dots */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-20 bg-white/30 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/40">
+        {HERO_IMAGES.map((_, i) => (
+          <button
+            key={i}
+            onClick={() => setIndex(i)}
+            className={`w-2 h-2 rounded-full transition-all duration-300 ${
+              index === i ? 'bg-brand-rose w-4' : 'bg-brand-dark/30 hover:bg-brand-dark/60'
+            }`}
+            aria-label={`Go to slide ${i + 1}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const Home = () => {
+  const [minPrices, setMinPrices] = useState({
+    manicura: 'Desde 9,90€',
+    pedicura: 'Desde 14,90€',
+    lifting: 'Desde 35€',
+    depilacion: 'Desde 5€'
+  });
+
+  useEffect(() => {
+    supabase
+      .from('services')
+      .select('*')
+      .eq('active', true)
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          // Manicuras: incluye manicura, acrílica, gel, baby boomer, limar, etc.
+          const manicuras = data.filter(
+            (s) =>
+              s.name.toLowerCase().includes('manicura') ||
+              s.name.toLowerCase().includes('cortar') ||
+              s.name.toLowerCase().includes('gel') ||
+              s.name.toLowerCase().includes('acrílic') ||
+              s.name.toLowerCase().includes('uñas')
+          );
+          // Pedicuras
+          const pedicuras = data.filter(
+            (s) =>
+              s.name.toLowerCase().includes('pedicura') ||
+              s.name.toLowerCase().includes('pies')
+          );
+          // Lifting
+          const lifting = data.find((s) => s.name.toLowerCase().includes('lifting'));
+          // Depilación
+          const depilacion = data.filter(
+            (s) =>
+              s.name.toLowerCase().includes('depilac') ||
+              s.name.toLowerCase().includes('depilar') ||
+              s.name.toLowerCase().includes('cejas') ||
+              s.name.toLowerCase().includes('bigote') ||
+              s.name.toLowerCase().includes('axila') ||
+              s.name.toLowerCase().includes('rostro')
+          );
+
+          const getMinPriceString = (list, defaultVal) => {
+            if (!list || list.length === 0) return defaultVal;
+            const prices = list
+              .map((s) => {
+                const num = parseFloat(
+                  (s.price ?? '').replace(',', '.').replace(/[^0-9.]/g, '')
+                );
+                return isNaN(num) ? Infinity : num;
+              });
+            const min = Math.min(...prices);
+            return min === Infinity ? defaultVal : `Desde ${min.toString().replace('.', ',')}€`;
+          };
+
+          setMinPrices({
+            manicura: getMinPriceString(manicuras, 'Desde 9,90€'),
+            pedicura: getMinPriceString(pedicuras, 'Desde 14,90€'),
+            lifting: lifting ? `Desde ${lifting.price}` : 'Desde 35€',
+            depilacion: getMinPriceString(depilacion, 'Desde 5€'),
+          });
+        }
+      });
+  }, []);
+
   const services = [
     {
       title: 'Manicuras',
       description: 'Gel, semipermanente y diseños únicos.',
       image: '/serviciosimg/manicura-expres.jpg',
-      price: 'Desde 9,90€',
+      price: minPrices.manicura,
     },
     {
       title: 'Pedicuras',
       description: 'Relajantes pedicuras spa y tratamientos.',
       image: '/serviciosimg/pedicura-completa.jpg',
-      price: 'Desde 14,90€',
+      price: minPrices.pedicura,
     },
     {
       title: 'Lifting de Pestañas',
       description: 'Realza tu mirada de forma natural.',
       image: '/serviciosimg/lifting-pestañas.jpg',
-      price: 'Desde 35€',
+      price: minPrices.lifting,
     },
     {
       title: 'Depilación',
       description: 'Cejas, bigote, axilas y rostro.',
       image: '/serviciosimg/depilar-cejas.jpg',
-      price: 'Desde 5€',
+      price: minPrices.depilacion,
     },
   ];
 
@@ -90,24 +209,22 @@ const Home = () => {
           >
             <h1 className="hero-relaxe-heading">
               <span className="hero-relaxe-heading-line">Relaja tu cuerpo</span>
-              <span className="hero-relaxe-heading-line">y alma en{' '}</span>
-              <LayoutGroup>
-                <motion.span layout className="hero-relaxe-animated-text">
-                  <TextRotate
-                    texts={[
-                      "Suly Pretty",
-                      "tu salón",
-                      "buenas manos",
-                      "confianza",
-                    ]}
-                    mainClassName="overflow-hidden text-brand-rose"
-                    staggerDuration={0.025}
-                    staggerFrom="last"
-                    rotationInterval={3000}
-                    transition={{ type: "spring", damping: 28, stiffness: 280 }}
-                  />
-                </motion.span>
-              </LayoutGroup>
+              <span className="hero-relaxe-heading-line">y alma en</span>
+              <span className="text-brand-rose block sm:inline-block">
+                <TextRotate
+                  texts={[
+                    "Suly Pretty",
+                    "tu salón",
+                    "buenas manos",
+                    "tu confianza",
+                  ]}
+                  mainClassName="overflow-hidden text-brand-rose inline-flex"
+                  staggerDuration={0.05}
+                  splitBy="words"
+                  rotationInterval={3000}
+                  transition={{ type: "spring", damping: 28, stiffness: 280 }}
+                />
+              </span>
             </h1>
 
             <motion.p 
@@ -127,8 +244,9 @@ const Home = () => {
             >
               <Button
                 asChild
+                variant="gradient"
                 size="lg"
-                className="bg-brand-dark text-white hover:bg-brand-dark/90 px-8 py-6 rounded-full text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
+                className="px-8 py-6 rounded-full text-base font-bold shadow-rose-sm hover:shadow-rose-md hover:scale-105 transition-all duration-300"
               >
                 <Link to="/reservas" className="flex items-center gap-2">
                   <Calendar size={18} />
@@ -138,14 +256,12 @@ const Home = () => {
               
               <Button
                 asChild
-                variant="ghost"
+                variant="outline"
                 size="lg"
-                className="text-brand-mid hover:text-brand-rose hover:bg-transparent px-6 py-6 rounded-full text-base font-medium"
+                className="px-8 py-6 rounded-full text-base font-semibold hover:scale-105 transition-all duration-300 border-2 border-brand-rose/30 text-brand-rose hover:border-brand-rose hover:bg-brand-rose-50/50"
               >
                 <Link to="/servicios" className="flex items-center gap-2">
-                  <span className="w-10 h-10 rounded-full border-2 border-brand-mid/30 flex items-center justify-center group-hover:border-brand-rose transition-colors">
-                    <ArrowRight size={16} />
-                  </span>
+                  <ArrowRight size={18} />
                   Ver Servicios
                 </Link>
               </Button>
@@ -166,7 +282,7 @@ const Home = () => {
                 </div>
               </div>
               <div className="hero-feature-pill">
-                <Star size={16} className="text-brand-gold" />
+                <Star size={16} className="text-brand-rose" />
                 <div>
                   <span className="hero-feature-title">Satisfacción</span>
                   <span className="hero-feature-sub">Clientas felices siempre</span>
@@ -182,19 +298,15 @@ const Home = () => {
             </motion.div>
           </motion.div>
 
-          {/* Right: Hero image */}
+          {/* Right: Hero image (mobile-first carousel) */}
           <motion.div
             className="flex lg:hidden items-center justify-center"
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="hero-relaxe-image-wrapper w-full max-w-sm">
-              <img
-                src="https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-                alt="Mujer relajada disfrutando de tratamiento de belleza"
-                className="hero-relaxe-image"
-              />
+            <div className="hero-relaxe-image-wrapper w-full max-w-[290px] sm:max-w-sm">
+              <HeroImageCarousel />
             </div>
           </motion.div>
 
@@ -205,12 +317,7 @@ const Home = () => {
             transition={{ delay: 0.2, duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           >
             <div className="hero-relaxe-image-wrapper">
-              <img
-                src="https://images.unsplash.com/photo-1604654894610-df63bc536371?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1000&q=80"
-                alt="Mujer relajada disfrutando de tratamiento de belleza"
-                className="hero-relaxe-image"
-              />
-              {/* Floating stats card - desktop only */}
+              <HeroImageCarousel />
               <motion.div 
                 className="hero-floating-card hidden md:block"
                 animate={{ y: [0, -8, 0] }}

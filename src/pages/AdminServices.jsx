@@ -114,20 +114,28 @@ const AdminServices = () => {
       })
       .eq('id', id);
     if (updateErr) showError('Error al guardar: ' + updateErr.message);
-    else showFlash('Servicio actualizado');
+    else {
+      showFlash('Servicio actualizado');
+      await fetchServices();
+    }
     setSaving(false);
     setEditingId(null);
   };
 
   const toggleActive = async (svc) => {
-    await supabase.from('services').update({ active: !svc.active }).eq('id', svc.id);
+    const { error: toggleErr } = await supabase.from('services').update({ active: !svc.active }).eq('id', svc.id);
+    if (toggleErr) showError('Error al cambiar estado: ' + toggleErr.message);
+    else await fetchServices();
   };
 
   const deleteService = async (id) => {
     if (!window.confirm('¿Eliminar este servicio?')) return;
     const { error: deleteErr } = await supabase.from('services').delete().eq('id', id);
     if (deleteErr) showError('Error al eliminar: ' + deleteErr.message);
-    else showFlash('Servicio eliminado');
+    else {
+      showFlash('Servicio eliminado');
+      await fetchServices();
+    }
   };
 
   const addService = async () => {
@@ -141,6 +149,7 @@ const AdminServices = () => {
       setNewService({ name: '', price: '', duration_minutes: 30, category: 'nails' });
       setShowAdd(false);
       showFlash('Servicio añadido');
+      await fetchServices();
     }
     setSaving(false);
   };
