@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   Plus, Trash2, Loader2, Settings as SettingsIcon, Store, Lock, Calendar as CalendarIcon,
-  Check, AlertCircle, Users, Crown, Mail, Shield, ExternalLink,
+  Check, AlertCircle, Users, Crown, Mail, Shield, KeyRound, Eye, EyeOff, RefreshCw,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -236,13 +236,41 @@ const Switch = ({ checked, onChange, disabled }) => (
   </button>
 );
 
+const genPassword = () => {
+  // Readable 12-char password: avoids ambiguous chars, always meets the 8+ rule.
+  const chars = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  const sym = '!@#$%&*';
+  let p = '';
+  for (let i = 0; i < 11; i++) p += chars[Math.floor(Math.random() * chars.length)];
+  return p + sym[Math.floor(Math.random() * sym.length)];
+};
+
 const TeamSection = ({ currentUserId, onFlash, onError }) => {
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [busyId, setBusyId] = useState(null);
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newRole, setNewRole] = useState('admin');
+  const [newPassword, setNewPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Calls the admin-team Edge Function; the user JWT is attached automatically.
+  const callTeamFn = useCallback(async (payload) => {
+    const { data, error: fnErr } = await supabase.functions.invoke('admin-team', { body: payload });
+    if (fnErr) {
+      // Edge Function returns a JSON { error } body on non-2xx; surface it when available.
+      let msg = fnErr.message;
+      try {
+        const ctx = await fnErr.context?.json();
+        if (ctx?.error) msg = ctx.error;
+      } catch (_e) { /* keep default */ }
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
+    return data;
+  }, []);
 
   const fetchProfiles = useCallback(async () => {
     setLoading(true);
@@ -268,38 +296,27 @@ const TeamSection = ({ currentUserId, onFlash, onError }) => {
   const handleAdd = async () => {
     const email = newEmail.trim().toLowerCase();
     if (!email) return;
+    if (!newPassword || newPassword.length < 8) {
+      onError('La contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
     setSubmitting(true);
     try {
-      const { data: userId, error: rpcErr } = await supabase
-        .rpc('find_user_id_by_email', { p_email: email });
-      if (rpcErr) throw rpcErr;
-      if (!userId) {
-        onError('Este email no existe en Supabase Auth. Crea primero el usuario en Authentication > Users > Add user.');
-        return;
-      }
-      const { error: insertErr } = await supabase
-        .from('admin_profiles')
-        .insert([{
-          id: userId,
-          email,
-          full_name: newName.trim() || null,
-          role: newRole,
-          is_active: true,
-        }]);
-      if (insertErr) {
-        if (insertErr.code === '23505') {
-          onError('Este usuario ya tiene perfil admin. Si está desactivado, reactívalo desde la lista.');
-        } else {
-          throw insertErr;
-        }
-        return;
-      }
-      onFlash(`Acceso activado para ${email}`);
+      await callTeamFn({
+        action: 'create',
+        email,
+        password: newPassword,
+        full_name: newName.trim() || null,
+        role: newRole,
+      });
+      onFlash(`Usuario creado: ${email}. Ya puede entrar con su email y contraseña.`);
       setNewEmail('');
       setNewName('');
       setNewRole('admin');
+      setNewPassword('');
+      setShowPassword(false);
     } catch (e) {
-      onError('Error al activar acceso: ' + (e.message || e));
+      onError('Error al crear usuario: ' + (e.message || e));
     } finally {
       setSubmitting(false);
     }
@@ -318,18 +335,49 @@ const TeamSection = ({ currentUserId, onFlash, onError }) => {
     else onFlash(`Acceso ${!profile.is_active ? 'activado' : 'desactivado'}`);
   };
 
+  const changeRole = async (profile, role) => {
+    if (role === profile.role) return;
+    setBusyId(profile.id);
+    try {
+      await callTeamFn({ action: 'set_role', user_id: profile.id, role });
+      onFlash(`${profile.email} ahora es ${role}`);
+    } catch (e) {
+      onError('Error al cambiar rol: ' + (e.message || e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const resetPassword = async (profile) => {
+    const pwd = window.prompt(`Nueva contraseña para ${profile.email} (mín. 8 caracteres):`, genPassword());
+    if (pwd === null) return;
+    if (pwd.length < 8) { onError('La contraseña debe tener al menos 8 caracteres.'); return; }
+    setBusyId(profile.id);
+    try {
+      await callTeamFn({ action: 'set_password', user_id: profile.id, password: pwd });
+      onFlash(`Contraseña actualizada para ${profile.email}`);
+    } catch (e) {
+      onError('Error al cambiar contraseña: ' + (e.message || e));
+    } finally {
+      setBusyId(null);
+    }
+  };
+
   const removeProfile = async (profile) => {
     if (profile.id === currentUserId) {
       onError('No puedes eliminar tu propio perfil.');
       return;
     }
-    if (!window.confirm(`¿Eliminar acceso de ${profile.email}? La cuenta en Supabase Auth seguirá existiendo (puedes borrarla manualmente).`)) return;
-    const { error: delErr } = await supabase
-      .from('admin_profiles')
-      .delete()
-      .eq('id', profile.id);
-    if (delErr) onError('Error al eliminar: ' + delErr.message);
-    else onFlash('Perfil eliminado');
+    if (!window.confirm(`¿Eliminar a ${profile.email}? Se borrará su acceso y su cuenta por completo.`)) return;
+    setBusyId(profile.id);
+    try {
+      await callTeamFn({ action: 'delete', user_id: profile.id });
+      onFlash('Usuario eliminado');
+    } catch (e) {
+      onError('Error al eliminar: ' + (e.message || e));
+    } finally {
+      setBusyId(null);
+    }
   };
 
   const inputCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
@@ -371,18 +419,41 @@ const TeamSection = ({ currentUserId, onFlash, onError }) => {
                     </div>
                     <p className="text-[11px] text-admin-muted truncate">{p.email}</p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {busyId === p.id && <Loader2 className="h-3.5 w-3.5 animate-spin text-admin-muted" />}
+                    {!isSelf && (
+                      <select
+                        value={p.role}
+                        onChange={(e) => changeRole(p, e.target.value)}
+                        disabled={busyId === p.id}
+                        title="Cambiar rol"
+                        className="h-7 rounded-lg border border-admin-border bg-white text-[11px] font-semibold text-admin-text px-1.5 focus:outline-none focus:border-brand-rose disabled:opacity-50"
+                      >
+                        <option value="admin">admin</option>
+                        <option value="owner">owner</option>
+                      </select>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => resetPassword(p)}
+                      disabled={busyId === p.id}
+                      className="p-1.5 text-admin-muted hover:text-brand-rose transition-colors disabled:opacity-50"
+                      title="Cambiar contraseña"
+                    >
+                      <KeyRound className="h-3.5 w-3.5" />
+                    </button>
                     <Switch
                       checked={p.is_active}
                       onChange={() => toggleActive(p)}
-                      disabled={isSelf}
+                      disabled={isSelf || busyId === p.id}
                     />
                     {!isSelf && (
                       <button
                         type="button"
                         onClick={() => removeProfile(p)}
-                        className="p-1 text-admin-muted hover:text-red-500 transition-colors"
-                        title="Eliminar perfil"
+                        disabled={busyId === p.id}
+                        className="p-1 text-admin-muted hover:text-red-500 transition-colors disabled:opacity-50"
+                        title="Eliminar usuario"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>
@@ -395,18 +466,10 @@ const TeamSection = ({ currentUserId, onFlash, onError }) => {
         </div>
 
         <div className="pt-3 border-t border-admin-border space-y-2">
-          <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider">Activar nuevo admin</p>
+          <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider">Crear nuevo usuario</p>
           <p className="text-[10px] text-admin-muted leading-relaxed">
-            Primero crea al usuario en{' '}
-            <a
-              href="https://supabase.com/dashboard/project/_/auth/users"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-brand-rose hover:underline inline-flex items-center gap-0.5 font-semibold"
-            >
-              Supabase Auth Dashboard <ExternalLink className="w-2.5 h-2.5" />
-            </a>{' '}
-            (Add user → email + password). Después introduce su email aquí para darle acceso al panel.
+            Crea la cuenta con email y contraseña directamente aquí. La persona podrá entrar desde
+            cualquier dispositivo con esos datos, sin nada más.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="relative sm:col-span-2">
@@ -432,6 +495,34 @@ const TeamSection = ({ currentUserId, onFlash, onError }) => {
             </div>
           </div>
           <div className="relative">
+            <KeyRound className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+            <input
+              type={showPassword ? 'text' : 'password'}
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Contraseña (mín. 8 caracteres)"
+              className={`${inputCls} pr-20`}
+            />
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setNewPassword(genPassword())}
+                title="Generar contraseña"
+                className="p-1.5 text-admin-muted hover:text-brand-rose transition-colors"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                title={showPassword ? 'Ocultar' : 'Mostrar'}
+                className="p-1.5 text-admin-muted hover:text-brand-rose transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+          <div className="relative">
             <Users className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
             <input
               type="text"
@@ -443,11 +534,11 @@ const TeamSection = ({ currentUserId, onFlash, onError }) => {
           </div>
           <button
             onClick={handleAdd}
-            disabled={!newEmail || submitting}
+            disabled={!newEmail || !newPassword || submitting}
             className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-rose-gold text-white text-xs font-bold rounded-xl shadow-rose-sm hover:shadow-rose-md transition-all disabled:opacity-50"
           >
             {submitting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Activar acceso
+            Crear usuario
           </button>
         </div>
       </div>

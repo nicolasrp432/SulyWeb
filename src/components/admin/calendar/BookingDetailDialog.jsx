@@ -144,9 +144,11 @@ const BookingDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose?.(); }}>
-      <DialogContent className="max-w-xl max-h-[92vh] overflow-y-auto rounded-2xl border border-admin-border bg-white shadow-2xl p-0">
+      <DialogContent className="max-w-xl p-0 sm:max-w-xl pb-6 sm:pb-0 overflow-hidden sm:overflow-visible">
+        {/* Drag handle for mobile */}
+        <div className="w-12 h-1.5 bg-gray-300/70 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
         {/* Header gradient */}
-        <div className="relative bg-gradient-to-br from-brand-rose-50 via-white to-amber-50 px-5 pt-5 pb-4 pr-14 border-b border-admin-border">
+        <div className="relative bg-gradient-to-br from-brand-rose-50 via-white to-amber-50 px-5 pt-3 sm:pt-5 pb-4 pr-14 border-b border-admin-border">
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-rose-gold flex items-center justify-center text-white text-base font-bold shadow-rose-sm shrink-0">
               {getInitials(form.client_name || booking?.client_name)}

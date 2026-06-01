@@ -69,7 +69,8 @@ const GalleryAdminPage = () => {
   const uploadImage = async () => {
     if (!selectedFile) return null;
     const ext = selectedFile.name.split('.').pop();
-    const path = `gallery/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    // Object key only — the bucket is already named "gallery"; prefixing here doubled the path.
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const { error: uploadErr } = await supabase.storage.from('gallery').upload(path, selectedFile, { upsert: false });
     if (uploadErr) { showError('Error al subir imagen: ' + uploadErr.message); return null; }
     const { data: urlData } = supabase.storage.from('gallery').getPublicUrl(path);

@@ -54,13 +54,33 @@ const NotificationsPanel = ({
   const [coords, setCoords] = useState({ top: 0, left: 0 });
 
   useLayoutEffect(() => {
-    if (!open || !anchorRef?.current) return;
-    const rect = anchorRef.current.getBoundingClientRect();
-    let left = rect.right - PANEL_WIDTH;
-    let top = rect.bottom + PANEL_GAP;
-    if (left < 8) left = 8;
-    if (left + PANEL_WIDTH > window.innerWidth - 8) left = window.innerWidth - PANEL_WIDTH - 8;
-    setCoords({ top, left });
+    if (!open || !anchorRef?.current) return undefined;
+
+    const updateCoords = () => {
+      const rect = anchorRef.current.getBoundingClientRect();
+      // Fallback robust coordinates if element rect has zero dimensions (initial dynamic mounts)
+      if (rect.width === 0 && rect.height === 0) {
+        setCoords({ top: 56, left: Math.max(8, window.innerWidth - PANEL_WIDTH - 8) });
+        return;
+      }
+      let left = rect.right - PANEL_WIDTH;
+      let top = rect.bottom + PANEL_GAP;
+      if (left < 8) left = 8;
+      if (left + PANEL_WIDTH > window.innerWidth - 8) {
+        left = Math.max(8, window.innerWidth - PANEL_WIDTH - 8);
+      }
+      setCoords({ top, left });
+    };
+
+    updateCoords();
+
+    window.addEventListener('resize', updateCoords);
+    window.addEventListener('scroll', updateCoords, true);
+
+    return () => {
+      window.removeEventListener('resize', updateCoords);
+      window.removeEventListener('scroll', updateCoords, true);
+    };
   }, [open, anchorRef]);
 
   useEffect(() => {

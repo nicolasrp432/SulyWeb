@@ -14,7 +14,7 @@ const AdminTopbar = ({
   const bellRef = useRef(null);
 
   return (
-    <header className="h-14 bg-admin-sidebar border-b border-admin-border flex items-center gap-3 px-4 shrink-0 shadow-sm">
+    <header className="relative z-30 h-14 bg-admin-sidebar border-b border-admin-border flex items-center gap-3 px-4 shrink-0 shadow-sm">
       <button
         onClick={onMobileMenuOpen}
         className="lg:hidden p-1.5 rounded-lg text-admin-muted hover:text-admin-text hover:bg-admin-surface transition-colors"
