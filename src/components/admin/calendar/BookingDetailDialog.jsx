@@ -170,71 +170,6 @@ const BookingDetailDialog = ({
           </div>
         </div>
 
-        {/* Quick action bar */}
-        <div className="px-5 pt-4 pb-3 border-b border-admin-border/50 bg-white">
-          <div className="grid grid-cols-3 gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 text-xs font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50"
-              onClick={handleConfirmClick}
-              disabled={status === 'confirmed'}
-            >
-              <Check className="w-3.5 h-3.5 mr-1" /> Confirmar
-            </Button>
-            <Button
-              size="sm"
-              className="h-9 text-xs font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-rose-sm hover:shadow-rose-md"
-              onClick={handleCompleteClick}
-              disabled={status === 'completed'}
-            >
-              <CheckCheck className="w-3.5 h-3.5 mr-1" /> Completar
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50"
-              onClick={handleCancelClick}
-              disabled={status === 'cancelled'}
-            >
-              <X className="w-3.5 h-3.5 mr-1" /> Cancelar
-            </Button>
-          </div>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 text-xs font-bold border-green-200 text-green-700 hover:bg-green-50"
-              onClick={handleWaClick}
-              disabled={!form.client_phone}
-            >
-              <MessageCircle className="w-3.5 h-3.5 mr-1" /> WhatsApp
-            </Button>
-            <a
-              href={form.client_phone ? `tel:${form.client_phone.replace(/\s+/g, '')}` : undefined}
-              className={!form.client_phone ? 'pointer-events-none opacity-50' : ''}
-            >
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-9 text-xs font-bold w-full border-admin-border text-admin-text hover:bg-admin-surface"
-                disabled={!form.client_phone}
-              >
-                <Phone className="w-3.5 h-3.5 mr-1" /> Llamar
-              </Button>
-            </a>
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-9 text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-50"
-              onClick={handleEmailClick}
-              disabled={!form.client_email}
-            >
-              <Mail className="w-3.5 h-3.5 mr-1" /> Email
-            </Button>
-          </div>
-        </div>
-
         {/* Body */}
         <div className="px-5 py-4 space-y-4">
           <div>
@@ -297,14 +232,83 @@ const BookingDetailDialog = ({
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setShowAdvanced((v) => !v)}
-            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-brand-rose hover:bg-brand-rose-50 rounded-lg transition-colors"
-          >
-            {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            {showAdvanced ? 'Menos opciones' : 'Más opciones (especialista, estado, notas internas...)'}
-          </button>
+          {/* Quick action bar - Located under client and appointment details for mobile ergonomic ease */}
+          <div className="pt-2 border-t border-admin-border/30">
+            <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider mb-2">Acciones rápidas</p>
+            <div className="grid grid-cols-3 gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs font-bold border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                onClick={handleConfirmClick}
+                disabled={status === 'confirmed'}
+              >
+                <Check className="w-3.5 h-3.5 mr-1" /> Confirmar
+              </Button>
+              <Button
+                size="sm"
+                className="h-9 text-xs font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-rose-sm hover:shadow-rose-md"
+                onClick={handleCompleteClick}
+                disabled={status === 'completed'}
+              >
+                <CheckCheck className="w-3.5 h-3.5 mr-1" /> Completar
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs font-bold border-rose-200 text-rose-700 hover:bg-rose-50"
+                onClick={handleCancelClick}
+                disabled={status === 'cancelled'}
+              >
+                <X className="w-3.5 h-3.5 mr-1" /> Cancelar
+              </Button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 mt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs font-bold border-green-200 text-green-700 hover:bg-green-50"
+                onClick={handleWaClick}
+                disabled={!form.client_phone}
+              >
+                <MessageCircle className="w-3.5 h-3.5 mr-1" /> WhatsApp
+              </Button>
+              <a
+                href={form.client_phone ? `tel:${form.client_phone.replace(/\s+/g, '')}` : undefined}
+                className={!form.client_phone ? 'pointer-events-none opacity-50' : ''}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-9 text-xs font-bold w-full border-admin-border text-admin-text hover:bg-admin-surface"
+                  disabled={!form.client_phone}
+                >
+                  <Phone className="w-3.5 h-3.5 mr-1" /> Llamar
+                </Button>
+              </a>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 text-xs font-bold border-blue-200 text-blue-700 hover:bg-blue-50"
+                onClick={handleEmailClick}
+                disabled={!form.client_email}
+              >
+                <Mail className="w-3.5 h-3.5 mr-1" /> Email
+              </Button>
+            </div>
+          </div>
+
+          <div className="pt-1 border-t border-admin-border/30">
+            <button
+              type="button"
+              onClick={() => setShowAdvanced((v) => !v)}
+              className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-brand-rose hover:bg-brand-rose-50 rounded-lg transition-colors"
+            >
+              {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+              {showAdvanced ? 'Menos opciones' : 'Más opciones (especialista, estado, notas internas...)'}
+            </button>
+          </div>
 
           {showAdvanced && (
             <div className="space-y-2 pt-1 border-t border-admin-border/30">

@@ -53,8 +53,22 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const getSession = async () => {
-      const { data: { session: initial } } = await supabase.auth.getSession();
-      handleSession(initial);
+      try {
+        const { data: { session: initial }, error } = await supabase.auth.getSession();
+        if (error) {
+          if (error.message?.includes('Refresh Token Not Found') || error.message?.includes('refresh_token')) {
+            console.warn('Sesión de Supabase expirada o no encontrada (Refresh Token Not Found). Redirigiendo a inicio limpio.');
+          } else {
+            console.error('Error al recuperar sesión de Supabase:', error);
+          }
+          handleSession(null);
+        } else {
+          handleSession(initial);
+        }
+      } catch (err) {
+        console.warn('Fallo defensivo al inicializar sesión de Supabase:', err);
+        handleSession(null);
+      }
     };
 
     getSession();

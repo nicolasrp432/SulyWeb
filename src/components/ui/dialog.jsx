@@ -31,7 +31,7 @@ const DialogContent = React.forwardRef(({ className, children, ...props }, ref) 
       className={cn(
         "fixed z-50 grid w-full gap-4 border bg-white p-6 shadow-lg duration-200",
         // Mobile layout & animation (bottom drawer)
-        "bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0 rounded-t-[2rem] rounded-b-none border-x-0 border-b-0 max-h-[92vh] overflow-y-auto",
+        "bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0 rounded-t-[2rem] rounded-b-none border-x-0 border-b-0 max-h-[80vh] overflow-y-auto",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
         "data-[state=open]:slide-in-from-bottom data-[state=closed]:slide-out-to-bottom",
         "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
