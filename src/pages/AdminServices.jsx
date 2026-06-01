@@ -31,8 +31,8 @@ const DEFAULT_SERVICES = [
   { name: 'Depilación labio',         price: '5,00€',  duration_minutes: 10, category: 'beauty', active: true, display_order: 15 },
 ];
 
-const inputCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
-const inputClsPlain = 'w-full h-10 px-3 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
+const inputCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-white text-base md:text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
+const inputClsPlain = 'w-full h-10 px-3 rounded-xl border border-admin-border bg-white text-base md:text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
 
 const Switch = ({ checked, onChange }) => (
   <button

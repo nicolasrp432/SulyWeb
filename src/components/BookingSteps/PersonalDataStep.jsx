@@ -80,7 +80,7 @@ const PersonalDataStep = memo(({
           <input 
             type="text" 
             {...register('name')}
-            className={`w-full px-4 py-3 border rounded-lg ${
+            className={`w-full px-4 py-3 text-base md:text-sm border rounded-lg ${
               hasFieldError('name') ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-pink-500'
             }`}
             placeholder="Tu nombre" 
@@ -96,7 +96,7 @@ const PersonalDataStep = memo(({
           <input 
             type="tel" 
             {...register('phone')}
-            className={`w-full px-4 py-3 border rounded-lg ${
+            className={`w-full px-4 py-3 text-base md:text-sm border rounded-lg ${
               hasFieldError('phone') ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-pink-500'
             }`}
             placeholder="Tu teléfono" 
@@ -114,7 +114,7 @@ const PersonalDataStep = memo(({
         <input 
           type="email" 
           {...register('email')}
-          className={`w-full px-4 py-3 border rounded-lg ${
+          className={`w-full px-4 py-3 text-base md:text-sm border rounded-lg ${
             hasFieldError('email') ? 'border-red-500 focus:border-red-500' : 'border-gray-300 focus:border-pink-500'
           }`}
           placeholder="tu@email.com" 
@@ -131,7 +131,7 @@ const PersonalDataStep = memo(({
         <textarea 
           {...register('notes')}
           rows={3} 
-          className="w-full px-4 py-3 border rounded-lg border-gray-300 focus:border-pink-500" 
+          className="w-full px-4 py-3 text-base md:text-sm border rounded-lg border-gray-300 focus:border-pink-500" 
           placeholder="Alergias, preferencias..."
         />
       </div>

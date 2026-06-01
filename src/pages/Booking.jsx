@@ -862,7 +862,7 @@ const Booking = () => {
                           value={form.name}
                           onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                           placeholder="Tu nombre"
-                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
+                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
                         />
                       </div>
                     </div>
@@ -878,7 +878,7 @@ const Booking = () => {
                           value={form.phone}
                           onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                           placeholder="612 345 678"
-                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
+                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
                         />
                       </div>
                     </div>
@@ -894,7 +894,7 @@ const Booking = () => {
                           value={form.email}
                           onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                           placeholder="tu@email.com"
-                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
+                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
                         />
                       </div>
                     </div>
@@ -910,7 +910,7 @@ const Booking = () => {
                           onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                           placeholder="Alergias, preferencias, dudas..."
                           rows={2}
-                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors resize-none"
+                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors resize-none"
                         />
                       </div>
                     </div>

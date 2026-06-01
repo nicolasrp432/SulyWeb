@@ -154,7 +154,7 @@ const Contact = () => {
                     <input
                       type="text"
                       {...register('name')}
-                      className={`w-full px-4 py-3 text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
+                      className={`w-full px-4 py-3 text-base md:text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
                         hasFieldError('name')
                           ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                           : 'border-brand-rose-100 focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15'
@@ -170,7 +170,7 @@ const Contact = () => {
                     <input
                       type="email"
                       {...register('email')}
-                      className={`w-full px-4 py-3 text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
+                      className={`w-full px-4 py-3 text-base md:text-sm bg-white border rounded-xl outline-none transition-all duration-200 ${
                         hasFieldError('email')
                           ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                           : 'border-brand-rose-100 focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15'
@@ -186,7 +186,7 @@ const Contact = () => {
                     <textarea
                       {...register('message')}
                       rows={5}
-                      className={`w-full px-4 py-3 text-sm bg-white border rounded-xl outline-none transition-all duration-200 resize-none ${
+                      className={`w-full px-4 py-3 text-base md:text-sm bg-white border rounded-xl outline-none transition-all duration-200 resize-none ${
                         hasFieldError('message')
                           ? 'border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200'
                           : 'border-brand-rose-100 focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15'
