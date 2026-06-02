@@ -78,7 +78,7 @@ const Footer = () => {
 
           {/* Brand column */}
           <div className="md:col-span-2 lg:col-span-1">
-            <Logo />
+            <Logo white />
             <p className="text-white/60 mt-5 mb-6 text-sm leading-relaxed max-w-xs">
               Tu salón de belleza de confianza en Basauri y Galdakao. Expertas en manicura, pedicura y tratamientos premium.
             </p>
