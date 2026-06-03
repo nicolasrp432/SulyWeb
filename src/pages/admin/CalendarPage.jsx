@@ -20,7 +20,8 @@ import {
   AlertCircle,
   X,
   Sliders,
-  Settings
+  Settings,
+  Trash2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -879,6 +880,31 @@ const CalendarPage = () => {
     toast({ title: 'Cita cancelada' });
   }, [updateBookingStatus, toast]);
 
+  const deleteBookingAction = useCallback(async (booking) => {
+    if (!booking?.id) return;
+    if (!window.confirm(`¿Seguro que deseas eliminar permanentemente la cita de ${booking.client_name}? Esta acción no se puede deshacer.`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', booking.id);
+
+      if (error) throw error;
+
+      toast({ title: 'Cita eliminada', description: 'La cita ha sido eliminada de la base de datos.' });
+      setSelectedBookingId(null);
+      setIsDetailDialogOpen(false);
+      fetchCalendarData();
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'No se pudo eliminar la cita',
+        description: error.message
+      });
+    }
+  }, [fetchCalendarData, toast]);
+
   const callBookingAction = useCallback((booking) => {
     if (!booking?.client_phone) return;
     window.location.href = `tel:${booking.client_phone.replace(/\s+/g, '')}`;
@@ -1141,18 +1167,29 @@ const CalendarPage = () => {
           >
             <Search className="h-3.5 w-3.5" />
           </button>
-          <button
-            type="button"
-            className="h-6 w-6 p-0 flex items-center justify-center text-rose-600 hover:bg-rose-50 rounded transition-colors"
-            onClick={() => {
-              if (confirm(`¿Seguro que deseas cancelar la cita de ${booking.client_name}?`)) {
-                updateBookingStatus(booking.id, 'cancelled');
-              }
-            }}
-            title="Cancelar cita"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
+          {bookingStatus === 'cancelled' ? (
+            <button
+              type="button"
+              className="h-6 w-6 p-0 flex items-center justify-center text-red-600 hover:bg-red-50 rounded transition-colors"
+              onClick={() => deleteBookingAction(booking)}
+              title="Eliminar cita permanentemente"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="h-6 w-6 p-0 flex items-center justify-center text-rose-600 hover:bg-rose-50 rounded transition-colors"
+              onClick={() => {
+                if (confirm(`¿Seguro que deseas cancelar la cita de ${booking.client_name}?`)) {
+                  updateBookingStatus(booking.id, 'cancelled');
+                }
+              }}
+              title="Cancelar cita"
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
         </div>
       </div>
     );
@@ -1695,7 +1732,6 @@ const CalendarPage = () => {
         }}
       />
 
-      {/* Booking Detail Dialog (redesigned) */}
       <BookingDetailDialog
         open={isDetailDialogOpen && !isCreatingBooking}
         onClose={resetDetailDialog}
@@ -1708,6 +1744,7 @@ const CalendarPage = () => {
         onOpenWa={handleOpenWaModal}
         onOpenEmail={(b) => setEmailModalBooking(b)}
         onSave={saveBookingEdits}
+        onDelete={deleteBookingAction}
       />
 
       <EmailComposeModal

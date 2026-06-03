@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   Plus, Trash2, Edit3, Check, X, Loader2, AlertCircle, Scissors, Sparkles,
-  Tag, Clock as ClockIcon, Eye, EyeOff,
+  Tag, Clock as ClockIcon, Eye, EyeOff, Upload,
 } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import PageHeader from '@/components/admin/PageHeader';
@@ -54,13 +54,26 @@ const AdminServices = () => {
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({});
   const [showAdd, setShowAdd] = useState(false);
-  const [newService, setNewService] = useState({ name: '', price: '', duration_minutes: 30, category: 'nails' });
+  const [newService, setNewService] = useState({ name: '', price: '', duration_minutes: 30, category: 'nails', selectedFile: null, previewUrl: '' });
   const [flash, setFlash] = useState('');
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('all');
 
   const showFlash = (msg) => { setFlash(msg); setTimeout(() => setFlash(''), 2500); };
   const showError = (msg) => { setError(msg); setTimeout(() => setError(''), 4000); };
+
+  const uploadImage = async (file) => {
+    if (!file) return null;
+    const ext = file.name.split('.').pop();
+    const path = `services/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: uploadErr } = await supabase.storage.from('gallery').upload(path, file, { upsert: false });
+    if (uploadErr) {
+      showError('Error al subir imagen: ' + uploadErr.message);
+      return null;
+    }
+    const { data: urlData } = supabase.storage.from('gallery').getPublicUrl(path);
+    return urlData.publicUrl;
+  };
 
   const fetchServices = useCallback(async () => {
     setLoading(true);
@@ -99,11 +112,25 @@ const AdminServices = () => {
       price: svc.price ?? '',
       duration_minutes: svc.duration_minutes ?? 30,
       category: svc.category ?? 'nails',
+      image_url: svc.image_url ?? '',
+      selectedFile: null,
+      previewUrl: '',
     });
   };
 
   const saveEdit = async (id) => {
     setSaving(true);
+    let imageUrl = editValues.image_url;
+
+    if (editValues.selectedFile) {
+      const uploadedUrl = await uploadImage(editValues.selectedFile);
+      if (!uploadedUrl) {
+        setSaving(false);
+        return;
+      }
+      imageUrl = uploadedUrl;
+    }
+
     const { error: updateErr } = await supabase
       .from('services')
       .update({
@@ -111,6 +138,7 @@ const AdminServices = () => {
         price: editValues.price,
         duration_minutes: Number(editValues.duration_minutes),
         category: editValues.category,
+        image_url: imageUrl || null,
       })
       .eq('id', id);
     if (updateErr) showError('Error al guardar: ' + updateErr.message);
@@ -141,12 +169,30 @@ const AdminServices = () => {
   const addService = async () => {
     if (!newService.name) return;
     setSaving(true);
+    
+    let imageUrl = null;
+    if (newService.selectedFile) {
+      imageUrl = await uploadImage(newService.selectedFile);
+      if (!imageUrl) {
+        setSaving(false);
+        return;
+      }
+    }
+
     const { error: addErr } = await supabase
       .from('services')
-      .insert([{ ...newService, duration_minutes: Number(newService.duration_minutes), active: true }]);
+      .insert([{
+        name: newService.name,
+        price: newService.price,
+        duration_minutes: Number(newService.duration_minutes),
+        category: newService.category,
+        image_url: imageUrl,
+        active: true
+      }]);
+
     if (addErr) showError('Error al añadir: ' + addErr.message);
     else {
-      setNewService({ name: '', price: '', duration_minutes: 30, category: 'nails' });
+      setNewService({ name: '', price: '', duration_minutes: 30, category: 'nails', selectedFile: null, previewUrl: '' });
       setShowAdd(false);
       showFlash('Servicio añadido');
       await fetchServices();
@@ -249,9 +295,65 @@ const AdminServices = () => {
                 {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
               </select>
             </div>
+            
+            {/* Image upload preview/input for new service */}
+            <div className="flex items-center gap-3 bg-admin-surface/30 p-3 rounded-xl border border-admin-border/50">
+              <div
+                onClick={() => document.getElementById('new-service-image')?.click()}
+                className="relative w-16 h-16 rounded-xl border border-dashed border-admin-border bg-white flex items-center justify-center cursor-pointer hover:border-brand-rose hover:bg-brand-rose-50/10 transition-all overflow-hidden shrink-0 group"
+              >
+                {newService.previewUrl ? (
+                  <img src={newService.previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                ) : (
+                  <Upload className="w-5 h-5 text-admin-muted group-hover:text-brand-rose transition-colors" />
+                )}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Upload className="w-4 h-4 text-white" />
+                </div>
+              </div>
+              <div className="flex-1 min-w-0">
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('new-service-image')?.click()}
+                  className="text-xs font-bold text-brand-rose hover:underline"
+                >
+                  Subir foto del servicio
+                </button>
+                <p className="text-[10px] text-admin-muted mt-0.5">Opcional. JPG, PNG o WEBP (máx. 5MB)</p>
+                <input
+                  id="new-service-image"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      setNewService((p) => ({
+                        ...p,
+                        selectedFile: file,
+                        previewUrl: URL.createObjectURL(file),
+                      }));
+                    }
+                  }}
+                />
+              </div>
+              {newService.previewUrl && (
+                <button
+                  type="button"
+                  onClick={() => setNewService((p) => ({ ...p, selectedFile: null, previewUrl: '' }))}
+                  className="text-admin-muted hover:text-red-500 p-1 rounded-lg hover:bg-admin-surface transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
             <div className="flex gap-2 justify-end pt-1">
               <button
-                onClick={() => setShowAdd(false)}
+                onClick={() => {
+                  setShowAdd(false);
+                  setNewService({ name: '', price: '', duration_minutes: 30, category: 'nails', selectedFile: null, previewUrl: '' });
+                }}
                 className="px-4 py-2 text-xs font-bold text-admin-muted hover:text-admin-text border border-admin-border rounded-xl hover:bg-admin-surface transition-colors"
               >
                 Cancelar
@@ -359,6 +461,61 @@ const AdminServices = () => {
                       >
                         {CATEGORIES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
                       </select>
+
+                      {/* Image upload preview/input for editing service */}
+                      <div className="flex items-center gap-3 bg-admin-surface/30 p-2 rounded-xl border border-admin-border/50 my-1">
+                        <div
+                          onClick={() => document.getElementById(`edit-service-image-${svc.id}`)?.click()}
+                          className="relative w-12 h-12 rounded-xl border border-dashed border-admin-border bg-white flex items-center justify-center cursor-pointer hover:border-brand-rose hover:bg-brand-rose-50/10 transition-all overflow-hidden shrink-0 group"
+                        >
+                          {editValues.previewUrl ? (
+                            <img src={editValues.previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                          ) : editValues.image_url ? (
+                            <img src={editValues.image_url} alt="Current" className="w-full h-full object-cover" />
+                          ) : (
+                            <Upload className="w-4 h-4 text-admin-muted group-hover:text-brand-rose transition-colors" />
+                          )}
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Upload className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => document.getElementById(`edit-service-image-${svc.id}`)?.click()}
+                            className="text-[10px] font-bold text-brand-rose hover:underline"
+                          >
+                            Cambiar foto
+                          </button>
+                          <input
+                            id={`edit-service-image-${svc.id}`}
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => {
+                              const file = e.target.files[0];
+                              if (file) {
+                                setEditValues((p) => ({
+                                  ...p,
+                                  selectedFile: file,
+                                  previewUrl: URL.createObjectURL(file),
+                                }));
+                              }
+                            }}
+                          />
+                        </div>
+                        {(editValues.previewUrl || editValues.image_url) && (
+                          <button
+                            type="button"
+                            onClick={() => setEditValues((p) => ({ ...p, selectedFile: null, previewUrl: '', image_url: '' }))}
+                            className="text-admin-muted hover:text-red-500 p-1 rounded-lg hover:bg-admin-surface transition-colors"
+                            title="Quitar foto"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+
                       <div className="flex justify-end gap-2 pt-1">
                         <button
                           onClick={() => setEditingId(null)}
@@ -378,8 +535,12 @@ const AdminServices = () => {
                     </div>
                   ) : (
                     <div className="flex items-start gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-rose-gold/15 text-brand-rose flex items-center justify-center shrink-0">
-                        <CatIcon className="w-5 h-5" />
+                      <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 bg-gradient-rose-gold/15 flex items-center justify-center border border-admin-border">
+                        {svc.image_url ? (
+                          <img src={svc.image_url} alt={svc.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <CatIcon className="w-5 h-5 text-brand-rose" />
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-bold text-admin-text truncate">{svc.name}</p>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import SEOHead from '../components/SEO/SEOHead';
 import { supabase } from '@/lib/customSupabaseClient';
-import { getServiceImage } from '@/lib/serviceImages';
+import { getServiceImageFromObj } from '@/lib/serviceImages';
 import { 
   Sparkles, 
   Clock, 
@@ -56,7 +56,7 @@ const Services = () => {
               description: s.description ?? '',
               duration: s.duration_minutes ? `${s.duration_minutes} min` : '—',
               price: s.price ?? '',
-              image: getServiceImage(s.name, s.category) || s.image_url || '/serviciosimg/manicura-expres.jpg',
+              image: getServiceImageFromObj(s),
               features: [],
               popular: false,
             })));

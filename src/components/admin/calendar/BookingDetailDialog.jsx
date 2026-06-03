@@ -63,6 +63,7 @@ const BookingDetailDialog = ({
   onOpenWa,
   onOpenEmail,
   onSave,
+  onDelete,
 }) => {
   const [form, setForm] = useState({
     client_name: '',
@@ -228,7 +229,7 @@ const BookingDetailDialog = ({
             {showBookingData && (
               <div className="space-y-2 pt-1">
                 {/* Date and Time: Stacks on mobile, side-by-side on desktop */}
-                <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <div className="relative min-w-0">
                     <FieldIcon icon={CalendarIcon} />
                     <input type="date" value={form.booking_date} onChange={setField('booking_date')} className={`${inputCls} text-xs sm:text-sm px-2`} />
@@ -393,10 +394,21 @@ const BookingDetailDialog = ({
           )}
         </div>
 
-        <DialogFooter className="px-5 py-3 border-t border-admin-border bg-admin-bg gap-2">
-          <Button variant="outline" className="h-9 flex-1" onClick={onClose}>Cerrar</Button>
+        <DialogFooter className="px-5 py-3 border-t border-admin-border bg-admin-bg gap-2 flex flex-wrap sm:flex-nowrap">
+          {onDelete && (
+            <Button
+              variant="outline"
+              type="button"
+              className="h-9 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-bold px-3 shrink-0"
+              onClick={() => onDelete(booking)}
+            >
+              Eliminar cita
+            </Button>
+          )}
+          <div className="grow" />
+          <Button variant="outline" className="h-9" onClick={onClose}>Cerrar</Button>
           <Button
-            className="h-9 flex-1 bg-gradient-rose-gold text-white font-bold"
+            className="h-9 bg-gradient-rose-gold text-white font-bold px-4"
             onClick={handleSave}
             disabled={saving}
           >

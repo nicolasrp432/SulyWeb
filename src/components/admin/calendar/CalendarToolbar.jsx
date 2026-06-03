@@ -39,7 +39,7 @@ const CalendarToolbar = ({
   const VIEW_MODES = isMobile ? VIEW_MODES_ALL.filter((v) => v.value !== 'week') : VIEW_MODES_ALL;
 
   return (
-    <div className="sticky top-0 z-20 bg-admin-bg/95 backdrop-blur-md border-b border-admin-border -mx-4 sm:-mx-6 px-4 sm:px-6">
+    <div className="sticky top-0 z-20 bg-admin-bg/95 backdrop-blur-md border-b border-admin-border -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-4 sm:pt-6">
       <div className="max-w-7xl mx-auto flex flex-wrap items-center gap-2 py-3">
         {/* Navigation block */}
         <div className="flex items-center gap-1.5">
