@@ -113,6 +113,29 @@ export function useBookingActions({ locations = [], onChange, openWa, openEmail 
   const waBooking = useCallback((booking) => openWa?.(booking), [openWa]);
   const emailBooking = useCallback((booking) => openEmail?.(booking), [openEmail]);
 
+  const deleteBooking = useCallback(async (booking) => {
+    if (!booking?.id) return false;
+    if (!window.confirm(`¿Seguro que deseas eliminar permanentemente la cita de ${booking.client_name}? Esta acción no se puede deshacer.`)) return false;
+
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', booking.id);
+
+    if (error) {
+      toast({
+        variant: 'destructive',
+        title: 'No se pudo eliminar la cita',
+        description: error.message
+      });
+      return false;
+    }
+
+    toast({ title: 'Cita eliminada', description: 'La cita ha sido eliminada de la base de datos.' });
+    onChange?.();
+    return true;
+  }, [toast, onChange]);
+
   return {
     confirmBooking,
     completeBooking,
@@ -122,5 +145,6 @@ export function useBookingActions({ locations = [], onChange, openWa, openEmail 
     resizeBooking,
     waBooking,
     emailBooking,
+    deleteBooking,
   };
 }

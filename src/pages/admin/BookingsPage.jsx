@@ -305,6 +305,10 @@ const BookingsPage = () => {
         onOpenWa={actions.waBooking}
         onOpenEmail={actions.emailBooking}
         onSave={async () => { fetchBookings(); setSelectedBooking(null); }}
+        onDelete={async (b) => {
+          const ok = await actions.deleteBooking(b);
+          if (ok) setSelectedBooking(null);
+        }}
       />
 
       <EmailComposeModal
