@@ -169,9 +169,12 @@ function getRangeForView(viewMode, anchorDate) {
   }
 
   if (viewMode === VIEW_MODES.month) {
+    // El grid del mes pinta 42 días (incluye colas de meses adyacentes):
+    // el rango de fetch debe cubrirlos para que esos días no salgan vacíos.
     const monthStart = new Date(date.getFullYear(), date.getMonth(), 1);
-    const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0);
-    return { start: toISODate(monthStart), end: toISODate(monthEnd) };
+    const gridStart = getWeekStart(monthStart);
+    const gridEnd = addDays(gridStart, 41);
+    return { start: toISODate(gridStart), end: toISODate(gridEnd) };
   }
 
   const start = new Date(date);
@@ -446,10 +449,14 @@ const CalendarPage = () => {
     setStaffMembers(data || []);
   }, [staffTableAvailable]);
 
-  const fetchCalendarData = useCallback(async () => {
+  // silent=true (por defecto) refresca en segundo plano sin desmontar la vista:
+  // un spinner a pantalla completa en cada evento realtime cancelaría cualquier
+  // drag en curso y hace "parpadear" el calendario.
+  const fetchCalendarData = useCallback(async (opts = {}) => {
     if (!user) return;
+    const silent = opts?.silent !== false;
 
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const { data: bookingsData, error: bookingsError } = await supabase
         .from('bookings')
@@ -551,17 +558,29 @@ const CalendarPage = () => {
   }, [fetchLocations, fetchStaffMembers, user]);
 
   useEffect(() => {
-    fetchCalendarData();
+    fetchCalendarData({ silent: false });
   }, [fetchCalendarData]);
+
+  // Debounce de los eventos realtime: con la sync de Google activa pueden llegar
+  // ráfagas de cambios; un solo refetch silencioso agrupado es suficiente.
+  const refetchTimerRef = React.useRef(null);
+  const scheduleSilentRefetch = useCallback(() => {
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+    refetchTimerRef.current = setTimeout(() => fetchCalendarData(), 400);
+  }, [fetchCalendarData]);
+
+  useEffect(() => () => {
+    if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
 
     const channel = supabase
       .channel('admin-calendar-live')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => fetchCalendarData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, () => fetchCalendarData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => fetchCalendarData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => scheduleSilentRefetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'booking_services' }, () => scheduleSilentRefetch())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, () => scheduleSilentRefetch())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'admin_staff' }, () => fetchStaffMembers())
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
         supabase
@@ -583,7 +602,7 @@ const CalendarPage = () => {
       supabase.removeChannel(channel);
       setRealtimeConnected(false);
     };
-  }, [fetchCalendarData, fetchStaffMembers, user]);
+  }, [fetchStaffMembers, scheduleSilentRefetch, user]);
 
   const saveBusinessHours = useCallback(async () => {
     try {
