@@ -25,9 +25,28 @@ export const STATUS_CHIP = {
   no_show:     'bg-zinc-100 text-zinc-700 border-zinc-200',
 };
 
+// Punto de color por estado (vista mes, estilo Google Calendar).
+export const STATUS_DOT = {
+  pending:     'bg-amber-400',
+  confirmed:   'bg-emerald-500',
+  rescheduled: 'bg-purple-500',
+  cancelled:   'bg-rose-400',
+  completed:   'bg-blue-500',
+  no_show:     'bg-zinc-400',
+};
+
 export const ORIGIN_LABEL = {
   online:     'Online',
   whatsapp:   'WhatsApp',
   presencial: 'Presencial',
   admin:      'Admin',
+  calendar:   'Google/iPhone',
 };
+
+export const SOURCE_OPTIONS = [
+  { value: 'online',     label: 'Online (web)' },
+  { value: 'whatsapp',   label: 'WhatsApp' },
+  { value: 'presencial', label: 'Presencial' },
+  { value: 'admin',      label: 'Admin' },
+  { value: 'calendar',   label: 'Google/iPhone Calendar' },
+];

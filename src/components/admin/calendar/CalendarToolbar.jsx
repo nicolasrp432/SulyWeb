@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, CalendarRange,
-  CalendarDays, Plus, SlidersHorizontal, RefreshCw, Clock3, Lock,
+  CalendarDays, CalendarClock, Plus, SlidersHorizontal, RefreshCw, Clock3, Lock,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -24,6 +24,8 @@ const CalendarToolbar = ({
   viewMode,
   realtimeConnected,
   activeFilterCount = 0,
+  pendingSyncCount = 0,
+  onShowPendingSync,
   isMobile = false,
   onPrev,
   onNext,
@@ -36,7 +38,7 @@ const CalendarToolbar = ({
   onOpenHours,
 }) => {
   const safeCount = activeFilterCount ?? 0;
-  const VIEW_MODES = isMobile ? VIEW_MODES_ALL.filter((v) => v.value !== 'week') : VIEW_MODES_ALL;
+  const VIEW_MODES = VIEW_MODES_ALL;
 
   return (
     <div className="sticky top-[-16px] sm:top-[-24px] z-20 bg-admin-bg/95 backdrop-blur-md border-b border-admin-border -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 px-4 sm:px-6 pt-4 sm:pt-6">
@@ -82,6 +84,19 @@ const CalendarToolbar = ({
             );
           })}
         </div>
+
+        {/* Citas sincronizadas desde Google/iPhone pendientes de completar */}
+        {pendingSyncCount > 0 && (
+          <button
+            type="button"
+            onClick={onShowPendingSync}
+            className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full border border-brand-gold/40 bg-brand-gold/10 text-brand-gold-dark hover:bg-brand-gold/20 transition-colors"
+            title="Citas llegadas de Google/iPhone sin manicurista o servicio asignado. Click para filtrarlas."
+          >
+            <CalendarClock className="h-3 w-3" />
+            {pendingSyncCount} por completar
+          </button>
+        )}
 
         {/* Realtime indicator */}
         <span

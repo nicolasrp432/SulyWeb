@@ -18,12 +18,15 @@ const ActiveFiltersChips = ({
   filterLocation,
   filterStatus,
   filterResponsible,
+  filterOrigin,
   locations = [],
   statusOptions = [],
+  sourceOptions = [],
   onClearSearch,
   onClearLocation,
   onClearStatus,
   onClearResponsible,
+  onClearOrigin,
   onClearAll,
 }) => {
   const items = [];
@@ -41,6 +44,10 @@ const ActiveFiltersChips = ({
   }
   if (filterResponsible && filterResponsible !== 'all') {
     items.push({ key: 'responsible', label: 'Responsable', value: filterResponsible, onRemove: onClearResponsible });
+  }
+  if (filterOrigin && filterOrigin !== 'all') {
+    const o = sourceOptions.find((opt) => opt.value === filterOrigin);
+    items.push({ key: 'origin', label: 'Origen', value: o?.label || filterOrigin, onRemove: onClearOrigin });
   }
 
   if (items.length === 0) return null;

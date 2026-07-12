@@ -1,32 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
-  CalendarDays,
-  CalendarRange,
-  Calendar as CalendarIcon,
-  List,
-  ChevronLeft,
-  ChevronRight,
-  RefreshCw,
   Lock,
   Unlock,
   Plus,
-  Search,
   Loader2,
-  Phone,
-  Mail,
   MessageCircle,
   Clock3,
   AlertCircle,
-  X,
-  Sliders,
-  Settings,
-  Trash2
+  X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -44,8 +30,12 @@ import CalendarToolbar from '@/components/admin/calendar/CalendarToolbar';
 import CalendarFiltersDrawer from '@/components/admin/calendar/CalendarFiltersDrawer';
 import ActiveFiltersChips from '@/components/admin/calendar/ActiveFiltersChips';
 import TeamDayView from '@/components/admin/calendar/TeamDayView';
+import WeekGridView from '@/components/admin/calendar/WeekGridView';
+import MonthGridView from '@/components/admin/calendar/MonthGridView';
+import AgendaListView from '@/components/admin/calendar/AgendaListView';
 import MobileStaffDayView from '@/components/admin/calendar/MobileStaffDayView';
 import MobileMonthView from '@/components/admin/calendar/MobileMonthView';
+import { STATUS_OPTIONS, SOURCE_OPTIONS } from '@/components/admin/calendar/statusStyles';
 import DayDetailSheet from '@/components/admin/calendar/DayDetailSheet';
 import NewBookingSheet from '@/components/admin/calendar/NewBookingSheet';
 import BookingDetailDialog from '@/components/admin/calendar/BookingDetailDialog';
@@ -61,29 +51,6 @@ const VIEW_MODES = {
   agenda: 'agenda'
 };
 
-const STATUS_OPTIONS = [
-  { value: 'pending', label: 'Pendiente' },
-  { value: 'confirmed', label: 'Confirmada' },
-  { value: 'rescheduled', label: 'Reprogramada' },
-  { value: 'cancelled', label: 'Cancelada' },
-  { value: 'completed', label: 'Completada' },
-  { value: 'no_show', label: 'No asistió' }
-];
-
-const SOURCE_OPTIONS = [
-  { value: 'online', label: 'Online (web)' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'presencial', label: 'Presencial' },
-  { value: 'admin', label: 'Admin' }
-];
-
-const VIEW_LABELS = {
-  [VIEW_MODES.day]: 'Día',
-  [VIEW_MODES.week]: 'Semana',
-  [VIEW_MODES.month]: 'Mes',
-  [VIEW_MODES.agenda]: 'Agenda'
-};
-
 const DEFAULT_BOOKING_META = {
   status: 'pending',
   assigned_to: '',
@@ -91,22 +58,6 @@ const DEFAULT_BOOKING_META = {
   appointment_type: '',
   internal_notes: '',
   source: 'online'
-};
-
-const STATUS_STYLES = {
-  confirmed: 'bg-emerald-500/10 text-emerald-600 border-emerald-200/50',
-  rescheduled: 'bg-amber-500/10 text-amber-600 border-amber-200/50',
-  cancelled: 'bg-rose-500/10 text-rose-600 border-rose-200/50',
-  completed: 'bg-blue-500/10 text-blue-600 border-blue-200/50',
-  no_show: 'bg-zinc-500/10 text-zinc-600 border-zinc-200/50',
-  pending: 'bg-pink-500/10 text-pink-600 border-pink-200/50'
-};
-
-const SOURCE_LABELS = {
-  web: 'Web',
-  phone: 'Teléfono',
-  whatsapp: 'WhatsApp',
-  admin: 'Admin'
 };
 
 function toISODate(date) {
@@ -120,25 +71,6 @@ function addDays(date, days) {
   const next = new Date(date);
   next.setDate(next.getDate() + days);
   return next;
-}
-
-function pad2(value) {
-  return String(value).padStart(2, '0');
-}
-
-function timeToMinutes(time) {
-  const [h, m] = (time || '00:00').split(':').map(Number);
-  return (h * 60) + m;
-}
-
-function minutesToTime(totalMinutes) {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${pad2(hours)}:${pad2(minutes)}`;
-}
-
-function addMinutes(time, minutes) {
-  return minutesToTime(timeToMinutes(time) + minutes);
 }
 
 function formatHumanDate(dateInput, options = { weekday: 'short', day: 'numeric', month: 'short' }) {
@@ -244,8 +176,8 @@ const CalendarPage = () => {
   const [filterLocation, setFilterLocation] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterResponsible, setFilterResponsible] = useState('all');
+  const [filterOrigin, setFilterOrigin] = useState('all');
 
-  const [draggedBookingId, setDraggedBookingId] = useState(null);
   const [selectedBookingId, setSelectedBookingId] = useState(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [selectedDay, setSelectedDay] = useState(null);
@@ -298,8 +230,9 @@ const CalendarPage = () => {
   }, []);
 
   useEffect(() => {
-    // En móvil, semana y agenda colapsan a vista día (que usa MobileStaffDayView con tabs swipeables)
-    if (isMobile && (viewMode === VIEW_MODES.week || viewMode === VIEW_MODES.agenda)) {
+    // En móvil la agenda colapsa a vista día; la semana sí es usable
+    // (scroll horizontal con snap, estilo Google Calendar móvil).
+    if (isMobile && viewMode === VIEW_MODES.agenda) {
       setViewMode(VIEW_MODES.day);
     }
   }, [isMobile, viewMode]);
@@ -332,8 +265,9 @@ const CalendarPage = () => {
       const locationMatch = filterLocation === 'all' || String(booking.location_id) === filterLocation;
       const statusMatch = filterStatus === 'all' || booking.meta.status === filterStatus;
       const responsibleMatch = filterResponsible === 'all' || (booking.meta.assigned_to || '') === filterResponsible;
+      const originMatch = filterOrigin === 'all' || (booking.meta.source || 'online') === filterOrigin;
 
-      if (!locationMatch || !statusMatch || !responsibleMatch) return false;
+      if (!locationMatch || !statusMatch || !responsibleMatch || !originMatch) return false;
 
       if (!query) return true;
 
@@ -353,7 +287,16 @@ const CalendarPage = () => {
 
       return haystack.includes(query);
     });
-  }, [enrichedBookings, filterLocation, filterResponsible, filterSearch, filterStatus]);
+  }, [enrichedBookings, filterLocation, filterOrigin, filterResponsible, filterSearch, filterStatus]);
+
+  // Citas llegadas de Google/iPhone a las que falta manicurista o servicio.
+  const pendingSyncCount = useMemo(() => {
+    return enrichedBookings.filter((b) =>
+      (b.meta.source || b.origin) === 'calendar' &&
+      b.meta.status !== 'cancelled' &&
+      (!b.meta.assigned_to || b.services.length === 0)
+    ).length;
+  }, [enrichedBookings]);
 
   const bookingsByDay = useMemo(() => {
     return filteredBookings.reduce((acc, booking) => {
@@ -371,15 +314,6 @@ const CalendarPage = () => {
     }, {});
   }, [timeBlocks]);
 
-  const timeSlots = useMemo(() => {
-    const slotSet = new Set(CONFIG.BOOKING.TIME_SLOTS);
-
-    filteredBookings.forEach((booking) => slotSet.add(booking.booking_time?.slice(0, 5)));
-    timeBlocks.forEach((block) => slotSet.add(block.start_time?.slice(0, 5)));
-
-    return Array.from(slotSet).sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
-  }, [filteredBookings, timeBlocks]);
-
   const responsibleOptions = useMemo(() => {
     const fromMeta = filteredBookings
       .map((booking) => booking.meta.assigned_to)
@@ -395,14 +329,16 @@ const CalendarPage = () => {
     if (filterLocation && filterLocation !== 'all') count += 1;
     if (filterStatus && filterStatus !== 'all') count += 1;
     if (filterResponsible && filterResponsible !== 'all') count += 1;
+    if (filterOrigin && filterOrigin !== 'all') count += 1;
     return count;
-  }, [filterSearch, filterLocation, filterStatus, filterResponsible]);
+  }, [filterSearch, filterLocation, filterStatus, filterResponsible, filterOrigin]);
 
   const clearAllFilters = useCallback(() => {
     setFilterSearch('');
     setFilterLocation('all');
     setFilterStatus('all');
     setFilterResponsible('all');
+    setFilterOrigin('all');
   }, []);
 
   const activeBooking = useMemo(() => {
@@ -773,61 +709,6 @@ const CalendarPage = () => {
     }
   }, [fetchCalendarData, toast]);
 
-  const moveBooking = useCallback(async (bookingId, bookingDate, bookingTime) => {
-    try {
-      const { error } = await supabase
-        .from('bookings')
-        .update({ booking_date: bookingDate, booking_time: bookingTime + ':00' })
-        .eq('id', bookingId);
-
-      if (error) throw error;
-
-      await updateBookingStatus(bookingId, 'rescheduled');
-      toast({ title: 'Cita movida', description: `Nueva hora: ${bookingDate} a las ${bookingTime}` });
-      fetchCalendarData();
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'No se pudo mover la cita',
-        description: error.message
-      });
-    }
-  }, [fetchCalendarData, toast, updateBookingStatus]);
-
-  const createTimeBlock = useCallback(async (date, time) => {
-    if (!blocksTableAvailable) {
-      toast({
-        variant: 'destructive',
-        title: 'Migración pendiente',
-        description: 'La tabla schedule_blocks no está disponible.'
-      });
-      return;
-    }
-
-    try {
-      const { error } = await supabase
-        .from('schedule_blocks')
-        .insert([{
-          block_date: date,
-          start_time: time + ':00',
-          end_time: addMinutes(time, 30) + ':00',
-          location_id: filterLocation === 'all' ? null : filterLocation,
-          reason: 'Bloqueo manual desde calendario'
-        }]);
-
-      if (error) throw error;
-
-      toast({ title: 'Horario bloqueado', description: `${date} ${time}` });
-      fetchCalendarData();
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'No se pudo bloquear la hora',
-        description: error.message
-      });
-    }
-  }, [blocksTableAvailable, fetchCalendarData, filterLocation, toast]);
-
   const removeTimeBlock = useCallback(async (blockId) => {
     if (!blockId) return;
 
@@ -1035,40 +916,6 @@ const CalendarPage = () => {
     setCurrentDate(nextDate);
   }, [currentDate, viewMode]);
 
-  const getBookingsForSlot = useCallback((date, time) => {
-    return (bookingsByDay[date] || []).filter((booking) => booking.booking_time?.slice(0, 5) === time);
-  }, [bookingsByDay]);
-
-  const getBlocksForSlot = useCallback((date, time) => {
-    return (blocksByDay[date] || []).filter((block) => block.start_time?.slice(0, 5) === time);
-  }, [blocksByDay]);
-
-  const handleDropOnSlot = useCallback(async (date, time) => {
-    if (!draggedBookingId) return;
-
-    const booking = enrichedBookings.find((item) => item.id === draggedBookingId);
-    if (!booking) return;
-
-    setDraggedBookingId(null);
-
-    if (booking.booking_date === date && booking.booking_time?.slice(0, 5) === time) return;
-
-    await moveBooking(draggedBookingId, date, time);
-  }, [draggedBookingId, enrichedBookings, moveBooking]);
-
-  const handleDropOnMonthDay = useCallback(async (date) => {
-    if (!draggedBookingId) return;
-
-    const booking = enrichedBookings.find((item) => item.id === draggedBookingId);
-    if (!booking) return;
-
-    setDraggedBookingId(null);
-
-    if (booking.booking_date === date) return;
-
-    await moveBooking(draggedBookingId, date, booking.booking_time?.slice(0, 5));
-  }, [draggedBookingId, enrichedBookings, moveBooking]);
-
   const beginCreateBooking = useCallback((date = toISODate(currentDate), time = CONFIG.BOOKING.TIME_SLOTS[0], assignedTo = '') => {
     // Sprint 3: el flujo de creación va siempre al NewBookingSheet (móvil y desktop).
     setNewBookingSheet({
@@ -1132,379 +979,6 @@ const CalendarPage = () => {
     setWaModalOpen(false);
   };
 
-  const renderBookingCard = (booking) => {
-    const bookingStatus = booking.meta.status || 'pending';
-    const statusLabel = STATUS_OPTIONS.find((option) => option.value === bookingStatus)?.label || 'Pendiente';
-    const servicesText = booking.services.length > 0
-      ? booking.services.map((service) => service.name).join(', ')
-      : 'Sin servicios';
-
-    return (
-      <div
-        key={booking.id}
-        draggable
-        onDragStart={() => setDraggedBookingId(booking.id)}
-        onDragEnd={() => setDraggedBookingId(null)}
-        onClick={(e) => {
-          e.stopPropagation();
-          openBookingDetail(booking);
-        }}
-        className={`rounded-xl border p-2.5 cursor-grab active:cursor-grabbing hover:shadow-md transition-all ${STATUS_STYLES[bookingStatus] || STATUS_STYLES.pending} border-l-4 border-l-current flex items-center justify-between gap-3`}
-      >
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <p className="text-xs font-bold truncate max-w-[140px]">{booking.client_name}</p>
-            <span className="text-[8px] font-extrabold px-1.5 py-0.2 rounded bg-white/60 border border-current/25 tracking-wide uppercase shrink-0">
-              {statusLabel}
-            </span>
-          </div>
-          <p className="text-[10px] opacity-90 mt-1 font-semibold truncate">
-            {booking.booking_time?.slice(0, 5)} · {locationNameById[booking.location_id] || 'Sede'}
-          </p>
-          <p className="text-[10px] opacity-80 mt-0.5 truncate italic">{servicesText}</p>
-          {booking.meta.assigned_to ? (
-            <p className="text-[9px] mt-1 font-bold text-gray-700 bg-white/50 inline-block px-1.5 py-0.5 rounded border border-gray-300/40">
-              👤 {booking.meta.assigned_to}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="flex items-center gap-0.5 shrink-0 bg-white/50 p-0.5 rounded-lg border border-current/10" onClick={(e) => e.stopPropagation()}>
-          <button
-            type="button"
-            className="h-6 w-6 p-0 flex items-center justify-center text-green-600 hover:bg-green-100/60 rounded transition-colors"
-            onClick={() => handleOpenWaModal(booking)}
-            title="Recordatorio WhatsApp"
-          >
-            <MessageCircle className="h-3.5 w-3.5" />
-          </button>
-          <button
-            type="button"
-            className="h-6 w-6 p-0 flex items-center justify-center text-admin-muted hover:text-admin-text hover:bg-gray-100 rounded transition-colors"
-            onClick={() => openBookingDetail(booking)}
-            title="Detalles / Editar"
-          >
-            <Search className="h-3.5 w-3.5" />
-          </button>
-          {bookingStatus === 'cancelled' ? (
-            <button
-              type="button"
-              className="h-6 w-6 p-0 flex items-center justify-center text-red-600 hover:bg-red-50 rounded transition-colors"
-              onClick={() => deleteBookingAction(booking)}
-              title="Eliminar cita permanentemente"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="h-6 w-6 p-0 flex items-center justify-center text-rose-600 hover:bg-rose-50 rounded transition-colors"
-              onClick={() => {
-                if (confirm(`¿Seguro que deseas cancelar la cita de ${booking.client_name}?`)) {
-                  updateBookingStatus(booking.id, 'cancelled');
-                }
-              }}
-              title="Cancelar cita"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
-  const renderTimeSlot = (date, time) => {
-    const bookingsInSlot = getBookingsForSlot(date, time);
-    const blocksInSlot = getBlocksForSlot(date, time);
-
-    return (
-      <div
-        key={`${date}-${time}`}
-        onDragOver={(event) => event.preventDefault()}
-        onDrop={() => handleDropOnSlot(date, time)}
-        className="grid grid-cols-[60px_1fr] gap-3 border-t border-admin-border/50 py-3 first:border-t-0 hover:bg-admin-surface/10 transition-colors px-1"
-      >
-        <div className="text-xs font-bold text-admin-muted pt-1.5 text-right pr-2">{time}</div>
-        <div className="space-y-2 min-h-[44px]">
-          {bookingsInSlot.map((booking) => renderBookingCard(booking))}
-
-          {blocksInSlot.map((block) => (
-            <div key={block.id} className="rounded-xl border border-zinc-200 bg-[linear-gradient(45deg,#f4f4f5_25%,transparent_25%,transparent_50%,#f4f4f5_50%,#f4f4f5_75%,transparent_75%,transparent)] bg-[length:15px_15px] bg-zinc-100 p-2.5 text-xs text-zinc-700 shadow-sm border-l-4 border-l-zinc-500 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <span className="font-bold text-zinc-800 flex items-center gap-1.5">
-                  🚫 Horario Bloqueado
-                </span>
-                <p className="text-[10px] text-zinc-500 mt-0.5">{block.start_time?.slice(0, 5)} - {block.end_time?.slice(0, 5)} · {block.reason || 'Bloqueo manual'}</p>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 px-2.5 text-[10px] font-bold text-zinc-700 border-zinc-300 hover:bg-zinc-200/80 bg-white rounded-lg shrink-0"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  removeTimeBlock(block.id);
-                }}
-              >
-                <Unlock className="h-3 w-3 mr-1" /> Habilitar
-              </Button>
-            </div>
-          ))}
-
-          {bookingsInSlot.length === 0 && blocksInSlot.length === 0 ? (
-            <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
-              <button
-                type="button"
-                className="h-7 px-3 text-[10px] text-brand-rose border border-brand-rose/30 hover:border-brand-rose rounded-lg transition-all flex items-center gap-1.5 bg-white hover:bg-brand-rose/5 font-semibold cursor-pointer"
-                onClick={() => beginCreateBooking(date, time)}
-              >
-                <Plus className="h-3 w-3" /> Reservar
-              </button>
-              <button
-                type="button"
-                className="h-7 px-3 text-[10px] text-zinc-500 border border-zinc-300 hover:border-zinc-500 rounded-lg transition-all flex items-center gap-1.5 bg-white hover:bg-zinc-50 font-semibold cursor-pointer"
-                onClick={() => createTimeBlock(date, time)}
-              >
-                <Lock className="h-3 w-3" /> Bloquear
-              </button>
-            </div>
-          ) : null}
-        </div>
-      </div>
-    );
-  };
-
-  const renderDayView = () => {
-    const dayISO = toISODate(currentDate);
-
-    return (
-      <div className="rounded-2xl border border-admin-border bg-white p-4 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h3 className="text-base font-bold capitalize text-admin-text">
-            {formatHumanDate(currentDate, { weekday: 'long', day: 'numeric', month: 'long' })}
-          </h3>
-          <Button variant="outline" size="sm" onClick={() => beginCreateBooking(dayISO)} className="border-brand-rose text-brand-rose hover:bg-brand-rose/5">
-            <Plus className="h-4 w-4 mr-1" /> Nueva cita
-          </Button>
-        </div>
-
-        <div className="max-h-[65vh] overflow-y-auto pr-2 divide-y divide-admin-border/30">
-          {timeSlots.map((time) => renderTimeSlot(dayISO, time))}
-        </div>
-      </div>
-    );
-  };
-
-  const renderWeekView = () => {
-    return (
-      <div className="grid grid-cols-1 lg:grid-cols-7 gap-4">
-        {weekDays.map((dayDate) => {
-          const dayISO = toISODate(dayDate);
-          const isTodayDate = dayISO === toISODate(new Date());
-
-          return (
-            <div key={dayISO} className={`rounded-2xl border ${isTodayDate ? 'border-brand-rose ring-1 ring-brand-rose/10 bg-brand-rose-50/5' : 'border-admin-border bg-white'} p-3 min-h-[480px] flex flex-col shadow-sm`}>
-              <div className="pb-3 border-b border-admin-border/50 mb-3 shrink-0">
-                <button
-                  className="text-left w-full hover:opacity-80 transition-opacity"
-                  onClick={() => {
-                    setCurrentDate(dayDate);
-                    setViewMode(VIEW_MODES.day);
-                  }}
-                >
-                  <p className="text-[10px] text-admin-muted uppercase font-bold tracking-wider">{formatHumanDate(dayDate, { weekday: 'short' })}</p>
-                  <p className="font-bold text-sm text-admin-text mt-0.5">{formatHumanDate(dayDate, { day: 'numeric', month: 'short' })}</p>
-                </button>
-              </div>
-
-              <div className="space-y-3 flex-1 overflow-y-auto max-h-[55vh] pr-1">
-                {timeSlots.map((time) => {
-                  const bookingsInSlot = getBookingsForSlot(dayISO, time);
-                  const blocksInSlot = getBlocksForSlot(dayISO, time);
-
-                  return (
-                    <div key={`${dayISO}-${time}`} className="border-t border-admin-border/20 pt-2 first:border-t-0">
-                      <div className="text-[9px] font-bold text-admin-muted mb-1">{time}</div>
-                      <div
-                        className="min-h-[40px] space-y-1.5 rounded-lg border border-dashed border-transparent hover:border-admin-border/40 hover:bg-admin-surface/5 transition-colors p-1"
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={() => handleDropOnSlot(dayISO, time)}
-                        onClick={() => {
-                          if (bookingsInSlot.length === 0 && blocksInSlot.length === 0) {
-                            beginCreateBooking(dayISO, time);
-                          }
-                        }}
-                      >
-                        {bookingsInSlot.map((booking) => renderBookingCard(booking))}
-                        {blocksInSlot.map((block) => (
-                          <div key={block.id} className="rounded-lg border border-zinc-200 bg-zinc-50 p-1.5 text-[9px] shadow-sm flex items-center justify-between gap-1">
-                            <span className="truncate font-medium">{block.reason || 'Bloqueo'}</span>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                removeTimeBlock(block.id);
-                              }}
-                              className="text-zinc-400 hover:text-zinc-600"
-                            >
-                              <Unlock className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderMonthView = () => {
-    const currentMonth = currentDate.getMonth();
-
-    return (
-      <div className="rounded-2xl border border-admin-border bg-white p-4 shadow-sm overflow-hidden">
-        <div className="grid grid-cols-7 gap-2 text-center text-[10px] font-bold text-admin-muted uppercase tracking-wider px-1 pb-3 border-b border-admin-border/50">
-          {['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'].map((dayName) => (
-            <div key={dayName} className="truncate">{dayName}</div>
-          ))}
-        </div>
-        <div className="grid grid-cols-7 gap-2 mt-2">
-          {monthGridDays.map((dayDate) => {
-            const iso = toISODate(dayDate);
-            const dayBookings = bookingsByDay[iso] || [];
-            const dayBlocks = blocksByDay[iso] || [];
-            const isOtherMonth = dayDate.getMonth() !== currentMonth;
-            const isToday = iso === toISODate(new Date());
-
-            const selectedIso = selectedAgendaDate ? toISODate(selectedAgendaDate) : null;
-            const isSelected = iso === selectedIso;
-            return (
-              <div
-                key={iso}
-                className={`min-h-[110px] rounded-xl border p-2 flex flex-col justify-between transition-all cursor-pointer ${
-                  isOtherMonth ? 'bg-zinc-50/50 text-admin-muted border-zinc-200/50' : 'bg-white border-admin-border'
-                } ${isToday ? 'border-brand-rose ring-1 ring-brand-rose/25 bg-brand-rose-50/5 shadow-rose-xs' : 'hover:shadow-sm'} ${
-                  isSelected && !isToday ? 'ring-2 ring-brand-rose/60' : ''
-                }`}
-                onClick={() => setSelectedAgendaDate(dayDate)}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={() => handleDropOnMonthDay(iso)}
-              >
-                <div className="flex items-center justify-between shrink-0 mb-1.5">
-                  <button
-                    type="button"
-                    className={`text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center ${
-                      isToday ? 'bg-brand-rose text-white shadow-rose-xs' : 'text-admin-text hover:bg-admin-surface'
-                    }`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedAgendaDate(dayDate);
-                      setSelectedDay(iso);
-                      setCurrentDate(dayDate);
-                    }}
-                  >
-                    {dayDate.getDate()}
-                  </button>
-                  <button
-                    type="button"
-                    className="text-[9px] font-bold text-brand-rose hover:bg-brand-rose-100/50 px-1 rounded transition-colors"
-                    onClick={() => beginCreateBooking(iso)}
-                  >
-                    + cita
-                  </button>
-                </div>
-
-                <div className="space-y-1 flex-1 overflow-y-auto max-h-[80px] scrollbar-none">
-                  {dayBookings.slice(0, 2).map((booking) => {
-                    const status = booking.meta.status || 'pending';
-                    return (
-                      <div
-                        key={booking.id}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openBookingDetail(booking);
-                        }}
-                        className={`text-[9px] px-1.5 py-0.5 rounded truncate font-medium border border-current/10 cursor-pointer ${STATUS_STYLES[status] || STATUS_STYLES.pending}`}
-                      >
-                        {booking.booking_time?.slice(0, 5)} {booking.client_name}
-                      </div>
-                    );
-                  })}
-                  {dayBookings.length > 2 ? (
-                    <p className="text-[9px] text-admin-muted font-semibold text-center mt-0.5">
-                      +{dayBookings.length - 2} más
-                    </p>
-                  ) : null}
-                  {dayBlocks.length > 0 && dayBookings.length === 0 ? (
-                    <p className="text-[9px] text-zinc-500 font-semibold italic text-center">
-                      🚫 {dayBlocks.length} bloqueo(s)
-                    </p>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const renderAgendaView = () => {
-    const agendaBookings = [...filteredBookings].sort((a, b) => {
-      if (a.booking_date === b.booking_date) return timeToMinutes(a.booking_time) - timeToMinutes(b.booking_time);
-      return a.booking_date.localeCompare(b.booking_date);
-    });
-
-    return (
-      <div className="rounded-2xl border border-admin-border bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base font-bold text-admin-text">Agenda de citas</h3>
-          <Button variant="outline" size="sm" onClick={() => beginCreateBooking()} className="border-brand-rose text-brand-rose hover:bg-brand-rose/5">
-            <Plus className="h-4 w-4 mr-1" /> Nueva cita
-          </Button>
-        </div>
-
-        <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
-          {agendaBookings.length === 0 ? (
-            <div className="text-sm text-admin-muted py-10 text-center font-medium">No hay citas con los filtros actuales.</div>
-          ) : agendaBookings.map((booking) => {
-            const bookingStatus = booking.meta.status || 'pending';
-            return (
-              <div key={booking.id} className="border border-admin-border rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:shadow-sm transition-shadow">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-bold text-admin-text text-sm">{booking.client_name}</p>
-                    <span className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded border ${STATUS_STYLES[bookingStatus] || STATUS_STYLES.pending}`}>
-                      {STATUS_OPTIONS.find((s) => s.value === bookingStatus)?.label || 'Pendiente'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-admin-muted mt-1">
-                    📅 {formatHumanDate(booking.booking_date, { weekday: 'long', day: 'numeric', month: 'long' })} · ⏰ {booking.booking_time?.slice(0, 5)}
-                  </p>
-                  <p className="text-xs text-admin-text mt-0.5">
-                    📍 Sede: <strong className="font-semibold">{locationNameById[booking.location_id] || 'N/A'}</strong>
-                    {booking.meta.assigned_to ? ` · 👤 Responsable: ${booking.meta.assigned_to}` : ''}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2 shrink-0 self-start md:self-auto">
-                  <Button size="sm" variant="outline" onClick={() => openBookingDetail(booking)}>Ver detalle</Button>
-                  <Button size="sm" variant="outline" className="border-emerald-200 text-emerald-600 hover:bg-emerald-50" onClick={() => updateBookingStatus(booking.id, 'completed')}>Completar</Button>
-                  <Button size="sm" variant="outline" className="border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => updateBookingStatus(booking.id, 'cancelled')}>Cancelar</Button>
-                  <Button size="sm" variant="outline" className="border-green-200 text-green-600 hover:bg-green-50" onClick={() => handleOpenWaModal(booking)}>Recordatorio</Button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
   const renderCalendarBody = () => {
     if (loading) {
       return (
@@ -1542,7 +1016,26 @@ const CalendarPage = () => {
         </div>
       );
     }
-    if (viewMode === VIEW_MODES.week) return renderWeekView();
+    if (viewMode === VIEW_MODES.week) {
+      return (
+        <WeekGridView
+          weekDays={weekDays}
+          bookings={filteredBookings}
+          blocks={timeBlocks}
+          businessHours={businessHours}
+          isMobile={isMobile}
+          onBookingClick={openBookingDetail}
+          onSlotClick={(iso, time) => setNewBookingSheet({ date: iso, time, assignedTo: '' })}
+          onBlockClick={removeTimeBlock}
+          onMoveBooking={moveBookingTo}
+          onResizeBooking={resizeBookingDuration}
+          onDayHeaderClick={(d) => {
+            setCurrentDate(d);
+            setViewMode(VIEW_MODES.day);
+          }}
+        />
+      );
+    }
     if (viewMode === VIEW_MODES.month) {
       const monthGrid = isMobile ? (
         <div className="rounded-2xl border border-admin-border bg-white shadow-sm overflow-hidden">
@@ -1557,7 +1050,25 @@ const CalendarPage = () => {
             }}
           />
         </div>
-      ) : renderMonthView();
+      ) : (
+        <MonthGridView
+          monthGridDays={monthGridDays}
+          currentMonth={currentDate.getMonth()}
+          bookingsByDay={bookingsByDay}
+          blocksByDay={blocksByDay}
+          businessHours={businessHours}
+          selectedDate={selectedAgendaDate}
+          onSelectDay={(d) => setSelectedAgendaDate(d)}
+          onOpenDaySheet={(d) => setDaySheetDate(d)}
+          onBookingClick={openBookingDetail}
+          onNewBooking={(iso) => beginCreateBooking(iso)}
+          onJumpToDay={(d) => {
+            setSelectedAgendaDate(d);
+            setSelectedDay(toISODate(d));
+            setCurrentDate(d);
+          }}
+        />
+      );
 
       return (
         <div className="space-y-4">
@@ -1581,7 +1092,17 @@ const CalendarPage = () => {
         </div>
       );
     }
-    return renderAgendaView();
+    return (
+      <AgendaListView
+        bookings={filteredBookings}
+        locationNameById={locationNameById}
+        onBookingClick={openBookingDetail}
+        onNewBooking={() => beginCreateBooking()}
+        onComplete={completeBookingAction}
+        onCancel={cancelBookingAction}
+        onWa={handleOpenWaModal}
+      />
+    );
   };
 
   const dayDialogBookings = selectedDay ? (bookingsByDay[selectedDay] || []) : [];
@@ -1602,6 +1123,8 @@ const CalendarPage = () => {
         viewMode={viewMode}
         realtimeConnected={realtimeConnected}
         activeFilterCount={activeFilterCount}
+        pendingSyncCount={pendingSyncCount}
+        onShowPendingSync={() => setFilterOrigin((prev) => (prev === 'calendar' ? 'all' : 'calendar'))}
         isMobile={isMobile}
         onPrev={() => moveCalendarCursor('prev')}
         onNext={() => moveCalendarCursor('next')}
@@ -1625,12 +1148,15 @@ const CalendarPage = () => {
           filterLocation={filterLocation}
           filterStatus={filterStatus}
           filterResponsible={filterResponsible}
+          filterOrigin={filterOrigin}
           locations={locations}
           statusOptions={STATUS_OPTIONS}
+          sourceOptions={SOURCE_OPTIONS}
           onClearSearch={() => setFilterSearch('')}
           onClearLocation={() => setFilterLocation('all')}
           onClearStatus={() => setFilterStatus('all')}
           onClearResponsible={() => setFilterResponsible('all')}
+          onClearOrigin={() => setFilterOrigin('all')}
           onClearAll={clearAllFilters}
         />
 
@@ -1668,8 +1194,11 @@ const CalendarPage = () => {
         onFilterStatusChange={setFilterStatus}
         filterResponsible={filterResponsible}
         onFilterResponsibleChange={setFilterResponsible}
+        filterOrigin={filterOrigin}
+        onFilterOriginChange={setFilterOrigin}
         locations={locations}
         statusOptions={STATUS_OPTIONS}
+        sourceOptions={SOURCE_OPTIONS}
         responsibleOptions={responsibleOptions}
         onClearAll={clearAllFilters}
       />
