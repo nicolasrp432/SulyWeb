@@ -110,8 +110,15 @@ enriquecerlos (servicio, manicurista) desde el panel admin.
 6. Vuelve a Google Calendar → *Configuración de `Agenda Suly`* → **Compartir con
    determinadas personas** → añade el `client_email` de la service account con
    permiso **"Hacer cambios en los eventos"**.
+   > ⚠️ Debe ser **"Hacer cambios en los eventos"** (escritura). Si se comparte solo
+   > como *"Ver todos los detalles"* (lectura), el `watch` funciona pero al crear/editar
+   > eventos Google devuelve `403 requiredAccessLevel: writer access`.
+   > Tampoco hace falta activar **facturación** en Google Cloud: la Calendar API y las
+   > cuentas de servicio son gratuitas (un error `OR_BACR2_44` de billing es ajeno a esto).
 
 ### 3.2. Secrets de Supabase
+Se pueden fijar con la CLI (`supabase secrets set ...`, abajo) **o** desde el panel:
+*Edge Functions → Secrets*. Los mismos 7 valores en cualquiera de las dos vías.
 ```bash
 # El contenido íntegro del JSON de la cuenta de servicio (en una sola línea)
 supabase secrets set GOOGLE_SERVICE_ACCOUNT_JSON='{"type":"service_account",...}'
@@ -148,24 +155,28 @@ supabase functions deploy gcal-webhook --no-verify-jwt
 supabase functions deploy gcal-watch   --no-verify-jwt
 ```
 
-### 3.4. DB-webhook de salida (app → Google)
+### 3.4. Config del trigger de salida (app → Google)
 La migración deja preparado un trigger que, en cada `INSERT/UPDATE/DELETE` de
-`bookings`, llama a `gcal-push` mediante la extensión `pg_net`. Solo tienes que
-fijar dos *settings* de base de datos con la URL y el secreto (una vez):
+`bookings`, llama a `gcal-push` mediante la extensión `pg_net`. El trigger lee la
+URL y el secreto de la tabla **`calendar_sync_config`** (en Supabase gestionado el
+rol de migraciones **no** puede hacer `alter database ... set`, por eso NO se usan
+*settings* de BD). La URL ya viene insertada por la migración
+`20260712_gcal_push_config_table.sql`; solo falta insertar el secreto (una vez):
 
 ```sql
-alter database postgres set "app.gcal_push_url"   = 'https://qeuqspjpwybaxppqgehm.functions.supabase.co/gcal-push';
-alter database postgres set "app.sync_shared_secret" = '<cadena-aleatoria-larga>';
+insert into public.calendar_sync_config (key, value)
+values ('sync_shared_secret', '<mismo-valor-que-SYNC_SHARED_SECRET>')
+on conflict (key) do update set value = excluded.value;
 ```
-(También puede hacerse con **Database Webhooks** desde el panel de Supabase
-apuntando a la función `gcal-push`; ver comentario en la migración.)
+(El `key = 'gcal_push_url'` ya está; se puede reapuntar con el mismo `insert ... on
+conflict`.)
 
 ### 3.5. Activar la escucha de Google (entrada) y el cron de renovación
 El canal `watch` de Google **caduca** (máx. ~7 días). Lo creamos y lo renovamos
 con un cron diario que llama a `gcal-watch`:
 
 ```sql
--- requiere las extensiones pg_cron y pg_net (activables desde el panel)
+-- pg_cron y pg_net las habilita la migración 20260712_gcal_enable_extensions.sql
 select cron.schedule(
   'gcal-watch-renew', '0 3 * * *',
   $$ select net.http_post(
