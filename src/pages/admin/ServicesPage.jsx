@@ -46,7 +46,7 @@ const Switch = ({ checked, onChange }) => (
   </button>
 );
 
-const AdminServices = () => {
+const ServicesPage = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -588,4 +588,4 @@ const AdminServices = () => {
   );
 };
 
-export default AdminServices;
+export default ServicesPage;

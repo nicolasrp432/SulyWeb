@@ -66,6 +66,7 @@ async function applyEvent(ev) {
   // Caso 3: evento NUEVO creado a mano en el iPhone -> crear booking.
   await supabase.from('bookings').insert({
     ...fields,
+    client_phone: '', // NOT NULL en bookings; el evento manual no trae teléfono
     location_id: DEFAULT_LOCATION_ID,
     staff_id: null,
     origin: 'calendar',

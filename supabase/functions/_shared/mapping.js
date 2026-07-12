@@ -73,10 +73,16 @@ export function eventToBooking(ev) {
 
   const start = new Date(startDt);
   const end = endDt ? new Date(endDt) : new Date(start.getTime() + 30 * 60000);
-  const pad = (n) => String(n).padStart(2, '0');
 
-  const booking_date = `${start.getFullYear()}-${pad(start.getMonth() + 1)}-${pad(start.getDate())}`;
-  const booking_time = `${pad(start.getHours())}:${pad(start.getMinutes())}:00`;
+  // El runtime de las Edge Functions corre en UTC: hay que convertir el
+  // instante a la hora local del salón, no usar getHours() del sistema.
+  const fmt = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: timeZone(),
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const [booking_date, hhmm] = fmt.format(start).split(' ');
+  const booking_time = `${hhmm}:00`;
   const duration_minutes = Math.max(15, Math.round((end - start) / 60000));
 
   return {
