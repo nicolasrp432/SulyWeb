@@ -220,7 +220,46 @@ canal inicial y guardar el `syncToken`.
 - Revisar `select * from calendar_sync_state;` para el estado del `syncToken` y
   del canal, y los logs de las funciones (`supabase functions logs gcal-*`).
 
-## 6. Limitaciones conocidas
+## 6. Importación desde un calendario iCloud existente (`ics-import`)
+
+Si el equipo ya lleva la agenda en un **calendario de iCloud** (Apple), se puede
+importar de golpe sin API de Apple usando el **enlace público .ics**:
+
+1. La **dueña** del calendario iCloud (un participante no puede) lo publica desde
+   su iPhone: *app Calendario → Calendarios → ⓘ junto al calendario → activar
+   «Calendario público» → Compartir enlace* (`webcal://p...icloud.com/published/...`).
+2. Guardar el enlace en la config (opcional, para re-ejecuciones):
+   ```sql
+   insert into public.calendar_sync_config (key, value)
+   values ('icloud_ics_url', 'webcal://p...icloud.com/published/...')
+   on conflict (key) do update set value = excluded.value;
+   ```
+3. Ejecutar la función (server-side, con el secreto compartido):
+   ```sql
+   select net.http_post(
+     url     := 'https://qeuqspjpwybaxppqgehm.functions.supabase.co/ics-import',
+     headers := jsonb_build_object('Content-Type','application/json','x-sync-secret','<SYNC_SHARED_SECRET>'),
+     body    := jsonb_build_object('dry_run', true)  -- primero en modo prueba
+   );
+   ```
+   Con `dry_run: true` responde qué importaría sin escribir nada; sin él, importa.
+
+Comportamiento: solo **citas futuras** (`time_min` por defecto = hoy), se saltan
+eventos de día completo, recurrentes (`RRULE`) y cancelados. Cada VEVENT se
+upserta en `bookings` por su `UID` (columna `ics_uid`, índice único → re-ejecutar
+**no duplica**), con `origin='calendar'`, `status='confirmed'` y la sede por
+defecto. Al insertarse, el trigger `notify_gcal_push` replica cada cita en
+`Agenda Suly` automáticamente.
+
+**Limitaciones del puente iCloud** (por eso es una migración, no el runtime):
+- Apple refresca el feed público con retardo (minutos a horas).
+- Es **solo entrada** (iCloud → app): lo creado en la web NO aparece en iCloud.
+- Los borrados en iCloud no se propagan (no se auto-cancela nada, para evitar
+  falsos positivos si el feed llega truncado).
+- Se puede programar un cron de re-importación como transición, pero el destino
+  final del equipo debe ser `Agenda Suly` (tiempo real y bidireccional).
+
+## 7. Limitaciones conocidas
 - Los eventos a mano no traen servicio/manicurista (se asignan luego).
 - Conflicto simultáneo: última escritura gana (sin *merge* por campo).
 - El canal de Google debe renovarse (lo cubre el cron diario).
