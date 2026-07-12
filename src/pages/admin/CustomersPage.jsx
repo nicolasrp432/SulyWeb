@@ -8,6 +8,7 @@ import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/customSupabaseClient';
 import PageHeader from '@/components/admin/PageHeader';
 import StatsCard from '@/components/admin/StatsCard';
+import EmptyState from '@/components/admin/EmptyState';
 import { STATUS_CHIP, STATUS_LABEL } from '@/components/admin/calendar/statusStyles';
 import { getInitials } from '@/lib/avatar';
 import { useToast } from '@/components/ui/use-toast';
@@ -179,10 +180,11 @@ const CustomersPage = () => {
               ))}
             </div>
           ) : filtered.length === 0 ? (
-            <div className="p-12 text-center">
-              <Users className="w-10 h-10 text-admin-muted/40 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-admin-text">No hay clientes</p>
-            </div>
+            <EmptyState
+              icon={Users}
+              title="No hay clientes"
+              description="Los clientes aparecerán aquí cuando registren su primera cita."
+            />
           ) : (
             <div className="divide-y divide-admin-border">
               {filtered.map((c, i) => {

@@ -15,6 +15,7 @@ const StatsCard = ({ title, value, icon: Icon, color = 'rose', loading, hint }) 
     <motion.div
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
+      whileHover={{ y: -2 }}
       className="bg-white border border-admin-border rounded-2xl p-4 sm:p-5 shadow-rose-xs hover:shadow-rose-sm transition-shadow"
     >
       <div className="flex items-start justify-between gap-2">
@@ -23,7 +24,7 @@ const StatsCard = ({ title, value, icon: Icon, color = 'rose', loading, hint }) 
           {loading ? (
             <div className="h-8 w-16 rounded-lg bg-admin-surface animate-pulse mt-1" />
           ) : (
-            <p className="text-2xl sm:text-3xl font-bold text-admin-text">{value}</p>
+            <p className="text-2xl sm:text-3xl font-sans font-bold text-admin-text">{value}</p>
           )}
           {hint && !loading && (
             <p className="text-[10px] text-admin-muted mt-1 truncate">{hint}</p>

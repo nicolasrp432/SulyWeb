@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import {
-  Activity, Calendar as CalendarIcon, Check, CheckCheck, ChevronDown, ChevronUp,
+  Activity, Calendar as CalendarIcon, CalendarClock, Check, CheckCheck, ChevronDown, ChevronUp,
   Clock, FileText, Globe, Loader2, Mail, MessageCircle, Phone, Store,
   Timer, User, UserCheck, X,
 } from 'lucide-react';
@@ -13,31 +13,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import ServicePicker from './ServicePicker';
-
-const STATUS_OPTIONS = [
-  { value: 'pending',     label: 'Pendiente' },
-  { value: 'confirmed',   label: 'Confirmada' },
-  { value: 'rescheduled', label: 'Reprogramada' },
-  { value: 'cancelled',   label: 'Cancelada' },
-  { value: 'completed',   label: 'Completada' },
-  { value: 'no_show',     label: 'No asistió' },
-];
-
-const SOURCE_OPTIONS = [
-  { value: 'online',     label: 'Online (web)' },
-  { value: 'whatsapp',   label: 'WhatsApp' },
-  { value: 'presencial', label: 'Presencial' },
-  { value: 'admin',      label: 'Admin' },
-];
-
-const STATUS_CHIP = {
-  pending:     'bg-amber-100 text-amber-800 border-amber-200',
-  confirmed:   'bg-emerald-100 text-emerald-800 border-emerald-200',
-  rescheduled: 'bg-purple-100 text-purple-800 border-purple-200',
-  cancelled:   'bg-rose-100 text-rose-800 border-rose-200',
-  completed:   'bg-blue-100 text-blue-800 border-blue-200',
-  no_show:     'bg-zinc-100 text-zinc-700 border-zinc-200',
-};
+import { STATUS_OPTIONS, STATUS_CHIP, SOURCE_OPTIONS } from './statusStyles';
 
 const getInitials = (name = '') => {
   const parts = name.trim().split(/\s+/).slice(0, 2);
@@ -116,6 +92,11 @@ const BookingDetailDialog = ({
   const statusLabel = STATUS_OPTIONS.find((s) => s.value === status)?.label || 'Pendiente';
   const chipCls = STATUS_CHIP[status] || STATUS_CHIP.pending;
 
+  // Cita llegada de Google/iPhone a la que falta manicurista o servicio.
+  const origin = booking?.meta?.source || booking?.origin || '';
+  const isIncompleteSync = origin === 'calendar' &&
+    (!form.assigned_to || form.selectedServiceIds.length === 0);
+
   const headerSubtitle = useMemo(() => {
     if (!booking?.booking_date) return '';
     try {
@@ -177,6 +158,37 @@ const BookingDetailDialog = ({
 
         {/* Body */}
         <div className="px-5 py-4 space-y-4">
+          {/* Banner de completado para citas sincronizadas desde Google/iPhone */}
+          {isIncompleteSync && (
+            <div className="rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-3">
+              <p className="text-xs font-bold text-brand-gold-dark flex items-center gap-1.5">
+                <CalendarClock className="w-3.5 h-3.5" /> Sincronizada desde Google/iPhone
+              </p>
+              <p className="text-[11px] text-admin-text mt-1">
+                {!form.assigned_to && form.selectedServiceIds.length === 0
+                  ? 'Asigna manicurista y servicio para completar la cita.'
+                  : !form.assigned_to
+                  ? 'Asigna la manicurista responsable para completar la cita.'
+                  : 'Selecciona el servicio para completar la cita.'}
+              </p>
+              {!form.assigned_to && (
+                <div className="relative mt-2">
+                  <FieldIcon icon={UserCheck} />
+                  <input
+                    list="bdd-staff-options-sync"
+                    value={form.assigned_to}
+                    onChange={setField('assigned_to')}
+                    placeholder="Especialista responsable"
+                    className={inputCls}
+                  />
+                  <datalist id="bdd-staff-options-sync">
+                    {responsibleOptions.map((name) => <option key={name} value={name} />)}
+                  </datalist>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Collapsible Client Details */}
           <div>
             <button

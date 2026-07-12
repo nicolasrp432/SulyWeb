@@ -5,3 +5,12 @@
     verify_jwt = false
   [functions.admin-team]
     verify_jwt = true
+  # Sincronización con Google Calendar (agenda del iPhone).
+  # Se protegen con secretos propios (x-sync-secret / x-goog-channel-token),
+  # por eso no usan verify_jwt.
+  [functions.gcal-push]
+    verify_jwt = false
+  [functions.gcal-webhook]
+    verify_jwt = false
+  [functions.gcal-watch]
+    verify_jwt = false

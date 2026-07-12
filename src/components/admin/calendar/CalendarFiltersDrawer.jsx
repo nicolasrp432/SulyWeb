@@ -16,8 +16,11 @@ const CalendarFiltersDrawer = ({
   onFilterStatusChange,
   filterResponsible,
   onFilterResponsibleChange,
+  filterOrigin = 'all',
+  onFilterOriginChange,
   locations = [],
   statusOptions = [],
+  sourceOptions = [],
   responsibleOptions = [],
   onClearAll,
 }) => {
@@ -110,6 +113,22 @@ const CalendarFiltersDrawer = ({
                   ))}
                 </select>
               </div>
+
+              {onFilterOriginChange && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold text-admin-text">Origen de la cita</Label>
+                  <select
+                    value={filterOrigin}
+                    onChange={(e) => onFilterOriginChange(e.target.value)}
+                    className="w-full px-3 h-10 bg-white border border-admin-border rounded-xl text-admin-text text-sm focus:outline-none focus:border-brand-rose transition-colors"
+                  >
+                    <option value="all">Todos los orígenes</option>
+                    {sourceOptions.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="pt-2 border-t border-admin-border">
                 <p className="text-[11px] text-admin-muted leading-relaxed">

@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async';
 import { Plus, Trash2, Star, Upload, Loader2, X, Image } from 'lucide-react';
 import { supabase } from '@/lib/customSupabaseClient';
 import PageHeader from '@/components/admin/PageHeader';
+import EmptyState from '@/components/admin/EmptyState';
 
 const CATEGORIES = [
   { id: 'manicure',   label: 'Manicura' },
@@ -282,10 +283,14 @@ const GalleryAdminPage = () => {
             ))}
           </div>
         ) : visibleImages.length === 0 ? (
-          <div className="bg-white border border-admin-border rounded-2xl p-12 text-center shadow-rose-xs">
-            <Image className="h-10 w-10 text-admin-muted/40 mx-auto mb-3" />
-            <p className="text-sm font-semibold text-admin-text">Sin imágenes en esta categoría</p>
-            <p className="text-xs text-admin-muted mt-1">Sube la primera con el botón "Subir imagen".</p>
+          <div className="bg-white border border-admin-border rounded-2xl shadow-rose-xs">
+            <EmptyState
+              icon={Image}
+              title="Sin imágenes en esta categoría"
+              description='Sube la primera con el botón "Subir imagen".'
+              actionLabel="Subir imagen"
+              onAction={() => setShowForm(true)}
+            />
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">

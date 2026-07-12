@@ -9,6 +9,7 @@ import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/customSupabaseClient';
 import PageHeader from '@/components/admin/PageHeader';
 import StatsCard from '@/components/admin/StatsCard';
+import EmptyState from '@/components/admin/EmptyState';
 import BookingActionMenu from '@/components/admin/calendar/BookingActionMenu';
 import BookingDetailDialog from '@/components/admin/calendar/BookingDetailDialog';
 import EmailComposeModal from '@/components/admin/calendar/EmailComposeModal';
@@ -213,18 +214,18 @@ const BookingsPage = () => {
               ))}
             </div>
           ) : bookings.length === 0 ? (
-            <div className="px-4 py-16 text-center">
-              <ClipboardList className="w-10 h-10 text-admin-muted/40 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-admin-text">No hay citas con esos filtros</p>
-              <p className="text-xs text-admin-muted mt-1">Cambia o limpia los filtros para ver más resultados.</p>
-            </div>
+            <EmptyState
+              icon={ClipboardList}
+              title="No hay citas con esos filtros"
+              description="Cambia o limpia los filtros para ver más resultados."
+            />
           ) : (
             <div className="divide-y divide-admin-border">
               {bookings.map((b) => {
                 const status = b.status || 'pending';
                 const services = b.booking_services?.map((bs) => bs.services?.name).filter(Boolean).join(', ') || '';
                 return (
-                  <div key={b.id} className="px-4 py-3 flex items-center gap-3 hover:bg-admin-surface/30 transition-colors">
+                  <div key={b.id} className="px-4 py-3 flex items-center gap-3 hover:bg-admin-surface/40 transition-colors">
                     <button
                       type="button"
                       onClick={() => setSelectedBooking(b)}

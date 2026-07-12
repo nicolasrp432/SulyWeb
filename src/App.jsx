@@ -26,7 +26,7 @@ import Dashboard from '@/pages/admin/Dashboard';
 import CalendarPage from '@/pages/admin/CalendarPage';
 import BookingsPage from '@/pages/admin/BookingsPage';
 import CustomersPage from '@/pages/admin/CustomersPage';
-import AdminServices from '@/pages/AdminServices';
+import ServicesPage from '@/pages/admin/ServicesPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
 import GalleryAdminPage from '@/pages/admin/GalleryAdminPage';
 import TeamPage from '@/pages/admin/TeamPage';
@@ -66,7 +66,7 @@ function App() {
             <Route path="/admin/calendario" element={<CalendarPage />} />
             <Route path="/admin/citas" element={<BookingsPage />} />
             <Route path="/admin/clientes" element={<CustomersPage />} />
-            <Route path="/admin/servicios" element={<AdminServices />} />
+            <Route path="/admin/servicios" element={<ServicesPage />} />
             <Route path="/admin/equipo" element={<TeamPage />} />
             <Route path="/admin/configuracion" element={<SettingsPage />} />
             <Route path="/admin/galeria" element={<GalleryAdminPage />} />

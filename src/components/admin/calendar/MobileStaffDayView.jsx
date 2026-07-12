@@ -6,24 +6,20 @@ import { Lock, UserX, Calendar } from 'lucide-react';
 import BookingCard from './BookingCard';
 import NowIndicator from './NowIndicator';
 import { getDayConfig } from '@/lib/businessHours';
+import {
+  HOUR_START,
+  HOUR_END,
+  HOURS,
+  SLOT_HEIGHT,
+  timeToMinutes,
+  computePosition,
+} from './grid/timeGridUtils';
 
-const HOUR_START = 8;
-const HOUR_END = 20;
-const SLOT_HEIGHT = 64;
 const UNASSIGNED_KEY = '__unassigned__';
-
-const HOURS = Array.from({ length: HOUR_END - HOUR_START + 1 }, (_, i) => i + HOUR_START);
-
-const DAY_KEYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
 
 const getInitials = (name = '') => {
   const parts = name.trim().split(/\s+/).slice(0, 2);
   return parts.map((p) => p[0]?.toUpperCase() || '').join('') || '?';
-};
-
-const timeToMinutes = (time) => {
-  const [h, m] = (time || '00:00').split(':').map(Number);
-  return h * 60 + m;
 };
 
 const MobileStaffDayView = ({
@@ -103,15 +99,6 @@ const MobileStaffDayView = ({
     if (Math.abs(info.offset.x) < 80) return;
     if (info.offset.x < 0 && safeIdx < columns.length - 1) setActiveIdx(safeIdx + 1);
     else if (info.offset.x > 0 && safeIdx > 0) setActiveIdx(safeIdx - 1);
-  };
-
-  const computePosition = (booking) => {
-    const minutes = timeToMinutes(booking.booking_time);
-    const startMin = HOUR_START * 60;
-    const top = ((minutes - startMin) / 60) * SLOT_HEIGHT;
-    const duration = booking.meta?.duration_minutes || booking.duration_minutes || 30;
-    const height = Math.max((duration / 60) * SLOT_HEIGHT, 36);
-    return { top, height };
   };
 
   const handleTimelineClick = (e) => {
