@@ -264,3 +264,29 @@ defecto. Al insertarse, el trigger `notify_gcal_push` replica cada cita en
 - Conflicto simultáneo: última escritura gana (sin *merge* por campo).
 - El canal de Google debe renovarse (lo cubre el cron diario).
 - Si se borra y recrea el calendario, hay que volver a ejecutar `gcal-watch`.
+
+## 8. Workaround temporal en BD — RETIRAR al redesplegar `gcal-webhook`
+
+La versión de `gcal-webhook` desplegada antes del fix de zona horaria escribe
+`booking_time` en UTC (el runtime corre en UTC). Mientras no se pueda
+redesplegar, hay un apaño **temporal** aplicado directamente en la BD
+(15/07/2026): el trigger `trg_a_gcal_tz_fix` (función `fix_gcal_webhook_tz`)
+detecta las escrituras del webhook — su `sync_hash` coincide con el hash de los
+campos tal cual llegan — convierte fecha/hora de UTC a `Europe/Madrid` y rehace
+el `sync_hash` sobre los campos corregidos para que `gcal-push` lo vea en sync
+(sin eco ni bucle). Se controla con la clave `webhook_tz_workaround` de
+`calendar_sync_config`.
+
+**Al desplegar la versión corregida de `gcal-webhook` (que ya convierte con
+`Intl.DateTimeFormat`), retirar el apaño en el mismo momento** — si no, las
+horas se desplazarían dos veces:
+
+```sql
+update public.calendar_sync_config set value = 'off' where key = 'webhook_tz_workaround';
+drop trigger if exists trg_a_gcal_tz_fix on public.bookings;
+drop function if exists public.fix_gcal_webhook_tz();
+```
+
+Los otros dos arreglos aplicados a la vez (constraint de `origin` con
+`'calendar'` y default `''` en `client_phone`, ver migración
+`20260715_calendar_origin_fix.sql`) son **permanentes** y no se retiran.
