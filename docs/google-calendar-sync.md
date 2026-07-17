@@ -259,13 +259,25 @@ defecto. Al insertarse, el trigger `notify_gcal_push` replica cada cita en
 - Se puede programar un cron de re-importación como transición, pero el destino
   final del equipo debe ser `Agenda Suly` (tiempo real y bidireccional).
 
+**Estado (17/07/2026)**: importación inicial ejecutada — 55 citas futuras
+importadas y replicadas todas en `Agenda Suly` (7 necesitaron reintento por
+rate limit de Google). El enlace está guardado en `icloud_ics_url` y existe el
+job `pg_cron` **`ics-import-bridge`** (cada 30 min) que re-ejecuta la
+importación mientras el equipo siga apuntando en iCloud. Para pararlo:
+`select cron.unschedule('ics-import-bridge');`
+
 ## 7. Limitaciones conocidas
 - Los eventos a mano no traen servicio/manicurista (se asignan luego).
 - Conflicto simultáneo: última escritura gana (sin *merge* por campo).
 - El canal de Google debe renovarse (lo cubre el cron diario).
 - Si se borra y recrea el calendario, hay que volver a ejecutar `gcal-watch`.
 
-## 8. Workaround temporal en BD — RETIRAR al redesplegar `gcal-webhook`
+## 8. Workaround temporal en BD — RETIRADO el 17/07/2026
+
+> **Ya no está activo**: la versión corregida de `gcal-webhook` (v9, con
+> conversión `Intl` de zona horaria) se desplegó el 17/07/2026 y el trigger
+> `trg_a_gcal_tz_fix` + su función se eliminaron en el mismo momento
+> (`webhook_tz_workaround = 'off'`). Se conserva esta sección como registro.
 
 La versión de `gcal-webhook` desplegada antes del fix de zona horaria escribe
 `booking_time` en UTC (el runtime corre en UTC). Mientras no se pueda
