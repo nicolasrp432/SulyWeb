@@ -14,6 +14,7 @@ import Home from '@/pages/Home';
 import Services from '@/pages/Services';
 import Gallery from '@/pages/Gallery';
 import Booking from '@/pages/Booking';
+import AppointmentManage from '@/pages/AppointmentManage';
 import Contact from '@/pages/Contact';
 
 // Admin components
@@ -80,6 +81,7 @@ function App() {
             <Route path="/servicios" element={<Services />} />
             <Route path="/galeria" element={<Gallery />} />
             <Route path="/reservas" element={<Booking />} />
+            <Route path="/cita/:token" element={<AppointmentManage />} />
             <Route path="/contacto" element={<Contact />} />
           </Route>
         </Routes>

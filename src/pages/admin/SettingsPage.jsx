@@ -35,6 +35,8 @@ const SettingsPage = () => {
   const [loadingBlocks, setLoadingBlocks] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newBlock, setNewBlock] = useState({ location_id: '', block_date: '', reason: '' });
+  const [policy, setPolicy] = useState({ minHours: '24', text: '' });
+  const [savingPolicy, setSavingPolicy] = useState(false);
   const [flash, setFlash] = useState('');
   const [error, setError] = useState('');
 
@@ -51,9 +53,32 @@ const SettingsPage = () => {
     setLoadingBlocks(false);
   }, []);
 
+  const fetchPolicy = useCallback(async () => {
+    const { data } = await supabase.from('settings').select('key, value')
+      .in('key', ['cancellation_min_hours', 'cancellation_policy_text']);
+    const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    setPolicy({
+      minHours: map.cancellation_min_hours != null ? String(map.cancellation_min_hours) : '24',
+      text: typeof map.cancellation_policy_text === 'string' ? map.cancellation_policy_text : '',
+    });
+  }, []);
+
+  const savePolicy = async () => {
+    setSavingPolicy(true);
+    const hours = Math.max(0, parseInt(policy.minHours, 10) || 0);
+    const { error: e } = await supabase.from('settings').upsert([
+      { key: 'cancellation_min_hours', value: hours },
+      { key: 'cancellation_policy_text', value: policy.text || '' },
+    ], { onConflict: 'key' });
+    setSavingPolicy(false);
+    if (e) { showError('No se pudo guardar la política'); return; }
+    showFlash('Política de cancelación guardada');
+  };
+
   useEffect(() => {
     supabase.from('locations').select('id, name').then(({ data }) => setLocations(data ?? []));
     fetchBlocks();
+    fetchPolicy();
     const channel = supabase
       .channel('settings-blocks-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, fetchBlocks)
@@ -124,6 +149,45 @@ const SettingsPage = () => {
                 </div>
               ))
             )}
+          </div>
+        </SectionCard>
+
+        {/* Política de cancelación */}
+        <SectionCard icon={AlertCircle} title="Política de cancelación" subtitle="Cómo pueden cancelar las clientas desde el enlace de su cita">
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="cancel-hours" className="block text-[11px] font-bold text-admin-muted uppercase tracking-wider mb-1">
+                Antelación mínima para cancelar online (horas)
+              </label>
+              <input
+                id="cancel-hours"
+                type="number" min="0" step="1"
+                value={policy.minHours}
+                onChange={(e) => setPolicy((p) => ({ ...p, minHours: e.target.value }))}
+                className="w-32 h-10 px-3 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+              />
+              <p className="text-[11px] text-admin-muted mt-1">Con menos antelación, la clienta solo podrá contactar por WhatsApp.</p>
+            </div>
+            <div>
+              <label htmlFor="cancel-text" className="block text-[11px] font-bold text-admin-muted uppercase tracking-wider mb-1">
+                Texto de la política (visible para la clienta)
+              </label>
+              <textarea
+                id="cancel-text"
+                rows={3}
+                value={policy.text}
+                onChange={(e) => setPolicy((p) => ({ ...p, text: e.target.value }))}
+                placeholder="Puedes cancelar tu cita online hasta 24 horas antes…"
+                className="w-full px-3 py-2 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
+              />
+            </div>
+            <button
+              onClick={savePolicy}
+              disabled={savingPolicy}
+              className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-gradient-rose-gold text-white text-sm font-bold shadow-rose-sm hover:brightness-105 disabled:opacity-50 transition-all"
+            >
+              {savingPolicy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Guardar política
+            </button>
           </div>
         </SectionCard>
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Check, CheckCheck, Mail, MessageCircle, MoreVertical, Phone, X,
+  Check, CheckCheck, Mail, MessageCircle, MoreVertical, Phone, UserX, X,
 } from 'lucide-react';
 
 const MENU_WIDTH = 176; // w-44
@@ -12,6 +12,7 @@ const BookingActionMenu = ({
   onConfirm,
   onComplete,
   onCancel,
+  onNoShow,
   onWa,
   onCall,
   onEmail,
@@ -89,6 +90,14 @@ const BookingActionMenu = ({
         }
       },
     },
+    ...(onNoShow ? [{
+      key: 'noshow',
+      label: 'No asistió',
+      icon: UserX,
+      color: 'text-zinc-700 hover:bg-zinc-50',
+      disabled: status === 'no_show',
+      action: () => onNoShow?.(booking),
+    }] : []),
     {
       key: 'wa',
       label: 'WhatsApp',

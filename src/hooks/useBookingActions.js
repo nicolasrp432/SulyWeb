@@ -76,6 +76,12 @@ export function useBookingActions({ locations = [], onChange, openWa, openEmail 
     if (ok) toast({ title: 'Cita cancelada' });
   }, [updateStatus, toast]);
 
+  const noShowBooking = useCallback(async (booking) => {
+    if (!booking?.id) return;
+    const ok = await updateStatus(booking.id, 'no_show');
+    if (ok) toast({ title: 'Marcada como «No asistió»' });
+  }, [updateStatus, toast]);
+
   const callBooking = useCallback((booking) => {
     if (!booking?.client_phone) return;
     window.location.href = `tel:${booking.client_phone.replace(/\s+/g, '')}`;
@@ -202,6 +208,7 @@ export function useBookingActions({ locations = [], onChange, openWa, openEmail 
     confirmBooking,
     completeBooking,
     cancelBooking,
+    noShowBooking,
     callBooking,
     moveBooking,
     resizeBooking,

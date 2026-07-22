@@ -258,6 +258,7 @@ const BookingsPage = () => {
                       onConfirm={actions.confirmBooking}
                       onComplete={actions.completeBooking}
                       onCancel={actions.cancelBooking}
+                      onNoShow={actions.noShowBooking}
                       onWa={actions.waBooking}
                       onCall={actions.callBooking}
                       onEmail={actions.emailBooking}

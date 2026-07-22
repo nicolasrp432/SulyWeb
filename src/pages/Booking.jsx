@@ -488,7 +488,7 @@ const Booking = () => {
 
     /* Atomic, server-validated creation: prevents double-booking and respects
        admin blocks, without exposing the bookings table to anonymous clients. */
-    const { data: bookingId, error: bookingErr } = await supabase.rpc('create_public_booking', {
+    const { data: result, error: bookingErr } = await supabase.rpc('create_public_booking', {
       p_location_id: selectedLocation.id,
       p_booking_date: dateStr,
       p_booking_time: selectedTime,
@@ -498,6 +498,8 @@ const Booking = () => {
       p_notes: form.notes || null,
       p_service_ids: selectedServices.map((s) => s.id),
     });
+    const bookingId = result?.booking_id;
+    const manageToken = result?.cancellation_token;
 
     if (bookingErr) {
       setSubmitting(false);
@@ -555,6 +557,7 @@ const Booking = () => {
 
     const submittedData = {
       reference: bookingId ? String(bookingId).slice(0, 8).toUpperCase() : '',
+      manageToken: manageToken || null,
       dateStr,
       time: selectedTime,
       locationName: selectedLocation.name,
@@ -609,9 +612,17 @@ const Booking = () => {
             )}
           </div>
           {submitted.reference && (
-            <p className="text-xs text-brand-mid mb-5">
+            <p className="text-xs text-brand-mid mb-3">
               Nº de referencia: <span className="font-mono font-bold text-brand-dark">{submitted.reference}</span>
             </p>
+          )}
+          {submitted.manageToken && (
+            <a
+              href={`/cita/${submitted.manageToken}`}
+              className="block text-sm font-semibold text-brand-rose hover:underline mb-5"
+            >
+              Ver o cancelar mi cita
+            </a>
           )}
           <a
             href={`https://wa.me/${CONTACT_INFO.WHATSAPP.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, soy ${submitted.name}. Tengo una cita el ${submitted.dateStr} a las ${submitted.time}${submitted.reference ? ` (ref. ${submitted.reference})` : ''} y quería consultar.`)}`}
