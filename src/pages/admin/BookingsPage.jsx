@@ -305,7 +305,10 @@ const BookingsPage = () => {
         onCancel={actions.cancelBooking}
         onOpenWa={actions.waBooking}
         onOpenEmail={actions.emailBooking}
-        onSave={async () => { fetchBookings(); setSelectedBooking(null); }}
+        onSave={async (id, form) => {
+          const ok = await actions.saveBookingEdits(id, form);
+          if (ok) setSelectedBooking(null);
+        }}
         onDelete={async (b) => {
           const ok = await actions.deleteBooking(b);
           if (ok) setSelectedBooking(null);

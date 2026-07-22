@@ -37,6 +37,21 @@ export const BookingCartProvider = ({ children }) => {
     });
   }, [selectedServices, setSelectedServices, toast]);
 
+  // Añade varios servicios a la vez (p. ej. los que componen un paquete) sin
+  // emitir un toast por cada uno. Deduplica contra lo ya seleccionado.
+  const addServices = useCallback((servicesToAdd = []) => {
+    const valid = servicesToAdd.filter((s) => s && s.id != null);
+    if (valid.length === 0) return 0;
+    let addedCount = 0;
+    setSelectedServices((prev) => {
+      const existing = new Set(prev.map((s) => s.id));
+      const fresh = valid.filter((s) => !existing.has(s.id));
+      addedCount = fresh.length;
+      return fresh.length ? [...prev, ...fresh] : prev;
+    });
+    return addedCount;
+  }, [setSelectedServices]);
+
   const removeService = useCallback((serviceId) => {
     setSelectedServices(prev => prev.filter(service => service.id !== serviceId));
     toast({
@@ -58,6 +73,7 @@ export const BookingCartProvider = ({ children }) => {
   const value = {
     selectedServices,
     addService,
+    addServices,
     removeService,
     clearServices,
   };

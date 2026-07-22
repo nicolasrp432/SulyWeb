@@ -69,11 +69,23 @@ export function isDayClosed(date, businessHours) {
   return cfg.closed || cfg.shifts.length === 0;
 }
 
+/** ¿Dos fechas caen en el mismo día natural (hora local)? */
+function isSameLocalDay(a, b) {
+  return a.getFullYear() === b.getFullYear()
+    && a.getMonth() === b.getMonth()
+    && a.getDate() === b.getDate();
+}
+
 /**
  * Genera los slots ('HH:MM') de un día recorriendo todos los tramos abiertos.
  * Si dos tramos se solapan o repiten un slot, se deduplica y ordena.
+ *
+ * @param {Object} [options]
+ * @param {Date}   [options.now]       Si se pasa y `date` es hoy, se descartan
+ *                                     los slots ya pasados (más el margen).
+ * @param {number} [options.marginMin] Minutos de antelación mínima para hoy (30).
  */
-export function generateDaySlots(date, businessHours, intervalMin = 30) {
+export function generateDaySlots(date, businessHours, intervalMin = 30, options = {}) {
   if (!date) return [];
   const cfg = getDayConfig(date, businessHours);
   if (cfg.closed) return [];
@@ -87,5 +99,15 @@ export function generateDaySlots(date, businessHours, intervalMin = 30) {
       set.add(m);
     }
   }
-  return [...set].sort((a, b) => a - b).map(minutesToTime);
+
+  let slots = [...set].sort((a, b) => a - b);
+
+  // Para el día de hoy, ocultar las horas ya pasadas (con margen de antelación).
+  const { now, marginMin = 30 } = options;
+  if (now && isSameLocalDay(date, now)) {
+    const cutoff = now.getHours() * 60 + now.getMinutes() + marginMin;
+    slots = slots.filter((m) => m >= cutoff);
+  }
+
+  return slots.map(minutesToTime);
 }

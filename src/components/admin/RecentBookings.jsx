@@ -148,7 +148,10 @@ const RecentBookings = () => {
         onCancel={actions.cancelBooking}
         onOpenWa={actions.waBooking}
         onOpenEmail={actions.emailBooking}
-        onSave={async () => { fetchTodayBookings(); setSelectedBooking(null); }}
+        onSave={async (id, form) => {
+          const ok = await actions.saveBookingEdits(id, form);
+          if (ok) setSelectedBooking(null);
+        }}
       />
 
       <EmailComposeModal

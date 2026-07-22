@@ -218,7 +218,8 @@ const Booking = () => {
   });
 
   const getAvailableTimeSlots = useCallback((date) => {
-    return generateDaySlots(date, businessHours, 30);
+    // `now` filtra las horas ya pasadas cuando la fecha elegida es hoy.
+    return generateDaySlots(date, businessHours, 30, { now: new Date() });
   }, [businessHours]);
 
   /* Fetch services and locations on mount with real-time subscription */

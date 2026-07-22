@@ -23,41 +23,15 @@ const CustomersPage = () => {
   const [expanded, setExpanded] = useState(null);
   const [historyCache, setHistoryCache] = useState({});
 
-  const deleteCustomer = async (customer) => {
-    const confirmMsg = `¿Seguro que deseas eliminar permanentemente a ${customer.name}? Se eliminarán todas sus citas (${customer.count}) del sistema. Esta acción no se puede deshacer.`;
-    if (!window.confirm(confirmMsg)) return;
-
-    try {
-      let query = supabase.from('bookings').delete();
-      if (customer.email) {
-        query = query.eq('client_email', customer.email);
-      } else if (customer.phone) {
-        query = query.eq('client_phone', customer.phone);
-      } else {
-        query = query.eq('client_name', customer.name).is('client_email', null).is('client_phone', null);
-      }
-
-      const { error } = await query;
-      if (error) throw error;
-
-      toast({
-        title: 'Cliente eliminado',
-        description: `Se han eliminado a ${customer.name} y todas sus citas con éxito.`
-      });
-
-      const key = customer.email || customer.phone;
-      if (expanded === key) {
-        setExpanded(null);
-      }
-
-      fetchCustomers();
-    } catch (error) {
-      toast({
-        variant: 'destructive',
-        title: 'No se pudo eliminar al cliente',
-        description: error.message
-      });
-    }
+  // Eliminar cliente queda deshabilitado temporalmente: el borrado anterior
+  // hacía DELETE en cascada de TODAS las citas del cliente (irreversible y
+  // además propagaba cancelaciones a Google Calendar). El borrado seguro
+  // (soft-delete sobre la tabla `customers`) llega con la ficha de clientas.
+  const deleteCustomer = (customer) => {
+    toast({
+      title: 'Disponible próximamente',
+      description: `El borrado seguro de clientas llegará con la nueva ficha de cliente. Por ahora no se elimina a ${customer.name}.`,
+    });
   };
 
   const fetchCustomers = useCallback(async () => {
@@ -251,7 +225,9 @@ const CustomersPage = () => {
                           )}
                           <button
                             onClick={() => deleteCustomer(c)}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-red-200 text-red-600 hover:bg-red-50 transition-colors sm:ml-auto"
+                            disabled
+                            title="El borrado seguro llegará con la nueva ficha de cliente"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold border border-admin-border text-admin-muted opacity-50 cursor-not-allowed sm:ml-auto"
                           >
                             <Trash2 className="w-3.5 h-3.5" /> Eliminar cliente
                           </button>
