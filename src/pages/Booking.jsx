@@ -17,13 +17,16 @@ import SEOHead from '@/components/SEO/SEOHead';
 import { getServiceImageFromObj } from '@/lib/serviceImages';
 import { generateDaySlots, isDayClosed, timeToMinutes } from '@/lib/businessHours';
 import { useBookingCart } from '@/contexts/BookingCartContext';
+import { useToast } from '@/components/ui/use-toast';
+import { CONTACT_INFO, VALIDATION } from '@/constants';
 
-/* ── Time slot grid ──────────────────────────── */
-const TIME_SLOTS = [];
-for (let h = 9; h < 19; h++) {
-  TIME_SLOTS.push(`${String(h).padStart(2, '0')}:00`);
-  TIME_SLOTS.push(`${String(h).padStart(2, '0')}:30`);
-}
+/* Valida un móvil/fijo español: 9 dígitos que empiezan por 6/7/8/9,
+   tolerando espacios y prefijo +34. */
+const isValidEsPhone = (raw) => {
+  let d = String(raw || '').replace(/\D/g, '');
+  if (d.length > 9 && d.startsWith('34')) d = d.slice(2);
+  return /^[6789]\d{8}$/.test(d);
+};
 
 /* ── Category labels ────────────────────────── */
 const CATEGORY_LABELS = {
@@ -202,10 +205,20 @@ const Booking = () => {
   const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null);
+  const [loadError, setLoadError] = useState(false);
+  const { toast } = useToast();
 
   /* Carrito global (servicios elegidos en /servicios, persistidos en localStorage) */
   const { selectedServices: cartServices, clearServices } = useBookingCart();
   const [cartPreloaded, setCartPreloaded] = useState(false);
+
+  /* Si el usuario recarga tras reservar, recuperamos la pantalla de éxito. */
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('last_booking');
+      if (raw) setSubmitted(JSON.parse(raw));
+    } catch (_) { /* noop */ }
+  }, []);
 
   const [businessHours, setBusinessHours] = useState({
     monday: { open: '10:00', close: '20:00', closed: false },
@@ -227,14 +240,16 @@ const Booking = () => {
     const fetchServices = () => {
       supabase.from('services').select('*').eq('active', true)
         .order('display_order').order('name')
-        .then(({ data }) => {
+        .then(({ data, error }) => {
+          if (error) { setLoadError(true); return; }
           if (data && data.length > 0) setServices(data);
         });
     };
 
     fetchServices();
 
-    supabase.from('locations').select('id, name').then(({ data }) => {
+    supabase.from('locations').select('id, name').then(({ data, error }) => {
+      if (error) { setLoadError(true); return; }
       setLocations(data ?? []);
       if (data && data.length > 0) setSelectedLocation(data[0]);
     });
@@ -339,22 +354,32 @@ const Booking = () => {
     setLoadingSlots(true);
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
 
-    const [{ data: bookingData }, { data: blockData }, { data: capData }] = await Promise.all([
-      supabase.rpc('get_booked_slots', { p_location_id: selectedLocation.id, p_date: dateStr }),
-      supabase
-        .from('schedule_blocks')
-        .select('start_time, end_time')
-        .eq('block_date', dateStr)
-        .not('start_time', 'is', null)
-        .or(`location_id.eq.${selectedLocation.id},location_id.is.null`),
-      supabase.rpc('get_location_capacity', { p_location_id: selectedLocation.id }),
-    ]);
+    try {
+      const [{ data: bookingData }, { data: blockData }, { data: capData }] = await Promise.all([
+        supabase.rpc('get_booked_slots', { p_location_id: selectedLocation.id, p_date: dateStr }),
+        supabase
+          .from('schedule_blocks')
+          .select('start_time, end_time')
+          .eq('block_date', dateStr)
+          .not('start_time', 'is', null)
+          .or(`location_id.eq.${selectedLocation.id},location_id.is.null`),
+        supabase.rpc('get_location_capacity', { p_location_id: selectedLocation.id }),
+      ]);
 
-    setBookedSlots(bookingData ?? []);
-    setBlockedTimes(blockData ?? []);
-    setCapacity(typeof capData === 'number' ? capData : 0);
-    setLoadingSlots(false);
-  }, [selectedDate, selectedLocation]);
+      setBookedSlots(bookingData ?? []);
+      setBlockedTimes(blockData ?? []);
+      setCapacity(typeof capData === 'number' ? capData : 0);
+    } catch (e) {
+      // Ante fallo de red no dejamos el grid colgado: se muestra vacío y se avisa.
+      toast({
+        variant: 'destructive',
+        title: 'No se pudieron cargar los horarios',
+        description: 'Revisa tu conexión e inténtalo de nuevo.',
+      });
+    } finally {
+      setLoadingSlots(false);
+    }
+  }, [selectedDate, selectedLocation, toast]);
 
   useEffect(() => { loadSlots(); }, [loadSlots]);
 
@@ -448,9 +473,15 @@ const Booking = () => {
   const categories = ['all', ...new Set(services.map((s) => s.category).filter(Boolean))];
   const filteredServices = categoryFilter === 'all' ? services : services.filter((s) => s.category === categoryFilter);
 
+  /* Validación de los datos de contacto */
+  const phoneValid = isValidEsPhone(form.phone);
+  const emailValid = !form.email || VALIDATION.EMAIL_REGEX.test(form.email.trim());
+  const canSubmit = !!form.name.trim() && phoneValid && emailValid
+    && !!selectedLocation && !!selectedDate && !!selectedTime && !submitting;
+
   /* Submit booking */
   const handleSubmit = async () => {
-    if (!form.name || !form.phone || !selectedLocation || !selectedDate || !selectedTime) return;
+    if (!canSubmit) return;
     setSubmitting(true);
 
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
@@ -471,14 +502,35 @@ const Booking = () => {
     if (bookingErr) {
       setSubmitting(false);
       const msg = bookingErr.message || '';
-      if (msg.includes('SLOT_TAKEN')) {
-        alert('Lo sentimos, ese horario acaba de ocuparse. Por favor, elige otra hora.');
+      if (msg.includes('SLOT_TAKEN') || msg.includes('SLOT_BLOCKED')) {
+        toast({
+          variant: 'destructive',
+          title: 'Ese horario acaba de ocuparse',
+          description: 'Elige otra hora, hemos actualizado la disponibilidad.',
+        });
+        setSelectedTime(null);
         loadSlots();
-      } else if (msg.includes('SLOT_BLOCKED')) {
-        alert('Ese horario ya no está disponible. Por favor, elige otra hora.');
+      } else if (msg.includes('PAST_SLOT')) {
+        toast({
+          variant: 'destructive',
+          title: 'Esa hora ya ha pasado',
+          description: 'Elige un horario futuro, por favor.',
+        });
+        setSelectedTime(null);
+        loadSlots();
+      } else if (msg.includes('OUTSIDE_HOURS')) {
+        toast({
+          variant: 'destructive',
+          title: 'Fuera de horario',
+          description: 'Ese horario está fuera del horario de atención. Elige otra hora.',
+        });
         loadSlots();
       } else {
-        alert('No se pudo crear la reserva. Por favor, inténtalo de nuevo.');
+        toast({
+          variant: 'destructive',
+          title: 'No se pudo crear la reserva',
+          description: 'Inténtalo de nuevo en unos segundos.',
+        });
       }
       return;
     }
@@ -501,7 +553,17 @@ const Booking = () => {
       }
     } catch (_) { /* email failure is non-critical */ }
 
-    setSubmitted({ booking, date: selectedDate, time: selectedTime, location: selectedLocation, services: selectedServices, name: form.name });
+    const submittedData = {
+      reference: bookingId ? String(bookingId).slice(0, 8).toUpperCase() : '',
+      dateStr,
+      time: selectedTime,
+      locationName: selectedLocation.name,
+      services: selectedServices.map((s) => ({ name: s.name })),
+      name: form.name,
+    };
+    setSubmitted(submittedData);
+    // Persistir para que una recarga de la pantalla de éxito no la pierda.
+    try { sessionStorage.setItem('last_booking', JSON.stringify(submittedData)); } catch (_) { /* noop */ }
     setSubmitting(false);
     clearServices(); // vaciar el carrito tras reservar con éxito
   };
@@ -521,13 +583,14 @@ const Booking = () => {
           </div>
           <h1 className="text-2xl font-bold text-brand-dark mb-2">¡Reserva Confirmada!</h1>
           <p className="text-brand-mid mb-6 leading-relaxed">
-            Hemos recibido tu cita, {submitted.name}. Te contactaremos por WhatsApp para confirmar.
+            Tu cita ha quedado registrada, {submitted.name}. Te esperamos en el salón; si
+            necesitas cambiar o cancelar, escríbenos por WhatsApp.
           </p>
-          <div className="bg-brand-rose-50 rounded-2xl p-4 text-left space-y-2.5 mb-6 border border-brand-rose-100">
+          <div className="bg-brand-rose-50 rounded-2xl p-4 text-left space-y-2.5 mb-4 border border-brand-rose-100">
             <div className="flex items-center gap-3">
               <Calendar className="h-4 w-4 text-brand-rose shrink-0" />
               <span className="text-sm text-brand-dark font-medium capitalize">
-                {format(submitted.date, "EEEE, d 'de' MMMM", { locale: es })}
+                {format(new Date(`${submitted.dateStr}T00:00:00`), "EEEE, d 'de' MMMM", { locale: es })}
               </span>
             </div>
             <div className="flex items-center gap-3">
@@ -536,7 +599,7 @@ const Booking = () => {
             </div>
             <div className="flex items-center gap-3">
               <MapPin className="h-4 w-4 text-brand-rose shrink-0" />
-              <span className="text-sm text-brand-dark font-medium">{submitted.location.name}</span>
+              <span className="text-sm text-brand-dark font-medium">{submitted.locationName}</span>
             </div>
             {submitted.services.length > 0 && (
               <div className="flex items-start gap-3">
@@ -545,8 +608,22 @@ const Booking = () => {
               </div>
             )}
           </div>
+          {submitted.reference && (
+            <p className="text-xs text-brand-mid mb-5">
+              Nº de referencia: <span className="font-mono font-bold text-brand-dark">{submitted.reference}</span>
+            </p>
+          )}
+          <a
+            href={`https://wa.me/${CONTACT_INFO.WHATSAPP.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Hola, soy ${submitted.name}. Tengo una cita el ${submitted.dateStr} a las ${submitted.time}${submitted.reference ? ` (ref. ${submitted.reference})` : ''} y quería consultar.`)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full h-12 mb-3 flex items-center justify-center gap-2 bg-[#25D366] text-white font-bold rounded-2xl shadow-rose-sm hover:brightness-105 transition-all"
+          >
+            <MessageSquare className="h-4 w-4" /> Contactar por WhatsApp
+          </a>
           <button
             onClick={() => {
+              try { sessionStorage.removeItem('last_booking'); } catch (_) { /* noop */ }
               setSubmitted(null); setStep(1);
               setSelectedServices([]); setSelectedDate(null); setSelectedTime(null);
               setForm({ name: '', phone: '', email: '', notes: '' });
@@ -624,7 +701,17 @@ const Booking = () => {
 
                   {/* Services grid — scrollable area */}
                   <div className="p-4 overflow-y-auto flex-1 min-h-0">
-                    {services.length === 0 ? (
+                    {services.length === 0 && loadError ? (
+                      <div className="flex flex-col items-center justify-center py-12 gap-3 text-brand-mid text-center px-4">
+                        <span className="text-sm">No se pudieron cargar los servicios. Revisa tu conexión.</span>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="px-4 py-2 text-sm font-bold text-white bg-gradient-rose-gold rounded-xl shadow-rose-sm hover:brightness-105 transition-all"
+                        >
+                          Reintentar
+                        </button>
+                      </div>
+                    ) : services.length === 0 ? (
                       <div className="flex items-center justify-center py-12 gap-3 text-brand-mid">
                         <Loader2 className="h-5 w-5 animate-spin text-brand-rose" />
                         <span className="text-sm">Cargando servicios...</span>
@@ -870,59 +957,88 @@ const Booking = () => {
 
                   <div className="space-y-3">
                     <div>
-                      <label className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
+                      <label htmlFor="booking-name" className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
                         Nombre *
                       </label>
                       <div className="relative">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-mid/50" />
                         <input
+                          id="booking-name"
                           value={form.name}
                           onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
                           placeholder="Tu nombre"
+                          autoComplete="name"
+                          aria-required="true"
                           className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
                         />
                       </div>
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
+                      <label htmlFor="booking-phone" className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
                         Teléfono *
                       </label>
                       <div className="relative">
                         <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-mid/50" />
                         <input
+                          id="booking-phone"
                           type="tel"
                           value={form.phone}
                           onChange={(e) => setForm((p) => ({ ...p, phone: e.target.value }))}
                           placeholder="612 345 678"
-                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
+                          autoComplete="tel"
+                          aria-required="true"
+                          aria-invalid={!!form.phone && !phoneValid}
+                          className={`w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:ring-2 transition-colors ${
+                            form.phone && !phoneValid
+                              ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
+                              : 'border-brand-rose-100 focus:border-brand-rose focus:ring-brand-rose/15'
+                          }`}
                         />
                       </div>
+                      {form.phone && !phoneValid && (
+                        <p className="mt-1 text-xs text-red-500" role="alert">
+                          Introduce un teléfono español válido (9 dígitos).
+                        </p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
+                      <label htmlFor="booking-email" className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
                         Email <span className="font-normal text-brand-mid/60">(opcional)</span>
                       </label>
                       <div className="relative">
                         <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-brand-mid/50" />
                         <input
+                          id="booking-email"
                           type="email"
                           value={form.email}
                           onChange={(e) => setForm((p) => ({ ...p, email: e.target.value }))}
                           placeholder="tu@email.com"
-                          className="w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border border-brand-rose-100 rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:border-brand-rose focus:ring-2 focus:ring-brand-rose/15 transition-colors"
+                          autoComplete="email"
+                          aria-invalid={!emailValid}
+                          className={`w-full pl-9 pr-3 py-2.5 bg-brand-rose-50 border rounded-xl text-base md:text-sm text-brand-dark placeholder:text-brand-mid/40 focus:outline-none focus:ring-2 transition-colors ${
+                            !emailValid
+                              ? 'border-red-300 focus:border-red-400 focus:ring-red-200'
+                              : 'border-brand-rose-100 focus:border-brand-rose focus:ring-brand-rose/15'
+                          }`}
                         />
                       </div>
+                      {!emailValid && (
+                        <p className="mt-1 text-xs text-red-500" role="alert">
+                          El email no tiene un formato válido.
+                        </p>
+                      )}
                     </div>
 
                     <div>
-                      <label className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
+                      <label htmlFor="booking-notes" className="block text-xs font-bold text-brand-mid uppercase tracking-wider mb-1.5">
                         Notas <span className="font-normal text-brand-mid/60">(opcional)</span>
                       </label>
                       <div className="relative">
                         <MessageSquare className="absolute left-3 top-3 h-4 w-4 text-brand-mid/50" />
                         <textarea
+                          id="booking-notes"
                           value={form.notes}
                           onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))}
                           placeholder="Alergias, preferencias, dudas..."
@@ -942,7 +1058,7 @@ const Booking = () => {
                     </button>
                     <button
                       onClick={handleSubmit}
-                      disabled={!form.name || !form.phone || submitting}
+                      disabled={!canSubmit}
                       className="flex-1 flex items-center justify-center gap-2 h-12 bg-gradient-rose-gold text-white font-bold text-sm rounded-2xl shadow-rose-sm hover:brightness-105 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
                       {submitting
