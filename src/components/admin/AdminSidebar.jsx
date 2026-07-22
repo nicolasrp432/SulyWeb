@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LayoutDashboard, Calendar, ClipboardList, Users,
-  Scissors, Settings, X, LogOut, ChevronRight, Image, UserCog, Globe
+  Scissors, Settings, X, LogOut, ChevronRight, Image, UserCog, Globe, Bell
 } from 'lucide-react';
 import Logo from '@/components/Logo';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -12,6 +12,7 @@ const navItems = [
   { label: 'Dashboard',     path: '/admin',              icon: LayoutDashboard },
   { label: 'Calendario',    path: '/admin/calendario',   icon: Calendar },
   { label: 'Citas',         path: '/admin/citas',        icon: ClipboardList },
+  { label: 'Recordatorios', path: '/admin/recordatorios', icon: Bell },
   { label: 'Clientes',      path: '/admin/clientes',     icon: Users },
   { label: 'Servicios',     path: '/admin/servicios',    icon: Scissors },
   { label: 'Equipo',        path: '/admin/equipo',       icon: UserCog },

@@ -28,6 +28,7 @@ import CalendarPage from '@/pages/admin/CalendarPage';
 import BookingsPage from '@/pages/admin/BookingsPage';
 import CustomersPage from '@/pages/admin/CustomersPage';
 import CustomerDetailPage from '@/pages/admin/CustomerDetailPage';
+import RemindersPage from '@/pages/admin/RemindersPage';
 import ServicesPage from '@/pages/admin/ServicesPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
 import GalleryAdminPage from '@/pages/admin/GalleryAdminPage';
@@ -67,6 +68,7 @@ function App() {
             <Route path="/admin" element={<Dashboard />} />
             <Route path="/admin/calendario" element={<CalendarPage />} />
             <Route path="/admin/citas" element={<BookingsPage />} />
+            <Route path="/admin/recordatorios" element={<RemindersPage />} />
             <Route path="/admin/clientes" element={<CustomersPage />} />
             <Route path="/admin/clientes/:id" element={<CustomerDetailPage />} />
             <Route path="/admin/servicios" element={<ServicesPage />} />
