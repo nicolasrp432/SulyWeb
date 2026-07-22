@@ -14,6 +14,7 @@ import Home from '@/pages/Home';
 import Services from '@/pages/Services';
 import Gallery from '@/pages/Gallery';
 import Booking from '@/pages/Booking';
+import AppointmentManage from '@/pages/AppointmentManage';
 import Contact from '@/pages/Contact';
 
 // Admin components
@@ -26,6 +27,8 @@ import Dashboard from '@/pages/admin/Dashboard';
 import CalendarPage from '@/pages/admin/CalendarPage';
 import BookingsPage from '@/pages/admin/BookingsPage';
 import CustomersPage from '@/pages/admin/CustomersPage';
+import CustomerDetailPage from '@/pages/admin/CustomerDetailPage';
+import RemindersPage from '@/pages/admin/RemindersPage';
 import ServicesPage from '@/pages/admin/ServicesPage';
 import SettingsPage from '@/pages/admin/SettingsPage';
 import GalleryAdminPage from '@/pages/admin/GalleryAdminPage';
@@ -65,7 +68,9 @@ function App() {
             <Route path="/admin" element={<Dashboard />} />
             <Route path="/admin/calendario" element={<CalendarPage />} />
             <Route path="/admin/citas" element={<BookingsPage />} />
+            <Route path="/admin/recordatorios" element={<RemindersPage />} />
             <Route path="/admin/clientes" element={<CustomersPage />} />
+            <Route path="/admin/clientes/:id" element={<CustomerDetailPage />} />
             <Route path="/admin/servicios" element={<ServicesPage />} />
             <Route path="/admin/equipo" element={<TeamPage />} />
             <Route path="/admin/configuracion" element={<SettingsPage />} />
@@ -78,6 +83,7 @@ function App() {
             <Route path="/servicios" element={<Services />} />
             <Route path="/galeria" element={<Gallery />} />
             <Route path="/reservas" element={<Booking />} />
+            <Route path="/cita/:token" element={<AppointmentManage />} />
             <Route path="/contacto" element={<Contact />} />
           </Route>
         </Routes>

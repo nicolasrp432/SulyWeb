@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import SEOHead from '../components/SEO/SEOHead';
 import { supabase } from '@/lib/customSupabaseClient';
@@ -32,12 +32,26 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 
+// Composición de cada paquete en servicios REALES del catálogo (por nombre).
+// Se resuelven contra los servicios cargados de la BD para arrastrar el id real
+// al carrito; así el paquete deja de "desaparecer" al llegar a la reserva
+// (antes se añadía un id ficticio 'package-*' que nada casaba en /reservas).
+// NOTA para la dueña: el Deluxe listaba "Manicura rusa" y "Depilar rostro
+// entero", que aún NO existen como servicios reservables. Se usa la manicura
+// semipermanente como equivalente más cercano y se omite la depilación facial.
+// Conviene crear esos servicios o ajustar la composición del paquete.
+const PACKAGE_COMPOSITION = {
+  'Paquete Básico': ['Manicura exprés', 'Esmaltar pies'],
+  'Paquete Premium': ['Manicura completa spa', 'Pedicura completa semi / tradicional', 'Lifting de Pestañas'],
+  'Paquete Deluxe': ['Manicura Semipermanente', 'Pedicura completa semi / tradicional', 'Lifting de Pestañas'],
+};
+
 const Services = () => {
   const { toast } = useToast();
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedService, setSelectedService] = useState(null);
   const [dbServices, setDbServices] = useState(null);
-  const { addService, selectedServices } = useBookingCart();
+  const { addService, addServices, selectedServices } = useBookingCart();
 
   useEffect(() => {
     const fetchServices = () => {
@@ -323,6 +337,29 @@ const Services = () => {
     ? activeServices
     : activeServices.filter(service => service.category === selectedCategory);
 
+  // Añade al carrito los servicios reales que componen un paquete (por nombre).
+  const addPackage = useCallback((packageName) => {
+    const titles = PACKAGE_COMPOSITION[packageName] || [];
+    const matched = titles
+      .map((t) => activeServices.find((s) => s.title === t))
+      .filter(Boolean);
+    if (matched.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'No se pudo añadir el paquete',
+        description: 'Añade los servicios manualmente desde el listado.',
+      });
+      return;
+    }
+    const added = addServices(matched);
+    toast({
+      title: `${packageName} añadido`,
+      description: added > 0
+        ? `${added} servicio${added > 1 ? 's' : ''} añadido${added > 1 ? 's' : ''} a tu reserva.`
+        : 'Ya tenías estos servicios en tu reserva.',
+    });
+  }, [activeServices, addServices, toast]);
+
   return (
     <>
       <SEOHead 
@@ -527,21 +564,7 @@ const Services = () => {
                 </li>
               </ul>
               <Button
-                 onClick={() => {
-                   const basicPackage = {
-                     id: 'package-basic',
-                     title: 'Paquete Básico',
-                     price: '35,00€',
-                     duration: '60 min',
-                     category: 'paquetes',
-                     description: 'Manicura exprés + Esmaltar pies'
-                   };
-                   addService(basicPackage);
-                   toast({
-                     title: "Paquete añadido",
-                     description: "Paquete Básico añadido a tu reserva",
-                   });
-                 }}
+                 onClick={() => addPackage('Paquete Básico')}
                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full py-3 font-medium transition-all duration-300 mt-auto"
                >
                  Añadir Paquete
@@ -576,21 +599,7 @@ const Services = () => {
                 </li>
               </ul>
               <Button
-                 onClick={() => {
-                   const premiumPackage = {
-                     id: 'package-premium',
-                     title: 'Paquete Premium',
-                     price: '70,00€',
-                     duration: '180 min',
-                     category: 'paquetes',
-                     description: 'Manicura completa spa + Pedicura completa + Lifting de Pestañas'
-                   };
-                   addService(premiumPackage);
-                   toast({
-                     title: "Paquete añadido",
-                     description: "Paquete Premium añadido a tu reserva",
-                   });
-                 }}
+                 onClick={() => addPackage('Paquete Premium')}
                  className="w-full bg-white text-pink-600 hover:bg-gray-50 rounded-full py-3 font-medium transition-all duration-300 relative z-10 mt-auto"
                >
                  Añadir Paquete
@@ -629,21 +638,7 @@ const Services = () => {
                 </li>
               </ul>
               <Button
-                 onClick={() => {
-                   const deluxePackage = {
-                     id: 'package-deluxe',
-                     title: 'Paquete Deluxe',
-                     price: '95,00€',
-                     duration: '165 min',
-                     category: 'paquetes',
-                     description: 'Manicura rusa + Pedicura completa semi + Lifting de Pestañas + Depilar rostro entero'
-                   };
-                   addService(deluxePackage);
-                   toast({
-                     title: "Paquete añadido",
-                     description: "Paquete Deluxe añadido a tu reserva",
-                   });
-                 }}
+                 onClick={() => addPackage('Paquete Deluxe')}
                  className="w-full bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white rounded-full py-3 font-medium transition-all duration-300 mt-auto"
                >
                  Añadir Paquete

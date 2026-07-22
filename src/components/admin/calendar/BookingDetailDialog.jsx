@@ -52,6 +52,7 @@ const BookingDetailDialog = ({
     notes: '',
     assigned_to: '',
     duration_minutes: 30,
+    status: 'pending',
     source: 'admin',
     internal_notes: '',
     selectedServiceIds: [],
@@ -74,6 +75,7 @@ const BookingDetailDialog = ({
       notes: booking.notes || '',
       assigned_to: booking.meta?.assigned_to || booking.assigned_to || '',
       duration_minutes: booking.meta?.duration_minutes || booking.duration_minutes || 30,
+      status: booking.meta?.status || booking.status || 'pending',
       source: booking.meta?.source || booking.origin || 'admin',
       internal_notes: booking.meta?.internal_notes || booking.notes_admin || '',
       selectedServiceIds:
@@ -366,7 +368,7 @@ const BookingDetailDialog = ({
               <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
                 <div className="relative min-w-0">
                   <FieldIcon icon={Activity} />
-                  <select value={status} disabled className={`${selectCls} opacity-70`}>
+                  <select value={form.status} onChange={setField('status')} className={selectCls}>
                     {STATUS_OPTIONS.map((s) => (
                       <option key={s.value} value={s.value}>{s.label}</option>
                     ))}

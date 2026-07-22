@@ -15,12 +15,55 @@ const ADMIN_EMAIL = Deno.env.get('ADMIN_EMAIL') || 'sulyprettynails@gmail.com';
 const BUSINESS_WHATSAPP = (Deno.env.get('BUSINESS_WHATSAPP') || '').replace(/[^0-9]/g, '');
 const LOGO_URL = Deno.env.get('LOGO_URL') || 'https://sulyprettynails.com/logosuly.jpeg';
 
-// CORS para permitir llamadas desde el frontend (local y prod)
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
+// CORS restringido por sufijo de dominio (evita usar la función como relay
+// desde webs de terceros) sin romper despliegues legítimos: el dominio del
+// salón (cualquier subdominio), previews de Vercel y desarrollo local.
+// Dominio base configurable con SITE_DOMAIN.
+const SITE_DOMAIN = Deno.env.get('SITE_DOMAIN') || 'sulyprettynails.com';
+const FALLBACK_ORIGIN = `https://${SITE_DOMAIN}`;
+
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  let host;
+  try { host = new URL(origin).hostname; } catch { return false; }
+  return host === SITE_DOMAIN
+    || host.endsWith(`.${SITE_DOMAIN}`)
+    || host.endsWith('.vercel.app')
+    || host === 'localhost'
+    || host === '127.0.0.1';
+}
+
+function corsFor(req) {
+  const origin = req.headers.get('Origin') || '';
+  const allowed = isAllowedOrigin(origin) ? origin : FALLBACK_ORIGIN;
+  return {
+    'Access-Control-Allow-Origin': allowed,
+    'Vary': 'Origin',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS'
+  };
+}
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const isValidEmail = (v) => typeof v === 'string' && v.length <= 254 && EMAIL_RE.test(v);
+const cap = (v, n) => String(v ?? '').slice(0, n);
+
+// ¿La llamada la hace un admin activo? (se valida el JWT del panel).
+// Se usa para permitir SOLO a admins el envío de correos con asunto/cuerpo
+// libres (forCustomEmail); el resto de payloads usan plantillas fijas.
+async function isActiveAdmin(req) {
+  try {
+    const token = (req.headers.get('Authorization') || '').replace(/^Bearer\s+/i, '');
+    if (!token) return false;
+    const svc = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: { user } } = await svc.auth.getUser(token);
+    if (!user) return false;
+    const { data } = await svc.from('admin_profiles').select('is_active').eq('id', user.id).maybeSingle();
+    return !!data?.is_active;
+  } catch {
+    return false;
+  }
+}
 
 // Escapa HTML para insertar texto plano del admin de forma segura
 function escapeHtml(str) {
@@ -342,6 +385,8 @@ async function sendAdminNotification(booking) {
 
 // Manejador principal actualizado
 Deno.serve(async (req) => {
+  const corsHeaders = corsFor(req);
+
   // Preflight CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -362,33 +407,83 @@ Deno.serve(async (req) => {
     const { to, subject, booking } = await req.json();
 
     // Validar datos requeridos
-    if (!to || !subject || !booking) {
+    if (!to || !subject || !booking || typeof booking !== 'object') {
       return new Response(JSON.stringify({ error: 'Missing required fields' }), {
         status: 400,
         headers: jsonHeaders
       });
     }
 
-    // Generar HTML del correo según el tipo de payload
+    // Acotar longitudes para evitar payloads gigantes / abuso.
+    const safeBooking = {
+      ...booking,
+      name: cap(booking.name, 120),
+      email: cap(booking.email, 254),
+      phone: cap(booking.phone, 40),
+      location: cap(booking.location, 120),
+      notes: cap(booking.notes, 2000),
+      message: cap(booking.message, 4000),
+      customSubject: cap(booking.customSubject, 200),
+      customMessage: cap(booking.customMessage, 6000),
+      services: Array.isArray(booking.services) ? booking.services.slice(0, 30) : [],
+    };
+
+    // Determinar destinatario y plantilla según el tipo de payload.
+    // Los avisos internos SIEMPRE van al email del salón (se ignora `to`),
+    // así este endpoint no puede usarse para enviar a direcciones arbitrarias
+    // por esas vías. Los correos "al cliente" van a la dirección indicada,
+    // que debe ser un email válido.
+    let recipient;
     let htmlContent;
-    if (booking?.forCustomEmail) {
-      // Correo personalizado escrito por el admin desde el panel
-      htmlContent = generateCustomEmailHtml(booking);
-    } else if (booking?.isContact) {
-      htmlContent = booking?.forUser
-        ? generateContactConfirmationHtml(booking)
-        : generateContactEmailHtml(booking);
+
+    if (safeBooking.forCustomEmail) {
+      // Correo con asunto/cuerpo libres: SOLO admins autenticados.
+      if (!(await isActiveAdmin(req))) {
+        return new Response(JSON.stringify({ error: 'unauthorized' }), {
+          status: 401, headers: jsonHeaders
+        });
+      }
+      if (!isValidEmail(to)) {
+        return new Response(JSON.stringify({ error: 'invalid_recipient' }), {
+          status: 400, headers: jsonHeaders
+        });
+      }
+      recipient = to;
+      htmlContent = generateCustomEmailHtml(safeBooking);
+    } else if (safeBooking.isContact) {
+      if (safeBooking.forUser) {
+        if (!isValidEmail(to)) {
+          return new Response(JSON.stringify({ error: 'invalid_recipient' }), {
+            status: 400, headers: jsonHeaders
+          });
+        }
+        recipient = to;
+        htmlContent = generateContactConfirmationHtml(safeBooking);
+      } else {
+        recipient = ADMIN_EMAIL; // aviso interno: destinatario forzado
+        htmlContent = generateContactEmailHtml(safeBooking);
+      }
+    } else if (safeBooking.forAdmin) {
+      recipient = ADMIN_EMAIL; // aviso interno: destinatario forzado
+      htmlContent = generateEmailHtml(safeBooking);
     } else {
-      htmlContent = generateEmailHtml(booking);
+      // Confirmación de reserva al cliente.
+      if (!isValidEmail(to)) {
+        return new Response(JSON.stringify({ error: 'invalid_recipient' }), {
+          status: 400, headers: jsonHeaders
+        });
+      }
+      recipient = to;
+      htmlContent = generateEmailHtml(safeBooking);
     }
 
     // Asunto: para correos personalizados respetamos el customSubject si viene
-    const finalSubject = booking?.forCustomEmail
-      ? (booking?.customSubject || subject)
-      : subject;
+    const finalSubject = safeBooking.forCustomEmail
+      ? cap(safeBooking.customSubject || subject, 200)
+      : cap(subject, 200);
 
     // Enviar correo
-    const result = await sendEmail(to, finalSubject, htmlContent);
+    const result = await sendEmail(recipient, finalSubject, htmlContent);
 
     if (result.success) {
       return new Response(JSON.stringify({ success: true, data: result.data }), {

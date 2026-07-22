@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Helmet } from 'react-helmet-async';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   MapPin, 
@@ -126,6 +127,14 @@ const Contact = () => {
             <p className="text-brand-mid max-w-2xl mx-auto mt-4 leading-relaxed">
               Estamos aquí para ayudarte. Visítanos en nuestras sedes o envíanos un mensaje.
             </p>
+            <div className="mt-6">
+              <Link
+                to="/reservas"
+                className="inline-flex items-center gap-2 px-6 h-12 bg-gradient-rose-gold text-white font-bold rounded-2xl shadow-rose-sm hover:brightness-105 transition-all"
+              >
+                Reservar cita online
+              </Link>
+            </div>
           </motion.div>
         </div>
       </section>

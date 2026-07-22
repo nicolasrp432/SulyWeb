@@ -43,6 +43,7 @@ import EmailComposeModal from '@/components/admin/calendar/EmailComposeModal';
 import DayAgendaPanel from '@/components/admin/calendar/DayAgendaPanel';
 import { sendBookingConfirmationToUser } from '@/lib/emailService';
 import { normalizeDayConfig } from '@/lib/businessHours';
+import { useBookingActions } from '@/hooks/useBookingActions';
 
 const VIEW_MODES = {
   day: 'day',
@@ -840,53 +841,19 @@ const CalendarPage = () => {
     }
   }, [fetchCalendarData, toast]);
 
+  // Persistencia de la edición de cita compartida (hook central). Aquí solo se
+  // añade el cierre del diálogo tras un guardado correcto.
+  const { saveBookingEdits: persistBookingEdits } = useBookingActions({
+    locations,
+    onChange: fetchCalendarData,
+  });
   const saveBookingEdits = useCallback(async (bookingId, formData) => {
-    if (!bookingId) return;
-    try {
-      const updatePayload = {
-        client_name: formData.client_name?.trim() || null,
-        client_phone: formData.client_phone?.trim() || null,
-        client_email: formData.client_email?.trim() || null,
-        location_id: formData.location_id ? Number(formData.location_id) : null,
-        booking_date: formData.booking_date || null,
-        booking_time: formData.booking_time
-          ? (formData.booking_time.length === 5 ? formData.booking_time + ':00' : formData.booking_time)
-          : null,
-        appointment_type: formData.appointment_type?.trim() || null,
-        notes: formData.notes || null,
-        notes_admin: formData.internal_notes || null,
-        assigned_to: formData.assigned_to || null,
-        duration_minutes: Number(formData.duration_minutes) || 30,
-        origin: formData.source || 'admin',
-      };
-
-      const { error: updateError } = await supabase
-        .from('bookings')
-        .update(updatePayload)
-        .eq('id', bookingId);
-      if (updateError) throw updateError;
-
-      // Sync booking_services if list changed
-      if (Array.isArray(formData.selectedServiceIds)) {
-        await supabase.from('booking_services').delete().eq('booking_id', bookingId);
-        if (formData.selectedServiceIds.length > 0) {
-          const rows = formData.selectedServiceIds.map((sid) => ({
-            booking_id: bookingId,
-            service_id: sid,
-          }));
-          const { error: bsError } = await supabase.from('booking_services').insert(rows);
-          if (bsError) throw bsError;
-        }
-      }
-
-      toast({ title: 'Cambios guardados' });
-      fetchCalendarData();
+    const ok = await persistBookingEdits(bookingId, formData);
+    if (ok) {
       setSelectedBookingId(null);
       setIsDetailDialogOpen(false);
-    } catch (e) {
-      toast({ variant: 'destructive', title: 'No se pudo guardar', description: e.message });
     }
-  }, [fetchCalendarData, toast]);
+  }, [persistBookingEdits]);
 
   const getHeaderLabel = useMemo(() => {
     if (viewMode === VIEW_MODES.day) return formatHumanDate(currentDate, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });

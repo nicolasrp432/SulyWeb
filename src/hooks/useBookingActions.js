@@ -76,6 +76,12 @@ export function useBookingActions({ locations = [], onChange, openWa, openEmail 
     if (ok) toast({ title: 'Cita cancelada' });
   }, [updateStatus, toast]);
 
+  const noShowBooking = useCallback(async (booking) => {
+    if (!booking?.id) return;
+    const ok = await updateStatus(booking.id, 'no_show');
+    if (ok) toast({ title: 'Marcada como «No asistió»' });
+  }, [updateStatus, toast]);
+
   const callBooking = useCallback((booking) => {
     if (!booking?.client_phone) return;
     window.location.href = `tel:${booking.client_phone.replace(/\s+/g, '')}`;
@@ -110,6 +116,68 @@ export function useBookingActions({ locations = [], onChange, openWa, openEmail 
     onChange?.();
   }, [toast, onChange]);
 
+  /**
+   * Guarda los cambios editados en el diálogo de detalle de una cita.
+   * Persiste los campos del formulario y sincroniza booking_services.
+   *
+   * Reglas importantes:
+   * - `location_id` es uuid: se pasa tal cual (NUNCA Number(), daría NaN).
+   * - No toca los campos de sync (sync_origin/sync_hash/google_event_id/ics_uid):
+   *   el trigger notify_gcal_push replica el cambio a Google Calendar solo.
+   * - No toca `status`: eso va por confirmar/completar/cancelar.
+   *
+   * @returns {Promise<boolean>} true si se guardó correctamente.
+   */
+  const saveBookingEdits = useCallback(async (bookingId, formData) => {
+    if (!bookingId) return false;
+    try {
+      const updatePayload = {
+        client_name: formData.client_name?.trim() || null,
+        client_phone: formData.client_phone?.trim() || '',
+        client_email: formData.client_email?.trim() || null,
+        location_id: formData.location_id || null,
+        booking_date: formData.booking_date || null,
+        booking_time: formData.booking_time
+          ? (formData.booking_time.length === 5 ? formData.booking_time + ':00' : formData.booking_time)
+          : null,
+        appointment_type: formData.appointment_type?.trim() || null,
+        notes: formData.notes || null,
+        notes_admin: formData.internal_notes || null,
+        assigned_to: formData.assigned_to || null,
+        duration_minutes: Number(formData.duration_minutes) || 30,
+        origin: formData.source || 'admin',
+        // Solo se escribe el estado si el formulario lo trae (el diálogo sí).
+        ...(formData.status ? { status: formData.status } : {}),
+      };
+
+      const { error: updateError } = await supabase
+        .from('bookings')
+        .update(updatePayload)
+        .eq('id', bookingId);
+      if (updateError) throw updateError;
+
+      // Sincroniza booking_services si se pasó la lista.
+      if (Array.isArray(formData.selectedServiceIds)) {
+        await supabase.from('booking_services').delete().eq('booking_id', bookingId);
+        if (formData.selectedServiceIds.length > 0) {
+          const rows = formData.selectedServiceIds.map((sid) => ({
+            booking_id: bookingId,
+            service_id: sid,
+          }));
+          const { error: bsError } = await supabase.from('booking_services').insert(rows);
+          if (bsError) throw bsError;
+        }
+      }
+
+      toast({ title: 'Cambios guardados' });
+      onChange?.();
+      return true;
+    } catch (e) {
+      toast({ variant: 'destructive', title: 'No se pudo guardar', description: e.message });
+      return false;
+    }
+  }, [toast, onChange]);
+
   const waBooking = useCallback((booking) => openWa?.(booking), [openWa]);
   const emailBooking = useCallback((booking) => openEmail?.(booking), [openEmail]);
 
@@ -140,9 +208,11 @@ export function useBookingActions({ locations = [], onChange, openWa, openEmail 
     confirmBooking,
     completeBooking,
     cancelBooking,
+    noShowBooking,
     callBooking,
     moveBooking,
     resizeBooking,
+    saveBookingEdits,
     waBooking,
     emailBooking,
     deleteBooking,
