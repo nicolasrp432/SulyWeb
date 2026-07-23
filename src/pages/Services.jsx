@@ -36,14 +36,12 @@ import {
 // Se resuelven contra los servicios cargados de la BD para arrastrar el id real
 // al carrito; así el paquete deja de "desaparecer" al llegar a la reserva
 // (antes se añadía un id ficticio 'package-*' que nada casaba en /reservas).
-// NOTA para la dueña: el Deluxe listaba "Manicura rusa" y "Depilar rostro
-// entero", que aún NO existen como servicios reservables. Se usa la manicura
-// semipermanente como equivalente más cercano y se omite la depilación facial.
-// Conviene crear esos servicios o ajustar la composición del paquete.
+// «Manicura rusa» y «Depilación facial completa» se crean como servicios reales
+// en la migración 20260728_deluxe_services.sql (precios estimados a revisar).
 const PACKAGE_COMPOSITION = {
   'Paquete Básico': ['Manicura exprés', 'Esmaltar pies'],
   'Paquete Premium': ['Manicura completa spa', 'Pedicura completa semi / tradicional', 'Lifting de Pestañas'],
-  'Paquete Deluxe': ['Manicura Semipermanente', 'Pedicura completa semi / tradicional', 'Lifting de Pestañas'],
+  'Paquete Deluxe': ['Manicura rusa', 'Pedicura completa semi / tradicional', 'Lifting de Pestañas', 'Depilación facial completa'],
 };
 
 const Services = () => {
