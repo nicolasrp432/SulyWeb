@@ -8,10 +8,10 @@
 -- Se insertan como activos para que aparezcan en el catálogo y el paquete
 -- pueda resolverlos por nombre.
 
-insert into public.services (name, category, duration_minutes, price, price_cents, active)
-select 'Manicura rusa', 'nails', 75, '35€', 3500, true
-where not exists (select 1 from public.services where name = 'Manicura rusa');
+insert into public.services (name, slug, category, duration, duration_minutes, price, price_cents, active)
+select 'Manicura rusa', 'manicura-rusa', 'nails', '75 min', 75, '35€', 3500, true
+where not exists (select 1 from public.services where name = 'Manicura rusa' or slug = 'manicura-rusa');
 
-insert into public.services (name, category, duration_minutes, price, price_cents, active)
-select 'Depilación facial completa', 'nails', 25, '18€', 1800, true
-where not exists (select 1 from public.services where name = 'Depilación facial completa');
+insert into public.services (name, slug, category, duration, duration_minutes, price, price_cents, active)
+select 'Depilación facial completa', 'depilacion-facial-completa', 'nails', '25 min', 25, '18€', 1800, true
+where not exists (select 1 from public.services where name = 'Depilación facial completa' or slug = 'depilacion-facial-completa');
