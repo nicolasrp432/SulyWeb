@@ -28,6 +28,7 @@ const SwipeableBookingRow = ({
   onWa,
   onCall,
   onEmail,
+  isMobile = true,
 }) => {
   const x = useMotionValue(0);
   const bgLeftOpacity = useTransform(x, [0, 80], [0, 1]);   // swipe right (positive) → complete (green left bg)
@@ -70,7 +71,7 @@ const SwipeableBookingRow = ({
       </motion.div>
 
       <motion.div
-        drag="x"
+        drag={isMobile ? 'x' : false}
         dragConstraints={{ left: -120, right: 120 }}
         dragElastic={0.2}
         dragSnapToOrigin
@@ -128,6 +129,7 @@ const DayDetailSheet = ({
   onWa,
   onCall,
   onEmail,
+  isMobile = true,
 }) => {
   const [snap, setSnap] = useState('collapsed');
 
@@ -183,21 +185,27 @@ const DayDetailSheet = ({
           />
           <motion.div
             key="sheet"
-            initial={{ y: '100%', height: `${SnapPoints.collapsed * 100}vh` }}
-            animate={{ y: 0, height: `${heightVh}vh` }}
-            exit={{ y: '100%' }}
+            initial={isMobile ? { y: '100%', height: `${SnapPoints.collapsed * 100}vh` } : { opacity: 0, scale: 0.96 }}
+            animate={isMobile ? { y: 0, height: `${heightVh}vh` } : { opacity: 1, scale: 1 }}
+            exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 240, damping: 32, mass: 0.8 }}
-            className="fixed inset-x-0 bottom-0 z-[75] bg-white rounded-t-2xl shadow-2xl flex flex-col"
+            className={isMobile
+              ? 'fixed inset-x-0 bottom-0 z-[75] bg-white rounded-t-2xl shadow-2xl flex flex-col'
+              : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[75] w-[calc(100%-2rem)] max-w-lg max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col'}
           >
-            <motion.div
-              drag="y"
-              dragConstraints={{ top: 0, bottom: 0 }}
-              dragElastic={0.15}
-              onDragEnd={handleDragEndSheet}
-              className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing"
-            >
-              <span className="w-12 h-1.5 rounded-full bg-zinc-300" />
-            </motion.div>
+            {isMobile ? (
+              <motion.div
+                drag="y"
+                dragConstraints={{ top: 0, bottom: 0 }}
+                dragElastic={0.15}
+                onDragEnd={handleDragEndSheet}
+                className="flex justify-center pt-2 pb-1 cursor-grab active:cursor-grabbing"
+              >
+                <span className="w-12 h-1.5 rounded-full bg-zinc-300" />
+              </motion.div>
+            ) : (
+              <div className="pt-3" />
+            )}
 
             <div className="px-5 pt-2 pb-3 border-b border-admin-border shrink-0 flex items-start justify-between gap-3">
               <div>
@@ -289,13 +297,16 @@ const DayDetailSheet = ({
                 </div>
               ) : (
                 <>
-                  <p className="text-[10px] font-bold text-admin-muted uppercase tracking-wider pt-1 pb-1 px-1">
-                    {dayBookings.length > 0 ? '←  Desliza para acciones rápidas  →' : ''}
-                  </p>
+                  {isMobile && dayBookings.length > 0 && (
+                    <p className="text-[10px] font-bold text-admin-muted uppercase tracking-wider pt-1 pb-1 px-1">
+                      ←  Desliza para acciones rápidas  →
+                    </p>
+                  )}
                   {dayBookings.map((b) => (
                     <SwipeableBookingRow
                       key={b.id}
                       booking={b}
+                      isMobile={isMobile}
                       onClick={onBookingClick}
                       onConfirm={onConfirm}
                       onComplete={onComplete}

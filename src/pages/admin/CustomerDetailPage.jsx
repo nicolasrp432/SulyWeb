@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, CalendarDays, CheckCircle, Euro, UserX, MessageCircle, Phone, Mail, Save, Cake,
+  ArrowLeft, CalendarDays, CheckCircle, Euro, XCircle, MessageCircle, Phone, Mail, Save, Cake, Trash2,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -18,12 +18,26 @@ const eur = (cents) => `${(cents / 100).toFixed(2).replace('.', ',')} €`;
 
 const CustomerDetailPage = () => {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
   const [customer, setCustomer] = useState(null);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [edits, setEdits] = useState({ notes: '', preferences: '', birthday: '' });
+
+  // Borrado definitivo: se elimina la ficha; las citas se conservan (la FK es
+  // ON DELETE SET NULL) y quedan sin clienta asignada. No se puede deshacer.
+  const hardDelete = async () => {
+    if (!window.confirm(`¿Eliminar definitivamente a ${customer?.full_name || 'esta clienta'}?\n\nSu ficha se borra; sus citas se conservan (quedan sin clienta asignada). Esta acción no se puede deshacer.`)) return;
+    setDeleting(true);
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    setDeleting(false);
+    if (error) { toast({ variant: 'destructive', title: 'No se pudo eliminar', description: error.message }); return; }
+    toast({ title: 'Clienta eliminada', description: 'Sus citas se han conservado.' });
+    navigate('/admin/clientes');
+  };
 
   const fetchAll = useCallback(async () => {
     const [{ data: cust }, { data: bks }] = await Promise.all([
@@ -53,7 +67,8 @@ const CustomerDetailPage = () => {
     const spend = completed.reduce((sum, b) => sum
       + (b.booking_services ?? []).reduce((s, bs) => s + (bs.services?.price_cents ?? 0), 0), 0);
     const lastVisit = completed[0]?.booking_date || history[0]?.booking_date || null;
-    return { total: history.length, visits: completed.length, spend, lastVisit };
+    const cancelled = history.filter((b) => b.status === 'cancelled').length;
+    return { total: history.length, visits: completed.length, spend, lastVisit, cancelled };
   }, [history]);
 
   const save = async () => {
@@ -94,7 +109,7 @@ const CustomerDetailPage = () => {
   if (!customer) {
     return (
       <div className="max-w-4xl mx-auto">
-        <EmptyState icon={UserX} title="Clienta no encontrada" description="Puede que se haya eliminado o el enlace no sea válido." />
+        <EmptyState icon={XCircle} title="Clienta no encontrada" description="Puede que se haya eliminado o el enlace no sea válido." />
         <div className="text-center mt-4">
           <Link to="/admin/clientes" className="text-sm font-bold text-brand-rose hover:underline">← Volver a Clientas</Link>
         </div>
@@ -137,7 +152,7 @@ const CustomerDetailPage = () => {
           <StatsCard title="Citas"    value={stats.total}  icon={CalendarDays} color="rose" />
           <StatsCard title="Visitas"  value={stats.visits} icon={CheckCircle}  color="emerald" hint="completadas" />
           <StatsCard title="Gasto"    value={eur(stats.spend)} icon={Euro}     color="amber" hint="en completadas" />
-          <StatsCard title="No-shows" value={customer.no_show_count ?? 0} icon={UserX} color="rose" />
+          <StatsCard title="Cancelaciones" value={stats.cancelled} icon={XCircle} color="rose" />
         </div>
 
         {/* Datos editables */}
@@ -203,6 +218,22 @@ const CustomerDetailPage = () => {
               })}
             </div>
           )}
+        </div>
+
+        {/* Zona de peligro */}
+        <div className="border border-red-200 rounded-2xl p-4 bg-red-50/40">
+          <h2 className="text-sm font-bold text-red-700 uppercase tracking-wider mb-1">Zona de peligro</h2>
+          <p className="text-xs text-admin-muted mb-3">
+            Elimina la ficha de la clienta de forma permanente. Sus citas se conservan en la base de
+            datos (quedan sin clienta asignada). Esta acción no se puede deshacer.
+          </p>
+          <button
+            onClick={hardDelete}
+            disabled={deleting}
+            className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl border border-red-300 text-red-600 text-xs font-bold hover:bg-red-50 disabled:opacity-50 transition-colors"
+          >
+            <Trash2 className="w-3.5 h-3.5" /> Eliminar definitivamente
+          </button>
         </div>
       </div>
     </>

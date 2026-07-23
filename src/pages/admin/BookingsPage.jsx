@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 import {
   Search, Download, ClipboardList, CalendarDays, AlertCircle, CheckCircle, XCircle,
-  Filter as FilterIcon, Store, Globe,
+  Filter as FilterIcon, Store, Globe, Trash2, Eraser, CheckSquare, Square, X,
 } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -16,6 +16,7 @@ import EmailComposeModal from '@/components/admin/calendar/EmailComposeModal';
 import { useBookingActions } from '@/hooks/useBookingActions';
 import { STATUS_CHIP, STATUS_LABEL, STATUS_OPTIONS, ORIGIN_LABEL } from '@/components/admin/calendar/statusStyles';
 import { getInitials } from '@/lib/avatar';
+import { useToast } from '@/components/ui/use-toast';
 
 const PAGE_SIZE = 20;
 
@@ -23,6 +24,7 @@ const inputCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-whit
 const selectCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors';
 
 const BookingsPage = () => {
+  const { toast } = useToast();
   const [bookings, setBookings] = useState([]);
   const [allCounts, setAllCounts] = useState({ total: 0, today: 0, pending: 0, confirmed: 0 });
   const [total, setTotal] = useState(0);
@@ -31,10 +33,16 @@ const BookingsPage = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [locationFilter, setLocationFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('all'); // all | upcoming | past
   const [locations, setLocations] = useState([]);
   const [responsibleOptions, setResponsibleOptions] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [emailBooking, setEmailBooking] = useState(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(() => new Set());
+  const [cleanupOpen, setCleanupOpen] = useState(false);
+  const [cleanupDate, setCleanupDate] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     supabase.from('locations').select('id, name').then(({ data }) => setLocations(data ?? []));
@@ -62,12 +70,15 @@ const BookingsPage = () => {
     if (statusFilter) query = query.eq('status', statusFilter);
     if (locationFilter) query = query.eq('location_id', locationFilter);
     if (search) query = query.ilike('client_name', `%${search}%`);
+    const todayStr = format(new Date(), 'yyyy-MM-dd');
+    if (dateFilter === 'upcoming') query = query.gte('booking_date', todayStr);
+    else if (dateFilter === 'past') query = query.lt('booking_date', todayStr);
 
     const { data, count } = await query;
     setBookings(data ?? []);
     setTotal(count ?? 0);
     setLoading(false);
-  }, [page, statusFilter, locationFilter, search]);
+  }, [page, statusFilter, locationFilter, search, dateFilter]);
 
   const fetchCounts = useCallback(async () => {
     const todayStr = format(new Date(), 'yyyy-MM-dd');
@@ -113,6 +124,45 @@ const BookingsPage = () => {
     },
     openEmail: (b) => setEmailBooking(b),
   });
+
+  const refresh = () => { fetchBookings(); fetchCounts(); };
+
+  const toggleSelect = (id) => setSelectedIds((prev) => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
+  const clearSelection = () => { setSelectedIds(new Set()); setSelectMode(false); };
+
+  const bulkDelete = async () => {
+    const ids = [...selectedIds];
+    if (ids.length === 0) return;
+    if (!window.confirm(`¿Eliminar ${ids.length} cita${ids.length === 1 ? '' : 's'} de forma permanente? Esta acción no se puede deshacer.`)) return;
+    setBusy(true);
+    const { error } = await supabase.from('bookings').delete().in('id', ids);
+    setBusy(false);
+    if (error) { toast({ variant: 'destructive', title: 'No se pudieron eliminar', description: error.message }); return; }
+    toast({ title: 'Citas eliminadas', description: `${ids.length} eliminada${ids.length === 1 ? '' : 's'}.` });
+    clearSelection();
+    refresh();
+  };
+
+  const cleanupPast = async () => {
+    setBusy(true);
+    const { count } = await supabase.from('bookings').select('id', { count: 'exact', head: true }).lt('booking_date', cleanupDate);
+    if (!count) {
+      setBusy(false); setCleanupOpen(false);
+      toast({ title: 'Nada que limpiar', description: 'No hay citas anteriores a esa fecha.' });
+      return;
+    }
+    if (!window.confirm(`Se eliminarán ${count} cita${count === 1 ? '' : 's'} anteriores al ${cleanupDate} de forma permanente.\n\nNota: esto solo borra citas pasadas (seguro). ¿Continuar?`)) { setBusy(false); return; }
+    const { error } = await supabase.from('bookings').delete().lt('booking_date', cleanupDate);
+    setBusy(false);
+    if (error) { toast({ variant: 'destructive', title: 'No se pudo limpiar', description: error.message }); return; }
+    toast({ title: 'Citas limpiadas', description: `${count} cita${count === 1 ? '' : 's'} eliminada${count === 1 ? '' : 's'}.` });
+    setCleanupOpen(false);
+    refresh();
+  };
 
   const exportCSV = () => {
     const rows = [['Fecha', 'Hora', 'Sede', 'Cliente', 'Teléfono', 'Servicios', 'Estado', 'Origen']];
@@ -163,7 +213,7 @@ const BookingsPage = () => {
         </div>
 
         {/* Filters */}
-        <div className="bg-white border border-admin-border rounded-2xl p-3 sm:p-4 shadow-rose-xs grid grid-cols-1 sm:grid-cols-3 gap-2">
+        <div className="bg-white border border-admin-border rounded-2xl p-3 sm:p-4 shadow-rose-xs grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
           <div className="relative sm:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-admin-muted pointer-events-none" />
             <input
@@ -197,7 +247,80 @@ const BookingsPage = () => {
               {locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
             </select>
           </div>
+          <div className="relative">
+            <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-admin-muted pointer-events-none" />
+            <select
+              value={dateFilter}
+              onChange={(e) => { setDateFilter(e.target.value); setPage(0); }}
+              className={selectCls}
+            >
+              <option value="all">Todas las fechas</option>
+              <option value="upcoming">Próximas</option>
+              <option value="past">Pasadas</option>
+            </select>
+          </div>
         </div>
+
+        {/* Barra de herramientas: seleccionar / limpiar */}
+        <div className="flex flex-wrap items-center gap-2">
+          {!selectMode ? (
+            <button
+              onClick={() => setSelectMode(true)}
+              className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold text-admin-text bg-white border border-admin-border hover:bg-admin-surface transition-colors"
+            >
+              <CheckSquare className="w-3.5 h-3.5" /> Seleccionar
+            </button>
+          ) : (
+            <>
+              <span className="text-xs font-bold text-admin-text">{selectedIds.size} seleccionada{selectedIds.size === 1 ? '' : 's'}</span>
+              <button
+                onClick={bulkDelete}
+                disabled={busy || selectedIds.size === 0}
+                className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 disabled:opacity-40 transition-colors"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Eliminar seleccionadas
+              </button>
+              <button
+                onClick={clearSelection}
+                className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold text-admin-muted bg-white border border-admin-border hover:bg-admin-surface transition-colors"
+              >
+                <X className="w-3.5 h-3.5" /> Cancelar
+              </button>
+            </>
+          )}
+          <div className="grow" />
+          <button
+            onClick={() => setCleanupOpen((v) => !v)}
+            className="inline-flex items-center gap-1.5 px-3 h-9 rounded-xl text-xs font-bold text-admin-muted bg-white border border-admin-border hover:text-red-600 hover:border-red-200 transition-colors"
+          >
+            <Eraser className="w-3.5 h-3.5" /> Limpiar pasadas
+          </button>
+        </div>
+
+        {cleanupOpen && (
+          <div className="bg-white border border-red-200 rounded-2xl p-4 shadow-rose-xs">
+            <p className="text-xs font-bold text-admin-text mb-1">Eliminar citas antiguas</p>
+            <p className="text-[11px] text-admin-muted mb-3">
+              Borra permanentemente todas las citas anteriores a la fecha elegida para liberar espacio.
+              Solo afecta a citas pasadas (seguro). Las citas futuras de iCloud no se tocan.
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={cleanupDate}
+                onChange={(e) => setCleanupDate(e.target.value)}
+                className="h-9 px-3 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose"
+              />
+              <button
+                onClick={cleanupPast}
+                disabled={busy}
+                className="inline-flex items-center gap-1.5 px-4 h-9 rounded-xl text-xs font-bold text-white bg-red-500 hover:bg-red-600 disabled:opacity-40 transition-colors"
+              >
+                <Eraser className="w-3.5 h-3.5" /> Eliminar anteriores a esta fecha
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* List */}
         <div className="bg-white border border-admin-border rounded-2xl overflow-hidden shadow-rose-xs">
@@ -224,11 +347,22 @@ const BookingsPage = () => {
               {bookings.map((b) => {
                 const status = b.status || 'pending';
                 const services = b.booking_services?.map((bs) => bs.services?.name).filter(Boolean).join(', ') || '';
+                const checked = selectedIds.has(b.id);
                 return (
-                  <div key={b.id} className="px-4 py-3 flex items-center gap-3 hover:bg-admin-surface/40 transition-colors">
+                  <div key={b.id} className={`px-4 py-3 flex items-center gap-3 transition-colors ${checked ? 'bg-brand-rose-50/50' : 'hover:bg-admin-surface/40'}`}>
+                    {selectMode && (
+                      <button
+                        type="button"
+                        onClick={() => toggleSelect(b.id)}
+                        className="shrink-0 text-brand-rose"
+                        aria-label={checked ? 'Deseleccionar' : 'Seleccionar'}
+                      >
+                        {checked ? <CheckSquare className="w-5 h-5" /> : <Square className="w-5 h-5 text-admin-muted" />}
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => setSelectedBooking(b)}
+                      onClick={() => selectMode ? toggleSelect(b.id) : setSelectedBooking(b)}
                       className="flex items-center gap-3 flex-1 min-w-0 text-left"
                     >
                       <div className="w-10 h-10 rounded-full bg-gradient-rose-gold flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-rose-sm">
@@ -253,16 +387,19 @@ const BookingsPage = () => {
                         </p>
                       </div>
                     </button>
-                    <BookingActionMenu
-                      booking={b}
-                      onConfirm={actions.confirmBooking}
-                      onComplete={actions.completeBooking}
-                      onCancel={actions.cancelBooking}
-                      onNoShow={actions.noShowBooking}
-                      onWa={actions.waBooking}
-                      onCall={actions.callBooking}
-                      onEmail={actions.emailBooking}
-                    />
+                    {!selectMode && (
+                      <BookingActionMenu
+                        booking={b}
+                        onConfirm={actions.confirmBooking}
+                        onComplete={actions.completeBooking}
+                        onCancel={actions.cancelBooking}
+                        onNoShow={actions.noShowBooking}
+                        onWa={actions.waBooking}
+                        onCall={actions.callBooking}
+                        onEmail={actions.emailBooking}
+                        onDelete={async (bk) => { await actions.deleteBooking(bk); }}
+                      />
+                    )}
                   </div>
                 );
               })}

@@ -1199,6 +1199,7 @@ const CalendarPage = () => {
       <DayDetailSheet
         open={!!daySheetDate}
         onClose={() => setDaySheetDate(null)}
+        isMobile={isMobile}
         date={daySheetDate}
         bookings={filteredBookings}
         blocks={timeBlocks}
