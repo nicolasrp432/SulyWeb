@@ -3,6 +3,8 @@
 [functions]
   [functions.send-booking-confirmation]
     verify_jwt = false
+  [functions.send-reminders]
+    verify_jwt = false
   [functions.admin-team]
     verify_jwt = true
   # Sincronización con Google Calendar (agenda del iPhone).
