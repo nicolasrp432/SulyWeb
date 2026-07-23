@@ -130,6 +130,7 @@ const RecentBookings = () => {
                     onWa={actions.waBooking}
                     onCall={actions.callBooking}
                     onEmail={actions.emailBooking}
+                    onDelete={async (bk) => { await actions.deleteBooking(bk); }}
                   />
                 </div>
               );

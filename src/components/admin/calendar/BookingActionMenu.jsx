@@ -1,7 +1,7 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  Check, CheckCheck, Mail, MessageCircle, MoreVertical, Phone, UserX, X,
+  Check, CheckCheck, Mail, MessageCircle, MoreVertical, Phone, Trash2, UserX, X,
 } from 'lucide-react';
 
 const MENU_WIDTH = 176; // w-44
@@ -16,6 +16,7 @@ const BookingActionMenu = ({
   onWa,
   onCall,
   onEmail,
+  onDelete,
   className = '',
 }) => {
   const [open, setOpen] = useState(false);
@@ -26,14 +27,29 @@ const BookingActionMenu = ({
   useLayoutEffect(() => {
     if (!open || !buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const top = rect.bottom + MENU_GAP;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const menuH = menuRef.current?.offsetHeight || 260;
+
+    // Clamp horizontal
     let left = rect.right - MENU_WIDTH;
-    // Clamp to viewport
     if (left < 8) left = 8;
-    if (left + MENU_WIDTH > window.innerWidth - 8) {
-      left = window.innerWidth - MENU_WIDTH - 8;
+    if (left + MENU_WIDTH > vw - 8) left = vw - MENU_WIDTH - 8;
+
+    // Vertical: abre hacia abajo si cabe; si no, hace flip hacia arriba.
+    // Siempre acota la altura al espacio disponible (con scroll interno).
+    const spaceBelow = vh - rect.bottom - 8;
+    const spaceAbove = rect.top - 8;
+    let top;
+    let maxHeight;
+    if (menuH <= spaceBelow || spaceBelow >= spaceAbove) {
+      top = rect.bottom + MENU_GAP;
+      maxHeight = Math.max(140, spaceBelow);
+    } else {
+      maxHeight = Math.max(140, spaceAbove);
+      top = Math.max(8, rect.top - Math.min(menuH, maxHeight) - MENU_GAP);
     }
-    setCoords({ top, left });
+    setCoords({ top, left, maxHeight });
   }, [open]);
 
   useEffect(() => {
@@ -122,6 +138,14 @@ const BookingActionMenu = ({
       disabled: !booking?.client_email,
       action: () => onEmail?.(booking),
     },
+    ...(onDelete ? [{
+      key: 'delete',
+      label: 'Eliminar',
+      icon: Trash2,
+      color: 'text-red-600 hover:bg-red-50',
+      // La confirmación la hace deleteBooking (useBookingActions) para no duplicarla.
+      action: () => onDelete?.(booking),
+    }] : []),
   ];
 
   return (
@@ -144,9 +168,11 @@ const BookingActionMenu = ({
             top: coords.top,
             left: coords.left,
             width: MENU_WIDTH,
+            maxHeight: coords.maxHeight,
+            overflowY: 'auto',
             zIndex: 200,
           }}
-          className="rounded-xl border border-admin-border bg-white shadow-2xl py-1 overflow-hidden"
+          className="rounded-xl border border-admin-border bg-white shadow-2xl py-1"
           onClick={(e) => e.stopPropagation()}
         >
           {items.map((it) => {

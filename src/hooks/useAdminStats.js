@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { format, startOfWeek, endOfWeek, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -8,9 +8,9 @@ export const useAdminStats = () => {
   const [weeklyData, setWeeklyData] = useState([]);
   const [recentBookings, setRecentBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const debounceRef = useRef(null);
 
-  useEffect(() => {
-    const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
       const today = new Date();
       const todayStr = format(today, 'yyyy-MM-dd');
       const weekStart = format(startOfWeek(today, { weekStartsOn: 1 }), 'yyyy-MM-dd');
@@ -46,10 +46,25 @@ export const useAdminStats = () => {
       }
       setWeeklyData(days);
       setLoading(false);
-    };
-
-    fetchStats();
   }, []);
+
+  useEffect(() => {
+    fetchStats();
+    // Tiempo real: el Dashboard se actualiza al vuelo ante cualquier cambio de
+    // citas (con un pequeño debounce para agrupar ráfagas de eventos).
+    const scheduleRefetch = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => { fetchStats(); }, 400);
+    };
+    const channel = supabase
+      .channel('admin-stats-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, scheduleRefetch)
+      .subscribe();
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      supabase.removeChannel(channel);
+    };
+  }, [fetchStats]);
 
   return { stats, weeklyData, recentBookings, loading };
 };
