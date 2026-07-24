@@ -104,7 +104,13 @@ const NotificationsPanel = ({
     };
   }, [open, onClose, anchorRef]);
 
-  const items = useMemo(() => notifications.slice(0, 20), [notifications]);
+  // Solo se muestran las NO leídas: al marcar una (o todas) como leída, desaparece.
+  const items = useMemo(() => notifications.filter((n) => !n.read).slice(0, 20), [notifications]);
+
+  const handleDismiss = (e, id) => {
+    e.stopPropagation();
+    onMarkOneRead?.(id);
+  };
 
   const handleClickNotification = (n) => {
     onMarkOneRead?.(n.id);
@@ -184,9 +190,7 @@ const NotificationsPanel = ({
                   key={n.id}
                   type="button"
                   onClick={() => handleClickNotification(n)}
-                  className={`w-full text-left px-4 py-3 flex items-start gap-3 hover:bg-admin-surface/40 transition-colors ${
-                    n.read ? '' : 'bg-brand-rose-50/30'
-                  }`}
+                  className="relative w-full text-left pl-4 pr-9 py-3 flex items-start gap-3 bg-brand-rose-50/30 hover:bg-admin-surface/40 transition-colors"
                 >
                   <div className="relative shrink-0">
                     <div className="w-10 h-10 rounded-full bg-gradient-rose-gold flex items-center justify-center text-white text-xs font-bold shadow-rose-sm">
@@ -220,6 +224,16 @@ const NotificationsPanel = ({
                       )}
                     </p>
                   </div>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    onClick={(e) => handleDismiss(e, n.id)}
+                    title="Marcar como leída"
+                    aria-label="Marcar como leída"
+                    className="absolute top-2 right-2 p-1 rounded-md text-admin-muted hover:text-brand-rose hover:bg-white transition-colors"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </span>
                 </button>
               );
             })
