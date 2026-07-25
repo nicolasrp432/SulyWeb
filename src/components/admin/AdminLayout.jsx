@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import AdminSidebar from './AdminSidebar';
 import AdminTopbar from './AdminTopbar';
+import InstallPWAHint from './InstallPWAHint';
 import { useRealtimeNotifications } from '@/hooks/useRealtimeNotifications';
 
 const AdminLayout = ({ children }) => {
@@ -19,6 +20,7 @@ const AdminLayout = ({ children }) => {
           onMarkOneRead={markOneRead}
         />
         <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          <InstallPWAHint />
           {children}
         </main>
       </div>
