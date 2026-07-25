@@ -132,11 +132,11 @@ const BookingDetailDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose?.(); }}>
-      <DialogContent className="max-w-xl p-0 sm:max-w-xl pb-6 sm:pb-0 overflow-y-auto sm:overflow-visible">
+      <DialogContent className="max-w-xl p-0 sm:max-w-xl pb-6 sm:pb-0 sm:gap-0 sm:overflow-hidden">
         {/* Drag handle for mobile */}
         <div className="w-12 h-1.5 bg-gray-300/70 rounded-full mx-auto mt-3 mb-1 sm:hidden shrink-0" />
         {/* Header gradient */}
-        <div className="relative bg-gradient-to-br from-brand-rose-50 via-white to-amber-50 px-5 pt-3 sm:pt-5 pb-4 pr-14 border-b border-admin-border">
+        <div className="relative bg-gradient-to-br from-brand-rose-50 via-white to-amber-50 px-5 pt-3 sm:pt-5 pb-4 pr-14 border-b border-admin-border sm:shrink-0">
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-rose-gold flex items-center justify-center text-white text-base font-bold shadow-rose-sm shrink-0">
               {getInitials(form.client_name || booking?.client_name)}
@@ -158,8 +158,8 @@ const BookingDetailDialog = ({
           </div>
         </div>
 
-        {/* Body */}
-        <div className="px-5 py-4 space-y-4">
+        {/* Body — en desktop es la única zona con scroll; header y footer quedan fijos */}
+        <div className="px-5 py-4 space-y-4 sm:flex-1 sm:overflow-y-auto sm:min-h-0">
           {/* Banner de completado para citas sincronizadas desde Google/iPhone */}
           {isIncompleteSync && (
             <div className="rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-3">
@@ -408,7 +408,7 @@ const BookingDetailDialog = ({
           )}
         </div>
 
-        <DialogFooter className="px-5 py-3 border-t border-admin-border bg-admin-bg gap-2 flex flex-wrap sm:flex-nowrap">
+        <DialogFooter className="px-5 py-3 border-t border-admin-border bg-admin-bg gap-2 flex flex-wrap sm:flex-nowrap sm:shrink-0">
           {onDelete && (
             <Button
               variant="outline"
