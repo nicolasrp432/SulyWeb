@@ -37,6 +37,8 @@ const SettingsPage = () => {
   const [newBlock, setNewBlock] = useState({ location_id: '', block_date: '', reason: '' });
   const [policy, setPolicy] = useState({ minHours: '24', text: '' });
   const [savingPolicy, setSavingPolicy] = useState(false);
+  const [notifyEmails, setNotifyEmails] = useState('');
+  const [savingNotify, setSavingNotify] = useState(false);
   const [flash, setFlash] = useState('');
   const [error, setError] = useState('');
 
@@ -75,10 +77,32 @@ const SettingsPage = () => {
     showFlash('Política de cancelación guardada');
   };
 
+  const fetchNotify = useCallback(async () => {
+    const { data } = await supabase.from('notification_config').select('value')
+      .eq('key', 'notify_new_booking_emails').maybeSingle();
+    setNotifyEmails(typeof data?.value === 'string' ? data.value : '');
+  }, []);
+
+  const saveNotify = async () => {
+    // Normaliza a lista separada por comas y valida emails básicos.
+    const emails = notifyEmails.split(/[,;\s]+/).map((e) => e.trim()).filter(Boolean);
+    const invalid = emails.filter((e) => !/.+@.+\..+/.test(e));
+    if (invalid.length) { showError(`Correo no válido: ${invalid[0]}`); return; }
+    const value = [...new Set(emails)].join(', ');
+    setSavingNotify(true);
+    const { error: e } = await supabase.from('notification_config')
+      .upsert([{ key: 'notify_new_booking_emails', value }], { onConflict: 'key' });
+    setSavingNotify(false);
+    if (e) { showError('No se pudieron guardar los correos de aviso'); return; }
+    setNotifyEmails(value);
+    showFlash('Correos de aviso guardados');
+  };
+
   useEffect(() => {
     supabase.from('locations').select('id, name').then(({ data }) => setLocations(data ?? []));
     fetchBlocks();
     fetchPolicy();
+    fetchNotify();
     const channel = supabase
       .channel('settings-blocks-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, fetchBlocks)
@@ -187,6 +211,35 @@ const SettingsPage = () => {
               className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-gradient-rose-gold text-white text-sm font-bold shadow-rose-sm hover:brightness-105 disabled:opacity-50 transition-all"
             >
               {savingPolicy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Guardar política
+            </button>
+          </div>
+        </SectionCard>
+
+        {/* Avisos de nuevas reservas */}
+        <SectionCard icon={Mail} title="Avisos de nuevas reservas" subtitle="Correos que reciben el aviso cuando una clienta reserva online">
+          <div className="space-y-3">
+            <div>
+              <label htmlFor="notify-emails" className="block text-[11px] font-bold text-admin-muted uppercase tracking-wider mb-1">
+                Correos del equipo (separados por comas)
+              </label>
+              <textarea
+                id="notify-emails"
+                rows={2}
+                value={notifyEmails}
+                onChange={(e) => setNotifyEmails(e.target.value)}
+                placeholder="salon@ejemplo.com, encargada@ejemplo.com"
+                className="w-full px-3 py-2 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
+              />
+              <p className="text-[11px] text-admin-muted mt-1">
+                El aviso se envía desde el servidor en cuanto entra la reserva, aunque nadie tenga el panel abierto.
+              </p>
+            </div>
+            <button
+              onClick={saveNotify}
+              disabled={savingNotify}
+              className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-gradient-rose-gold text-white text-sm font-bold shadow-rose-sm hover:brightness-105 disabled:opacity-50 transition-all"
+            >
+              {savingNotify ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Guardar correos
             </button>
           </div>
         </SectionCard>

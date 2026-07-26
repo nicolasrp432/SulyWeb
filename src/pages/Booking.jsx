@@ -12,7 +12,7 @@ import {
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { supabase } from '@/lib/customSupabaseClient';
-import { sendBookingNotificationToAdmin, sendBookingConfirmationToUser } from '@/lib/emailService';
+import { sendBookingConfirmationToUser } from '@/lib/emailService';
 import SEOHead from '@/components/SEO/SEOHead';
 import { getServiceImageFromObj } from '@/lib/serviceImages';
 import { generateDaySlots, isDayClosed, timeToMinutes } from '@/lib/businessHours';
@@ -539,18 +539,20 @@ const Booking = () => {
 
     const booking = { id: bookingId };
 
-    /* Email notifications — emailService expects (bookingData, services[], location) */
+    /* Email de confirmación a la CLIENTA. El aviso al equipo ya NO se envía desde
+       aquí: lo dispara el servidor (trigger notify_new_booking -> Edge Function
+       notify-new-booking) en cuanto se inserta la reserva, de forma fiable
+       aunque la clienta cierre esta pestaña. */
     try {
-      const bookingEmailData = {
-        name: form.name,
-        email: form.email || '',
-        phone: form.phone,
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        time: selectedTime,
-        notes: form.notes || '',
-      };
-      await sendBookingNotificationToAdmin(bookingEmailData, selectedServices, selectedLocation);
       if (form.email) {
+        const bookingEmailData = {
+          name: form.name,
+          email: form.email,
+          phone: form.phone,
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          time: selectedTime,
+          notes: form.notes || '',
+        };
         await sendBookingConfirmationToUser(bookingEmailData, selectedServices, selectedLocation);
       }
     } catch (_) { /* email failure is non-critical */ }
