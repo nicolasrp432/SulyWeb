@@ -16,3 +16,7 @@
     verify_jwt = false
   [functions.gcal-watch]
     verify_jwt = false
+  # Aviso fiable de nuevas reservas al equipo. Lo dispara el trigger
+  # notify_new_booking con x-sync-secret, por eso no usa verify_jwt.
+  [functions.notify-new-booking]
+    verify_jwt = false
