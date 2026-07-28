@@ -99,7 +99,13 @@ async function sendEmail(recipients, subject, html) {
     body: JSON.stringify({ from: FROM_EMAIL, to: recipients, subject, html }),
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) return { ok: false, error: data?.message || `resend_${res.status}` };
+  if (!res.ok) {
+    // Motivo exacto de Resend en los logs (dominio sin verificar, API key mala...).
+    console.error('[resend] envío rechazado', JSON.stringify({
+      status: res.status, from: FROM_EMAIL, to: recipients, body: data,
+    }));
+    return { ok: false, error: data?.message || `resend_${res.status}` };
+  }
   return { ok: true, id: data?.id };
 }
 

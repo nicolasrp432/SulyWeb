@@ -200,13 +200,180 @@ const NewBookingSheet = ({
     }
   }, [form.booking_date]);
 
+  // --- Campos ---------------------------------------------------------------
+  // Se definen una sola vez y se componen distinto en móvil (una columna, con
+  // "Más opciones" plegable) y en escritorio (dos columnas, todo a la vista).
+  const fClientName = (
+    <div className="relative">
+      <FieldIcon icon={User} />
+      <input
+        value={form.client_name}
+        onChange={setField('client_name')}
+        placeholder="Ej. María Gómez"
+        className={inputCls}
+        autoFocus
+      />
+    </div>
+  );
+
+  const fPhone = (
+    <div className="relative">
+      <FieldIcon icon={Phone} />
+      <input
+        type="tel"
+        inputMode="tel"
+        value={form.client_phone}
+        onChange={setField('client_phone')}
+        placeholder="Ej. 612 345 678"
+        className={inputCls}
+      />
+    </div>
+  );
+
+  const fDate = (
+    <div className="relative">
+      <CalendarPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+      <input
+        type="date"
+        value={form.booking_date}
+        onChange={setField('booking_date')}
+        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+      />
+    </div>
+  );
+
+  const fTime = (
+    <div className="relative">
+      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+      <input
+        type="time"
+        value={form.booking_time}
+        onChange={setField('booking_time')}
+        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+      />
+    </div>
+  );
+
+  const fServices = (
+    <ServicePicker
+      selectedIds={form.selectedServiceIds}
+      onChange={(ids) => setForm((prev) => ({ ...prev, selectedServiceIds: ids }))}
+      otherText={form.otherService}
+      onOtherChange={(t) => setForm((prev) => ({ ...prev, otherService: t }))}
+    />
+  );
+
+  const fEmail = (
+    <div className="relative">
+      <FieldIcon icon={Mail} />
+      <input
+        type="email"
+        value={form.client_email}
+        onChange={setField('client_email')}
+        placeholder="ejemplo@correo.com"
+        className={inputCls}
+      />
+    </div>
+  );
+
+  const fLocation = (
+    <div className="relative">
+      <FieldIcon icon={Store} />
+      <select value={form.location_id} onChange={setField('location_id')} className={selectCls}>
+        <option value="">Selecciona sede</option>
+        {locations.map((l) => (
+          <option key={l.id} value={String(l.id)}>{l.name}</option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const fStaff = (
+    <div className="relative">
+      <FieldIcon icon={UserCheck} />
+      {staffMembers.length > 0 ? (
+        <select value={form.staff_id} onChange={onStaffChange} className={selectCls}>
+          <option value="">Asignar manicurista (auto si vacío)</option>
+          {staffMembers.map((m) => (
+            <option key={m.id} value={String(m.id)}>{m.full_name}</option>
+          ))}
+        </select>
+      ) : (
+        <input
+          list="np-staff-options"
+          value={form.assigned_to}
+          onChange={setField('assigned_to')}
+          placeholder="Especialista (opcional)"
+          className={inputCls}
+        />
+      )}
+      <datalist id="np-staff-options">
+        {responsibleOptions.map((name) => <option key={name} value={name} />)}
+      </datalist>
+    </div>
+  );
+
+  const fStatus = (
+    <div className="relative">
+      <FieldIcon icon={Activity} />
+      <select value={form.status} onChange={setField('status')} className={selectCls}>
+        {STATUS_OPTIONS.map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const fDuration = (
+    <div className="relative">
+      <FieldIcon icon={Timer} />
+      <input
+        type="number"
+        min="15"
+        step="5"
+        value={form.duration_minutes}
+        onChange={setField('duration_minutes')}
+        placeholder="30"
+        className={inputCls}
+      />
+    </div>
+  );
+
+  const fSource = (
+    <div className="relative">
+      <FieldIcon icon={Globe} />
+      <select value={form.source} onChange={setField('source')} className={selectCls}>
+        {SOURCE_OPTIONS.map((s) => (
+          <option key={s.value} value={s.value}>{s.label}</option>
+        ))}
+      </select>
+    </div>
+  );
+
+  const fNotes = (
+    <div className="relative">
+      <FileText className="absolute left-3 top-3 w-4 h-4 text-admin-muted pointer-events-none" />
+      <textarea
+        value={form.notes}
+        onChange={setField('notes')}
+        placeholder="Notas (opcional)"
+        className="w-full pl-9 pt-2 pr-3 pb-2 min-h-[72px] rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
+      />
+    </div>
+  );
+
+  const colTitle = 'text-[11px] font-bold text-admin-muted uppercase tracking-wider';
+  const btnSize = isMobile ? 'flex-1 h-11' : 'h-11 px-6 min-w-[120px]';
+
   const containerAnim = isMobile
     ? { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' } }
     : { initial: { opacity: 0, scale: 0.97 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.97 } };
 
   const containerCls = isMobile
     ? 'fixed inset-x-0 bottom-0 z-[80] bg-white rounded-t-2xl shadow-2xl max-h-[92vh] flex flex-col'
-    : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[80] w-full max-w-lg bg-white rounded-2xl shadow-2xl max-h-[88vh] flex flex-col';
+    // En escritorio el panel es ancho y a dos columnas: así los campos no se
+    // aprietan y la cita entra casi entera sin scroll.
+    : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[80] w-[calc(100%-3rem)] max-w-4xl bg-white rounded-2xl shadow-2xl max-h-[88vh] flex flex-col';
 
   return (
     <AnimatePresence>
@@ -340,58 +507,18 @@ const NewBookingSheet = ({
                     />
                   </div>
                 </div>
-              ) : (
+              ) : isMobile ? (
+              /* ---------- Móvil: una columna, con "Más opciones" plegable ---------- */
               <>
-              <div className="relative">
-                <FieldIcon icon={User} />
-                <input
-                  value={form.client_name}
-                  onChange={setField('client_name')}
-                  placeholder="Ej. María Gómez"
-                  className={inputCls}
-                  autoFocus
-                />
-              </div>
-
-              <div className="relative">
-                <FieldIcon icon={Phone} />
-                <input
-                  type="tel"
-                  inputMode="tel"
-                  value={form.client_phone}
-                  onChange={setField('client_phone')}
-                  placeholder="Ej. 612 345 678"
-                  className={inputCls}
-                />
-              </div>
+              {fClientName}
+              {fPhone}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="relative">
-                  <CalendarPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
-                  <input
-                    type="date"
-                    value={form.booking_date}
-                    onChange={setField('booking_date')}
-                    className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
-                  />
-                </div>
-                <div className="relative">
-                  <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
-                  <input
-                    type="time"
-                    value={form.booking_time}
-                    onChange={setField('booking_time')}
-                    className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
-                  />
-                </div>
+                {fDate}
+                {fTime}
               </div>
 
-              <ServicePicker
-                selectedIds={form.selectedServiceIds}
-                onChange={(ids) => setForm((prev) => ({ ...prev, selectedServiceIds: ids }))}
-                otherText={form.otherService}
-                onOtherChange={(t) => setForm((prev) => ({ ...prev, otherService: t }))}
-              />
+              {fServices}
 
               <button
                 type="button"
@@ -408,101 +535,52 @@ const NewBookingSheet = ({
                   animate={{ opacity: 1, height: 'auto' }}
                   className="space-y-3 pt-2 border-t border-admin-border/50"
                 >
-                  <div className="relative">
-                    <FieldIcon icon={Mail} />
-                    <input
-                      type="email"
-                      value={form.client_email}
-                      onChange={setField('client_email')}
-                      placeholder="ejemplo@correo.com"
-                      className={inputCls}
-                    />
-                  </div>
-
-                  <div className="relative">
-                    <FieldIcon icon={Store} />
-                    <select value={form.location_id} onChange={setField('location_id')} className={selectCls}>
-                      <option value="">Selecciona sede</option>
-                      {locations.map((l) => (
-                        <option key={l.id} value={String(l.id)}>{l.name}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="relative">
-                    <FieldIcon icon={UserCheck} />
-                    {staffMembers.length > 0 ? (
-                      <select value={form.staff_id} onChange={onStaffChange} className={selectCls}>
-                        <option value="">Asignar manicurista (auto si vacío)</option>
-                        {staffMembers.map((m) => (
-                          <option key={m.id} value={String(m.id)}>{m.full_name}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <input
-                        list="np-staff-options"
-                        value={form.assigned_to}
-                        onChange={setField('assigned_to')}
-                        placeholder="Especialista (opcional)"
-                        className={inputCls}
-                      />
-                    )}
-                    <datalist id="np-staff-options">
-                      {responsibleOptions.map((name) => <option key={name} value={name} />)}
-                    </datalist>
-                  </div>
-
-                  <div className="relative">
-                    <FieldIcon icon={Activity} />
-                    <select value={form.status} onChange={setField('status')} className={selectCls}>
-                      {STATUS_OPTIONS.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="relative">
-                    <FieldIcon icon={Timer} />
-                    <input
-                      type="number"
-                      min="15"
-                      step="5"
-                      value={form.duration_minutes}
-                      onChange={setField('duration_minutes')}
-                      placeholder="30"
-                      className={inputCls}
-                    />
-                  </div>
-
-                  <div className="relative">
-                    <FieldIcon icon={Globe} />
-                    <select value={form.source} onChange={setField('source')} className={selectCls}>
-                      {SOURCE_OPTIONS.map((s) => (
-                        <option key={s.value} value={s.value}>{s.label}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-3 w-4 h-4 text-admin-muted pointer-events-none" />
-                    <textarea
-                      value={form.notes}
-                      onChange={setField('notes')}
-                      placeholder="Notas (opcional)"
-                      className="w-full pl-9 pt-2 pr-3 pb-2 min-h-[72px] rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
-                    />
-                  </div>
+                  {fEmail}
+                  {fLocation}
+                  {fStaff}
+                  {fStatus}
+                  {fDuration}
+                  {fSource}
+                  {fNotes}
                 </motion.div>
               )}
               </>
+              ) : (
+              /* ---------- Escritorio: dos columnas, todo a la vista ---------- */
+              <div className="grid grid-cols-2 gap-x-8 gap-y-3 items-start">
+                <div className="space-y-3">
+                  <p className={colTitle}>Datos de la clienta</p>
+                  {fClientName}
+                  {fPhone}
+                  {fEmail}
+                  {fLocation}
+                  {fStaff}
+                </div>
+                <div className="space-y-3">
+                  <p className={colTitle}>Detalles de la cita</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {fDate}
+                    {fTime}
+                  </div>
+                  {fServices}
+                  <div className="grid grid-cols-2 gap-3">
+                    {fStatus}
+                    {fDuration}
+                  </div>
+                  {fSource}
+                  {fNotes}
+                </div>
+              </div>
               )}
             </div>
 
-            <div className="px-5 py-3 border-t border-admin-border bg-admin-bg shrink-0 flex items-center gap-2">
+            {/* En móvil los botones ocupan todo el ancho (pulgar); en escritorio
+                se agrupan a la derecha para no estirarse por todo el panel. */}
+            <div className={`px-5 py-3 border-t border-admin-border bg-admin-bg shrink-0 flex items-center gap-2 ${isMobile ? '' : 'justify-end'}`}>
               <button
                 type="button"
                 onClick={onClose}
-                className="flex-1 h-11 rounded-xl text-sm font-bold text-admin-muted hover:text-admin-text hover:bg-admin-surface transition-colors"
+                className={`${btnSize} rounded-xl text-sm font-bold text-admin-muted hover:text-admin-text hover:bg-admin-surface transition-colors`}
               >
                 Cancelar
               </button>
@@ -511,7 +589,7 @@ const NewBookingSheet = ({
                   type="button"
                   disabled={saving}
                   onClick={handleBlock}
-                  className="flex-1 h-11 rounded-xl text-sm font-bold text-white bg-amber-500 shadow-sm hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  className={`${btnSize} rounded-xl text-sm font-bold text-white bg-amber-500 shadow-sm hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2`}
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
                   Cerrar horario
@@ -521,7 +599,7 @@ const NewBookingSheet = ({
                   type="button"
                   disabled={!valid || saving}
                   onClick={handleSubmit}
-                  className="flex-1 h-11 rounded-xl text-sm font-bold text-white bg-gradient-rose-gold shadow-rose-sm hover:shadow-rose-md disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                  className={`${btnSize} rounded-xl text-sm font-bold text-white bg-gradient-rose-gold shadow-rose-sm hover:shadow-rose-md disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2`}
                 >
                   {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Guardar cita
