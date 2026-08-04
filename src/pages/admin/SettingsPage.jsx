@@ -39,6 +39,8 @@ const SettingsPage = () => {
   const [savingPolicy, setSavingPolicy] = useState(false);
   const [notifyEmails, setNotifyEmails] = useState('');
   const [savingNotify, setSavingNotify] = useState(false);
+  const [bookingCfg, setBookingCfg] = useState({ capacity: '2', interval: '60' });
+  const [savingBooking, setSavingBooking] = useState(false);
   const [flash, setFlash] = useState('');
   const [error, setError] = useState('');
 
@@ -77,6 +79,30 @@ const SettingsPage = () => {
     showFlash('Política de cancelación guardada');
   };
 
+  const fetchBooking = useCallback(async () => {
+    const { data } = await supabase.from('settings').select('key, value')
+      .in('key', ['booking_capacity', 'booking_slot_interval']);
+    const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+    setBookingCfg({
+      capacity: map.booking_capacity != null ? String(map.booking_capacity) : '2',
+      interval: map.booking_slot_interval != null ? String(map.booking_slot_interval) : '60',
+    });
+  }, []);
+
+  const saveBooking = async () => {
+    const cap = Math.max(1, parseInt(bookingCfg.capacity, 10) || 1);
+    const iv = Math.max(5, parseInt(bookingCfg.interval, 10) || 60);
+    setSavingBooking(true);
+    const { error: e } = await supabase.from('settings').upsert([
+      { key: 'booking_capacity', value: cap },
+      { key: 'booking_slot_interval', value: iv },
+    ], { onConflict: 'key' });
+    setSavingBooking(false);
+    if (e) { showError('No se pudo guardar la configuración de reservas'); return; }
+    setBookingCfg({ capacity: String(cap), interval: String(iv) });
+    showFlash('Configuración de reservas guardada');
+  };
+
   const fetchNotify = useCallback(async () => {
     const { data } = await supabase.from('notification_config').select('value')
       .eq('key', 'notify_new_booking_emails').maybeSingle();
@@ -103,6 +129,7 @@ const SettingsPage = () => {
     fetchBlocks();
     fetchPolicy();
     fetchNotify();
+    fetchBooking();
     const channel = supabase
       .channel('settings-blocks-rt')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_blocks' }, fetchBlocks)
@@ -211,6 +238,55 @@ const SettingsPage = () => {
               className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-gradient-rose-gold text-white text-sm font-bold shadow-rose-sm hover:brightness-105 disabled:opacity-50 transition-all"
             >
               {savingPolicy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Guardar política
+            </button>
+          </div>
+        </SectionCard>
+
+        {/* Reservas online */}
+        <SectionCard icon={CalendarIcon} title="Reservas online" subtitle="Cuántas citas caben a la vez y cada cuánto se ofrecen horas en la web">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label htmlFor="booking-capacity" className="block text-[11px] font-bold text-admin-muted uppercase tracking-wider mb-1">
+                  Citas a la vez (por sede)
+                </label>
+                <input
+                  id="booking-capacity"
+                  type="number" min="1" step="1"
+                  value={bookingCfg.capacity}
+                  onChange={(e) => setBookingCfg((p) => ({ ...p, capacity: e.target.value }))}
+                  className="w-32 h-10 px-3 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                />
+                <p className="text-[11px] text-admin-muted mt-1">
+                  Cuántas clientas podéis atender en paralelo. Si se alcanza, la web deja de ofrecer esa franja.
+                </p>
+              </div>
+              <div>
+                <label htmlFor="booking-interval" className="block text-[11px] font-bold text-admin-muted uppercase tracking-wider mb-1">
+                  Cada cuánto se ofrecen horas (min)
+                </label>
+                <input
+                  id="booking-interval"
+                  type="number" min="5" step="5"
+                  value={bookingCfg.interval}
+                  onChange={(e) => setBookingCfg((p) => ({ ...p, interval: e.target.value }))}
+                  className="w-32 h-10 px-3 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+                />
+                <p className="text-[11px] text-admin-muted mt-1">
+                  60 = en punto (10:00, 11:00…). 30 da más flexibilidad para servicios cortos.
+                </p>
+              </div>
+            </div>
+            <p className="text-[11px] text-admin-muted">
+              La web solo ofrece horas donde la cita entera cabe antes de cerrar, según la duración de los
+              servicios elegidos. Al marcar una cita como <strong>completada</strong> su hueco vuelve a quedar libre.
+            </p>
+            <button
+              onClick={saveBooking}
+              disabled={savingBooking}
+              className="inline-flex items-center gap-1.5 px-4 h-10 rounded-xl bg-gradient-rose-gold text-white text-sm font-bold shadow-rose-sm hover:brightness-105 disabled:opacity-50 transition-all"
+            >
+              {savingBooking ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Guardar reservas
             </button>
           </div>
         </SectionCard>

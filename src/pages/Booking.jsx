@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -43,27 +43,35 @@ const StepIndicator = ({ step }) => {
     { id: 2, label: 'Fecha',    icon: Calendar },
     { id: 3, label: 'Tus datos',icon: User },
   ];
+  const current = steps.find((s) => s.id === step);
   return (
-    <div className="flex items-center justify-center gap-0 mb-8">
-      {steps.map((s, i) => (
-        <React.Fragment key={s.id}>
-          <div className="flex flex-col items-center gap-1">
-            <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-              step > s.id ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
-              : step === s.id ? 'bg-gradient-rose-gold text-white shadow-rose-md scale-110'
-              : 'bg-brand-rose-100 text-brand-mid'
-            }`}>
-              {step > s.id ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
+    <div className="mb-6">
+      <div className="flex items-center justify-center gap-0">
+        {steps.map((s, i) => (
+          <React.Fragment key={s.id}>
+            <div className="flex flex-col items-center gap-1">
+              <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                step > s.id ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
+                : step === s.id ? 'bg-gradient-rose-gold text-white shadow-rose-md scale-110'
+                : 'bg-brand-rose-100 text-brand-mid'
+              }`}>
+                {step > s.id ? <Check className="h-4 w-4" /> : <s.icon className="h-4 w-4" />}
+              </div>
+              <span className={`text-[10px] font-semibold hidden sm:block ${step === s.id ? 'text-brand-rose' : 'text-brand-mid'}`}>
+                {s.label}
+              </span>
             </div>
-            <span className={`text-[10px] font-semibold hidden sm:block ${step === s.id ? 'text-brand-rose' : 'text-brand-mid'}`}>
-              {s.label}
-            </span>
-          </div>
-          {i < steps.length - 1 && (
-            <div className={`h-0.5 w-12 sm:w-20 mx-1 rounded transition-all duration-500 ${step > s.id + 1 ? 'bg-gradient-rose-gold' : step > s.id ? 'bg-brand-rose-200' : 'bg-brand-rose-100'}`} />
-          )}
-        </React.Fragment>
-      ))}
+            {i < steps.length - 1 && (
+              <div className={`h-0.5 w-12 sm:w-20 mx-1 rounded transition-all duration-500 ${step > s.id + 1 ? 'bg-gradient-rose-gold' : step > s.id ? 'bg-brand-rose-200' : 'bg-brand-rose-100'}`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+      {/* En móvil las etiquetas de arriba están ocultas: sin esto solo se veían
+          tres círculos sin texto y no se sabía en qué paso se estaba. */}
+      <p className="sm:hidden text-center text-xs font-semibold text-brand-rose mt-2" aria-live="polite">
+        Paso {step} de {steps.length} · {current?.label}
+      </p>
     </div>
   );
 };
@@ -115,14 +123,21 @@ const ServiceCard = ({ service, selected, onToggle }) => {
 };
 
 /* ── Mini calendar ──────────────────────────── */
-const MiniCalendar = ({ selectedDate, blockedDates, businessHours, onSelect }) => {
-  const [calDate, setCalDate] = useState(new Date());
+const MiniCalendar = ({ selectedDate, blockedDates, businessHours, onSelect, month, onMonthChange }) => {
+  const calDate = month;
+  const setCalDate = (updater) =>
+    onMonthChange(typeof updater === 'function' ? updater(calDate) : updater);
   const today = startOfDay(new Date());
   const maxDate = addDays(today, 60);
 
   const calStart = startOfWeek(startOfMonth(calDate), { weekStartsOn: 1 });
   const calEnd   = endOfWeek(endOfMonth(calDate),   { weekStartsOn: 1 });
   const days     = eachDayOfInterval({ start: calStart, end: calEnd });
+
+  // Sin esto se podía navegar indefinidamente a meses pasados o más allá del
+  // límite de reserva, con todos los días en gris.
+  const canGoPrev = !isBefore(startOfMonth(calDate), startOfMonth(today));
+  const canGoNext = isBefore(startOfMonth(calDate), startOfMonth(maxDate));
 
   const isDisabled = (d) => {
     return isBefore(d, today) ||
@@ -134,19 +149,25 @@ const MiniCalendar = ({ selectedDate, blockedDates, businessHours, onSelect }) =
   return (
     <div className="bg-white rounded-2xl border border-brand-rose-100 shadow-card overflow-hidden">
       {/* Month header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-gradient-rose-gold text-white">
+      <div className="flex items-center justify-between px-2 py-2 bg-gradient-rose-gold text-white">
         <button
+          type="button"
           onClick={() => setCalDate((d) => subMonths(d, 1))}
-          className="p-1 rounded-lg hover:bg-white/20 transition-colors"
+          disabled={!canGoPrev}
+          aria-label="Mes anterior"
+          className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronLeft className="h-4 w-4" />
+          <ChevronLeft className="h-5 w-5" />
         </button>
         <span className="text-sm font-bold capitalize">{format(calDate, 'MMMM yyyy', { locale: es })}</span>
         <button
+          type="button"
           onClick={() => setCalDate((d) => addMonths(d, 1))}
-          className="p-1 rounded-lg hover:bg-white/20 transition-colors"
+          disabled={!canGoNext}
+          aria-label="Mes siguiente"
+          className="w-11 h-11 flex items-center justify-center rounded-lg hover:bg-white/20 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
         >
-          <ChevronRight className="h-4 w-4" />
+          <ChevronRight className="h-5 w-5" />
         </button>
       </div>
       {/* Day headers */}
@@ -167,12 +188,15 @@ const MiniCalendar = ({ selectedDate, blockedDates, businessHours, onSelect }) =
           return (
             <button
               key={key}
+              type="button"
               disabled={disabled}
+              aria-label={format(day, "d 'de' MMMM", { locale: es })}
+              aria-pressed={isSelected}
               onClick={() => onSelect(day)}
-              className={`aspect-square flex items-center justify-center rounded-xl text-xs font-semibold transition-all duration-150
-                ${!inMonth ? 'opacity-25' : ''}
-                ${disabled ? 'cursor-not-allowed text-brand-mid/40' : 'hover:bg-brand-rose-100 cursor-pointer'}
-                ${isSelected ? 'bg-gradient-rose-gold text-white shadow-rose-sm scale-110' : ''}
+              className={`aspect-square min-h-[44px] flex items-center justify-center rounded-xl text-sm font-semibold transition-colors duration-150
+                ${!inMonth ? 'opacity-30' : ''}
+                ${disabled ? 'cursor-not-allowed text-gray-400 line-through' : 'hover:bg-brand-rose-100 cursor-pointer'}
+                ${isSelected ? 'bg-gradient-rose-gold text-white shadow-rose-sm ring-2 ring-brand-rose ring-offset-1' : ''}
                 ${todayDay && !isSelected ? 'ring-1 ring-brand-rose text-brand-rose' : ''}
                 ${!isSelected && !disabled && !todayDay ? 'text-brand-dark' : ''}
               `}
@@ -196,12 +220,22 @@ const Booking = () => {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
+  // El mes visible vive aquí (no dentro del calendario) para que al volver del
+  // paso 1 no se pierda y vuelva a saltar al mes actual.
+  const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [blockedDates, setBlockedDates] = useState([]);
   const [bookedSlots, setBookedSlots] = useState([]); // [{ booking_time, duration_minutes, staff_id }]
   const [blockedTimes, setBlockedTimes] = useState([]);
-  const [capacity, setCapacity] = useState(0); // nº de manicuristas reservables en la sede
+  // Citas simultáneas admitidas por sede (settings.booking_capacity). Se arranca
+  // en 1 para no ofrecer de más si el ajuste tardara en llegar.
+  const [capacity, setCapacity] = useState(1);
+  // Cada cuánto se ofrecen horas de inicio (settings.booking_slot_interval).
+  const [slotInterval, setSlotInterval] = useState(60);
   const [team, setTeam] = useState([]); // equipo de la sede (gestionable desde admin)
   const [loadingSlots, setLoadingSlots] = useState(false);
+  // Aviso mostrado JUNTO a las horas (los toasts salen arriba del todo en móvil,
+  // lejos de donde está mirando la clienta).
+  const [slotNotice, setSlotNotice] = useState('');
   const [form, setForm] = useState({ name: '', phone: '', email: '', notes: '' });
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(null);
@@ -212,12 +246,19 @@ const Booking = () => {
   const { selectedServices: cartServices, clearServices } = useBookingCart();
   const [cartPreloaded, setCartPreloaded] = useState(false);
 
-  /* Si el usuario recarga tras reservar, recuperamos la pantalla de éxito. */
+  /* Si el usuario RECARGA justo tras reservar, recuperamos la pantalla de éxito.
+     Caduca a los 10 min: sin esto, cualquier visita posterior a /reservas en la
+     misma pestaña mostraba la confirmación antigua en vez del formulario, y no
+     se podía reservar de nuevo (p. ej. al reservar para una amiga). */
   useEffect(() => {
     try {
       const raw = sessionStorage.getItem('last_booking');
-      if (raw) setSubmitted(JSON.parse(raw));
-    } catch (_) { /* noop */ }
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      const fresh = saved?.savedAt && (Date.now() - saved.savedAt) < 10 * 60 * 1000;
+      if (fresh) setSubmitted(saved);
+      else sessionStorage.removeItem('last_booking');
+    } catch (_) { sessionStorage.removeItem('last_booking'); }
   }, []);
 
   const [businessHours, setBusinessHours] = useState({
@@ -230,10 +271,15 @@ const Booking = () => {
     sunday: { open: '10:00', close: '20:00', closed: true }
   });
 
-  const getAvailableTimeSlots = useCallback((date) => {
+  const getAvailableTimeSlots = useCallback((date, durationMin) => {
     // `now` filtra las horas ya pasadas cuando la fecha elegida es hoy.
-    return generateDaySlots(date, businessHours, 30, { now: new Date() });
-  }, [businessHours]);
+    // `durationMin` evita ofrecer horas donde la cita no cabría antes de cerrar
+    // (antes se ofrecían y el servidor las rechazaba al final con OUTSIDE_HOURS).
+    return generateDaySlots(date, businessHours, slotInterval, {
+      now: new Date(),
+      durationMin,
+    });
+  }, [businessHours, slotInterval]);
 
   /* Fetch services and locations on mount with real-time subscription */
   useEffect(() => {
@@ -282,25 +328,31 @@ const Booking = () => {
 
   /* Fetch and subscribe to business hours */
   useEffect(() => {
-    const fetchBusinessHours = () => {
+    // Horario + capacidad (cuántas citas caben a la vez) y cada cuánto se
+    // ofrecen las horas. Los tres son ajustes editables desde el panel.
+    const fetchSettings = () => {
       supabase
         .from('settings')
-        .select('value')
-        .eq('key', 'business_hours')
-        .single()
+        .select('key, value')
+        .in('key', ['business_hours', 'booking_capacity', 'booking_slot_interval'])
         .then(({ data }) => {
-          if (data && data.value) {
-            setBusinessHours(data.value);
-          }
+          const map = Object.fromEntries((data ?? []).map((r) => [r.key, r.value]));
+          if (map.business_hours) setBusinessHours(map.business_hours);
+
+          const cap = parseInt(map.booking_capacity, 10);
+          if (Number.isFinite(cap) && cap > 0) setCapacity(cap);
+
+          const iv = parseInt(map.booking_slot_interval, 10);
+          if (Number.isFinite(iv) && iv > 0) setSlotInterval(iv);
         });
     };
 
-    fetchBusinessHours();
+    fetchSettings();
 
     const channel = supabase
       .channel('booking-settings-live')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, () => {
-        fetchBusinessHours();
+        fetchSettings();
       })
       .subscribe();
 
@@ -424,6 +476,23 @@ const Booking = () => {
     selectedServices.reduce((a, s) => a + (s.duration_minutes || 0), 0) || 30
   );
 
+  /* Horas del día elegido, ya filtradas por la duración de la reserva. */
+  const slotsForSelectedDay = useMemo(
+    () => (selectedDate ? getAvailableTimeSlots(selectedDate, newBookingDuration) : []),
+    [selectedDate, getAvailableTimeSlots, newBookingDuration]
+  );
+
+  /* Al elegir día, llevar la vista a las horas: antes aparecían debajo del
+     calendario, fuera de pantalla en el móvil, y parecía que no pasaba nada. */
+  const slotsRef = useRef(null);
+  useEffect(() => {
+    if (!selectedDate || !slotsRef.current) return;
+    const t = setTimeout(() => {
+      slotsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [selectedDate]);
+
   /* ¿El intervalo [slot, slot+duración) solapa un bloqueo de agenda? */
   const isTimeBlocked = (slot) => {
     const start = timeToMinutes(slot);
@@ -435,21 +504,25 @@ const Booking = () => {
     });
   };
 
-  /* Ocupación single-capacity: una hora se considera ocupada en cuanto exista
-     CUALQUIER cita no cancelada que solape el intervalo [slot, slot+duración)
-     en la sede, sin importar la manicurista. Esto evita que dos clientes tomen
-     la misma hora. El servidor (create_public_booking) aplica la misma regla. */
+  /* Ocupación por capacidad: se CUENTAN las citas que solapan el intervalo
+     [slot, slot+duración) en la sede y se compara con la capacidad configurada
+     (settings.booking_capacity, por defecto 2 = manicuristas por sede). El
+     servidor (create_public_booking) aplica exactamente la misma regla.
+     Las citas completadas / no-asistió / canceladas ya no vienen en
+     `bookedSlots`: el servidor las excluye, así que liberan su hueco. */
   const isTimeUnavailable = (slot) => {
     if (isTimeBlocked(slot)) return true;
 
     const start = timeToMinutes(slot);
     const end = start + newBookingDuration;
 
-    return bookedSlots.some((b) => {
+    const overlapping = bookedSlots.filter((b) => {
       const bs = timeToMinutes(b.booking_time);
       const be = bs + (b.duration_minutes || 30);
       return bs < end && be > start;
-    });
+    }).length;
+
+    return overlapping >= capacity;
   };
 
   /* Service toggle */
@@ -505,12 +578,16 @@ const Booking = () => {
       setSubmitting(false);
       const msg = bookingErr.message || '';
       if (msg.includes('SLOT_TAKEN') || msg.includes('SLOT_BLOCKED')) {
+        // Se vuelve al paso de la hora: antes el aviso salía arriba del todo y
+        // el usuario se quedaba en el paso 3 sin forma evidente de corregirlo.
         toast({
           variant: 'destructive',
           title: 'Ese horario acaba de ocuparse',
           description: 'Elige otra hora, hemos actualizado la disponibilidad.',
         });
         setSelectedTime(null);
+        setSlotNotice('Ese horario acaba de ocuparse. Elige otra hora.');
+        setStep(2);
         loadSlots();
       } else if (msg.includes('PAST_SLOT')) {
         toast({
@@ -519,6 +596,8 @@ const Booking = () => {
           description: 'Elige un horario futuro, por favor.',
         });
         setSelectedTime(null);
+        setSlotNotice('Esa hora ya ha pasado. Elige un horario futuro.');
+        setStep(2);
         loadSlots();
       } else if (msg.includes('OUTSIDE_HOURS')) {
         toast({
@@ -526,6 +605,9 @@ const Booking = () => {
           title: 'Fuera de horario',
           description: 'Ese horario está fuera del horario de atención. Elige otra hora.',
         });
+        setSelectedTime(null);
+        setSlotNotice('Esa hora queda fuera del horario. Elige otra.');
+        setStep(2);
         loadSlots();
       } else {
         toast({
@@ -565,6 +647,7 @@ const Booking = () => {
       locationName: selectedLocation.name,
       services: selectedServices.map((s) => ({ name: s.name })),
       name: form.name,
+      savedAt: Date.now(),
     };
     setSubmitted(submittedData);
     // Persistir para que una recarga de la pantalla de éxito no la pierda.
@@ -687,7 +770,11 @@ const Booking = () => {
                 exit={{ opacity: 0, x: -24 }}
                 transition={{ duration: 0.3 }}
               >
-                <div className="bg-white rounded-3xl shadow-card border border-brand-rose-100 overflow-hidden flex flex-col max-h-[calc(100vh-300px)]">
+                {/* En móvil NO se limita la altura: la lista crece y scrollea la
+                    página. Antes tenía max-h-[calc(100vh-300px)] con scroll
+                    interno y en un iPhone SE se veía apenas una fila de 21
+                    servicios. En escritorio sí se mantiene el panel acotado. */}
+                <div className="bg-white rounded-3xl shadow-card border border-brand-rose-100 overflow-hidden flex flex-col sm:max-h-[calc(100dvh-300px)]">
                   <div className="px-5 py-4 border-b border-brand-rose-100 shrink-0">
                     <h2 className="font-bold text-brand-dark text-base">¿Qué servicio quieres?</h2>
                     <p className="text-sm text-brand-mid mt-0.5">Puedes elegir más de uno</p>
@@ -695,12 +782,13 @@ const Booking = () => {
 
                   {/* Category filter */}
                   {categories.length > 1 && (
-                    <div className="px-4 py-3 flex gap-2 overflow-x-auto border-b border-brand-rose-100 scrollbar-none shrink-0">
+                    <div className="px-4 py-3 flex gap-2 overflow-x-auto border-b border-brand-rose-100 no-scrollbar shrink-0">
                       {categories.map((cat) => (
                         <button
                           key={cat}
+                          type="button"
                           onClick={() => setCategoryFilter(cat)}
-                          className={`px-4 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
+                          className={`px-4 min-h-[44px] rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 shrink-0 ${
                             categoryFilter === cat
                               ? 'bg-gradient-rose-gold text-white shadow-rose-sm'
                               : 'bg-brand-rose-50 text-brand-mid hover:bg-brand-rose-100'
@@ -712,8 +800,9 @@ const Booking = () => {
                     </div>
                   )}
 
-                  {/* Services grid — scrollable area */}
-                  <div className="p-4 overflow-y-auto flex-1 min-h-0">
+                  {/* Rejilla de servicios: en móvil crece libre; solo scrollea
+                      dentro del panel a partir de sm. */}
+                  <div className="p-4 sm:overflow-y-auto sm:flex-1 sm:min-h-0">
                     {services.length === 0 && loadError ? (
                       <div className="flex flex-col items-center justify-center py-12 gap-3 text-brand-mid text-center px-4">
                         <span className="text-sm">No se pudieron cargar los servicios. Revisa tu conexión.</span>
@@ -764,7 +853,7 @@ const Booking = () => {
                     <button
                       onClick={() => setStep(2)}
                       disabled={selectedServices.length === 0}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-gradient-rose-gold text-white font-bold text-sm rounded-2xl shadow-rose-sm hover:brightness-105 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0"
+                      className="flex items-center gap-2 px-6 min-h-[48px] bg-gradient-rose-gold text-white font-bold text-sm rounded-2xl shadow-rose-sm hover:brightness-105 disabled:opacity-40 disabled:cursor-not-allowed transition-all shrink-0"
                     >
                       Continuar <ArrowRight className="h-4 w-4" />
                     </button>
@@ -846,40 +935,70 @@ const Booking = () => {
                     blockedDates={blockedDates}
                     businessHours={businessHours}
                     onSelect={setSelectedDate}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
                   />
                 </div>
 
                 {/* Time slots */}
                 {selectedDate && (
                   <motion.div
+                    ref={slotsRef}
                     initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-white rounded-3xl shadow-card border border-brand-rose-100 p-5"
+                    className="bg-white rounded-3xl shadow-card border border-brand-rose-100 p-5 scroll-mt-24"
                   >
                     <h2 className="font-bold text-brand-dark text-base mb-1">¿A qué hora?</h2>
-                    <p className="text-xs text-brand-mid mb-4 capitalize">
+                    <p className="text-xs text-brand-mid mb-3 capitalize">
                       {format(selectedDate, "EEEE, d 'de' MMMM", { locale: es })}
+                      {selectedServices.length > 0 && (
+                        <span className="normal-case"> · {newBookingDuration} min</span>
+                      )}
                     </p>
+
+                    {slotNotice && (
+                      <div
+                        role="alert"
+                        className="mb-3 rounded-xl bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700"
+                      >
+                        {slotNotice}
+                      </div>
+                    )}
                     {loadingSlots ? (
-                      <div className="flex items-center justify-center py-8 gap-2 text-brand-mid">
-                        <Loader2 className="h-4 w-4 animate-spin text-brand-rose" />
-                        <span className="text-sm">Comprobando disponibilidad...</span>
+                      /* Skeletons en lugar de un spinner suelto: el bloque mantiene
+                         su altura y la página deja de dar saltos al elegir día. */
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2" aria-busy="true">
+                        {Array.from({ length: 10 }).map((_, i) => (
+                          <div key={i} className="skeleton h-11 rounded-xl" />
+                        ))}
+                        <span className="sr-only">Comprobando disponibilidad…</span>
+                      </div>
+                    ) : slotsForSelectedDay.length === 0 ? (
+                      <div className="rounded-2xl bg-brand-rose-50 border border-brand-rose-100 p-4 text-center">
+                        <p className="text-sm font-semibold text-brand-dark">
+                          No quedan horas libres ese día
+                        </p>
+                        <p className="text-xs text-brand-mid mt-1">
+                          Prueba con otra fecha{selectedServices.length > 0 && ` (tu reserva necesita ${newBookingDuration} min seguidos)`}.
+                        </p>
                       </div>
                     ) : (
-                      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                        {getAvailableTimeSlots(selectedDate).map((slot) => {
+                      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+                        {slotsForSelectedDay.map((slot) => {
                           const unavailable = isTimeUnavailable(slot);
                           const selected = selectedTime === slot;
                           return (
                             <button
                               key={slot}
+                              type="button"
                               disabled={unavailable}
-                              onClick={() => setSelectedTime(slot)}
-                              className={`py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 ${
+                              aria-pressed={selected}
+                              onClick={() => { setSelectedTime(slot); setSlotNotice(''); }}
+                              className={`min-h-[44px] px-1 rounded-xl text-sm font-semibold transition-all duration-150 ${
                                 selected
-                                  ? 'bg-gradient-rose-gold text-white shadow-rose-sm scale-105'
+                                  ? 'bg-gradient-rose-gold text-white shadow-rose-sm ring-2 ring-brand-rose ring-offset-1'
                                   : unavailable
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed line-through'
+                                  ? 'bg-gray-100 text-gray-500 cursor-not-allowed line-through'
                                   : 'bg-brand-rose-50 text-brand-dark hover:bg-brand-rose-100 hover:text-brand-rose'
                               }`}
                             >
@@ -896,14 +1015,14 @@ const Booking = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => setStep(1)}
-                    className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-brand-mid border border-brand-rose-100 rounded-2xl hover:bg-brand-rose-50 transition-colors"
+                    className="flex items-center gap-2 px-5 min-h-[48px] text-sm font-semibold text-brand-mid border border-brand-rose-100 rounded-2xl hover:bg-brand-rose-50 transition-colors"
                   >
                     <ChevronLeft className="h-4 w-4" /> Atrás
                   </button>
                   <button
                     onClick={() => setStep(3)}
                     disabled={!selectedDate || !selectedTime}
-                    className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gradient-rose-gold text-white font-bold text-sm rounded-2xl shadow-rose-sm hover:brightness-105 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    className="flex-1 flex items-center justify-center gap-2 min-h-[48px] bg-gradient-rose-gold text-white font-bold text-sm rounded-2xl shadow-rose-sm hover:brightness-105 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                   >
                     Continuar <ArrowRight className="h-4 w-4" />
                   </button>
@@ -961,8 +1080,12 @@ const Booking = () => {
                   </div>
                 </div>
 
-                {/* Form */}
-                <div className="lg:col-span-3 bg-white rounded-3xl shadow-card border border-brand-rose-100 p-5 sm:p-6 space-y-4">
+                {/* Form — <form> real para que el teclado del móvil ofrezca "Ir"
+                    y Enter envíe la reserva. */}
+                <form
+                  onSubmit={(e) => { e.preventDefault(); if (canSubmit) handleSubmit(); }}
+                  className="lg:col-span-3 bg-white rounded-3xl shadow-card border border-brand-rose-100 p-5 sm:p-6 space-y-4"
+                >
                   <div>
                     <h2 className="font-bold text-brand-dark text-base">Tus datos</h2>
                     <p className="text-sm text-brand-mid">Solo necesitamos lo esencial</p>
@@ -1062,15 +1185,30 @@ const Booking = () => {
                     </div>
                   </div>
 
+                  {/* Si falta algo, se dice CUÁL: antes el botón solo se veía
+                      apagado, sin explicar por qué. */}
+                  {!canSubmit && !submitting && (
+                    <p className="text-xs text-brand-mid">
+                      {!form.name.trim()
+                        ? 'Escribe tu nombre para continuar.'
+                        : !phoneValid
+                        ? 'Necesitamos un móvil válido (9 dígitos).'
+                        : !emailValid
+                        ? 'Revisa el correo: no parece válido.'
+                        : 'Falta elegir fecha y hora.'}
+                    </p>
+                  )}
+
                   <div className="flex gap-3 pt-2">
                     <button
+                      type="button"
                       onClick={() => setStep(2)}
-                      className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold text-brand-mid border border-brand-rose-100 rounded-2xl hover:bg-brand-rose-50 transition-colors"
+                      className="flex items-center gap-2 px-5 min-h-[48px] text-sm font-semibold text-brand-mid border border-brand-rose-100 rounded-2xl hover:bg-brand-rose-50 transition-colors"
                     >
                       <ChevronLeft className="h-4 w-4" /> Atrás
                     </button>
                     <button
-                      onClick={handleSubmit}
+                      type="submit"
                       disabled={!canSubmit}
                       className="flex-1 flex items-center justify-center gap-2 h-12 bg-gradient-rose-gold text-white font-bold text-sm rounded-2xl shadow-rose-sm hover:brightness-105 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
                     >
@@ -1080,7 +1218,7 @@ const Booking = () => {
                       }
                     </button>
                   </div>
-                </div>
+                </form>
               </motion.div>
             )}
           </AnimatePresence>

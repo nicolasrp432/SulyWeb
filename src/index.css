@@ -183,6 +183,21 @@ h3 { font-size: clamp(1.125rem, 2.5vw, 1.5rem); }
   border-radius: var(--radius);
 }
 
+/* Oculta la barra de scroll en carruseles horizontales (chips de categoría).
+   Antes se usaba `scrollbar-none`, que no existe en este proyecto. */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respeta el indicador de inicio del iPhone en barras fijas inferiores. */
+.safe-area-pb {
+  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+}
+
 /* Pill badge */
 .badge-pill {
   display: inline-flex;

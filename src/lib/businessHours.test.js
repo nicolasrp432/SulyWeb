@@ -62,4 +62,32 @@ describe('generateDaySlots', () => {
     const now = new Date('2026-03-17T12:00:00'); // otro día
     expect(generateDaySlots(date, hours, 30, { now })).toHaveLength(8);
   });
+
+  it('solo ofrece horas donde la cita entera cabe en el tramo', () => {
+    const hours = allDays([{ open: '10:00', close: '14:00' }]);
+    // 90 min: el último inicio válido es 12:30 (termina justo a las 14:00).
+    expect(generateDaySlots(date, hours, 30, { durationMin: 90 }))
+      .toEqual(['10:00', '10:30', '11:00', '11:30', '12:00', '12:30']);
+  });
+
+  it('aplica la duración a cada tramo de un día partido', () => {
+    const hours = allDays([
+      { open: '10:00', close: '14:00' },
+      { open: '16:00', close: '20:00' },
+    ]);
+    // Con 60 min, el último inicio de cada tramo es 13:00 y 19:00.
+    const slots = generateDaySlots(date, hours, 60, { durationMin: 60 });
+    expect(slots).toEqual(['10:00', '11:00', '12:00', '13:00', '16:00', '17:00', '18:00', '19:00']);
+  });
+
+  it('si la cita no cabe en el tramo, no ofrece ninguna hora', () => {
+    const hours = allDays([{ open: '10:00', close: '11:00' }]);
+    expect(generateDaySlots(date, hours, 30, { durationMin: 90 })).toEqual([]);
+  });
+
+  it('sin duración se comporta como antes (retrocompatible)', () => {
+    const hours = allDays([{ open: '10:00', close: '14:00' }]);
+    expect(generateDaySlots(date, hours, 30)).toHaveLength(8);
+    expect(generateDaySlots(date, hours, 30, { durationMin: 0 })).toHaveLength(8);
+  });
 });
