@@ -183,15 +183,20 @@ const DayDetailSheet = ({
             onClick={onClose}
             className="fixed inset-0 z-[70] bg-black/40 backdrop-blur-sm"
           />
+          {/* En escritorio el centrado se hace con flex y no con
+              `left-1/2 -translate-x-1/2`: framer-motion escribe su propio
+              `transform` para animar la escala y borraba ese translate, con lo
+              que el panel se iba medio fuera de la pantalla. */}
           <motion.div
             key="sheet"
             initial={isMobile ? { y: '100%', height: `${SnapPoints.collapsed * 100}vh` } : { opacity: 0, scale: 0.96 }}
             animate={isMobile ? { y: 0, height: `${heightVh}vh` } : { opacity: 1, scale: 1 }}
             exit={isMobile ? { y: '100%' } : { opacity: 0, scale: 0.96 }}
             transition={{ type: 'spring', stiffness: 240, damping: 32, mass: 0.8 }}
+            style={isMobile ? undefined : { left: '50%', top: '50%', translateX: '-50%', translateY: '-50%' }}
             className={isMobile
               ? 'fixed inset-x-0 bottom-0 z-[75] bg-white rounded-t-2xl shadow-2xl flex flex-col'
-              : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[75] w-[calc(100%-2rem)] max-w-lg max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col'}
+              : 'fixed z-[75] w-[calc(100%-2rem)] max-w-lg max-h-[85vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden'}
           >
             {isMobile ? (
               <motion.div

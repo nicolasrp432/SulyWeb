@@ -19,7 +19,11 @@ const AdminLayout = ({ children }) => {
           onMarkAllRead={markAllRead}
           onMarkOneRead={markOneRead}
         />
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+        {/* overflow-x-hidden: red de seguridad para que ningún componente pueda
+            provocar scroll lateral en móvil. Lo que sí necesita desplazarse en
+            horizontal (filtros de servicios/galería, carrusel de manicuristas)
+            tiene su propio contenedor con overflow-x-auto. */}
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
           <InstallPWAHint />
           {children}
         </main>

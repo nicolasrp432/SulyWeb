@@ -50,7 +50,7 @@ const Dashboard = () => {
   return (
     <>
       <Helmet><title>Dashboard — Admin Suly</title></Helmet>
-      <div className="max-w-6xl mx-auto space-y-5 sm:space-y-6">
+      <div className="max-w-6xl mx-auto w-full min-w-0 space-y-5 sm:space-y-6">
 
         {/* Welcome card */}
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-rose-50 via-white to-amber-50 border border-admin-border p-5 sm:p-6 shadow-rose-xs">
@@ -91,13 +91,16 @@ const Dashboard = () => {
         </div>
 
         {/* Chart + Recent */}
-        <div className="grid lg:grid-cols-5 gap-4">
-          <div className="lg:col-span-3 bg-white border border-admin-border rounded-2xl p-5 shadow-rose-xs">
+        {/* min-w-0 en la rejilla y en cada columna: sin esto los hijos usan
+            min-width:auto y el SVG de recharts (que fija su ancho en px y no
+            encoge) estiraba toda la fila, provocando scroll lateral en móvil. */}
+        <div className="grid lg:grid-cols-5 gap-4 min-w-0">
+          <div className="lg:col-span-3 min-w-0 overflow-hidden bg-white border border-admin-border rounded-2xl p-4 sm:p-5 shadow-rose-xs">
             <h3 className="font-bold text-admin-text text-sm mb-4">Citas — últimos 7 días</h3>
             {loading ? (
               <div className="h-48 rounded-xl bg-admin-surface animate-pulse" />
             ) : (
-              <ResponsiveContainer width="100%" height={200}>
+              <ResponsiveContainer width="100%" height={200} minWidth={0}>
                 <BarChart data={weeklyData} barSize={28}>
                   <XAxis
                     dataKey="day"
@@ -127,7 +130,7 @@ const Dashboard = () => {
             )}
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 min-w-0">
             <RecentBookings />
           </div>
         </div>
