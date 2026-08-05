@@ -4,6 +4,7 @@ import { es } from 'date-fns/locale';
 import {
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, CalendarRange,
   CalendarDays, CalendarClock, Plus, SlidersHorizontal, RefreshCw, Clock3, Lock,
+  DownloadCloud,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -35,6 +36,9 @@ const CalendarToolbar = ({
   onNewBooking,
   onBlock,
   onRefresh,
+  refreshing = false,
+  onSyncNow,
+  syncing = false,
   onOpenHours,
 }) => {
   const safeCount = activeFilterCount ?? 0;
@@ -111,8 +115,29 @@ const CalendarToolbar = ({
         </span>
 
         {onRefresh && (
-          <Button variant="outline" size="icon" className="h-8 w-8 hidden sm:inline-flex" onClick={onRefresh} title="Actualizar">
-            <RefreshCw className="h-3.5 w-3.5" />
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-8 w-8 hidden sm:inline-flex"
+            onClick={() => onRefresh()}
+            disabled={refreshing}
+            title="Actualizar la vista con los datos ya guardados"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+          </Button>
+        )}
+
+        {onSyncNow && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 hidden sm:inline-flex text-xs"
+            onClick={() => onSyncNow()}
+            disabled={syncing}
+            title="Traer ahora las citas creadas en el iPhone/iCloud (sin esperar al automático)"
+          >
+            <DownloadCloud className={`h-3.5 w-3.5 mr-1 ${syncing ? 'animate-pulse' : ''}`} />
+            {syncing ? 'Sincronizando…' : 'Sincronizar'}
           </Button>
         )}
 

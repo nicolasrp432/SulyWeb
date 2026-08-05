@@ -510,6 +510,53 @@ const CalendarPage = () => {
     if (refetchTimerRef.current) clearTimeout(refetchTimerRef.current);
   }, []);
 
+  // Recargar: refresco de la vista con lo ya guardado. Antes se pasaba
+  // `fetchCalendarData` directo al botón, así que recibía el evento del clic
+  // como opciones y nunca daba señal visual: parecía que no hacía nada.
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fetchCalendarData();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [fetchCalendarData]);
+
+  // Sincronizar ahora: fuerza el puente iCloud/iPhone -> app sin esperar al
+  // automático. El secreto vive en la BD; el navegador solo llama a la RPC.
+  const [syncing, setSyncing] = useState(false);
+  const handleSyncNow = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.rpc('request_ics_sync');
+      if (error) throw error;
+      if (data?.ok === false && data?.reason === 'cooldown') {
+        toast({
+          title: 'Espera un momento',
+          description: `Puedes volver a sincronizar en ${data.retry_in || 60} s.`,
+        });
+        return;
+      }
+      if (data?.ok === false) {
+        toast({ variant: 'destructive', title: 'No se pudo sincronizar', description: 'La sincronización no está configurada.' });
+        return;
+      }
+      toast({
+        title: 'Sincronizando con el iPhone',
+        description: 'Las citas nuevas aparecerán solas en unos segundos.',
+      });
+      // El import tarda unos segundos; al terminar, realtime traerá los cambios.
+      // Refrescamos igualmente por si el canal estuviera caído.
+      setTimeout(() => fetchCalendarData(), 12000);
+    } catch (err) {
+      console.error('Error al sincronizar:', err);
+      toast({ variant: 'destructive', title: 'No se pudo sincronizar', description: err.message || 'Error inesperado' });
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchCalendarData, toast]);
+
   useEffect(() => {
     if (!user) return;
 
@@ -1105,7 +1152,10 @@ const CalendarPage = () => {
             blocksSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
           }, 200);
         }}
-        onRefresh={fetchCalendarData}
+        onRefresh={handleRefresh}
+        refreshing={refreshing}
+        onSyncNow={handleSyncNow}
+        syncing={syncing}
         onOpenHours={() => setIsHoursDialogOpen(true)}
       />
 

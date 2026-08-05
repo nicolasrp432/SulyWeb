@@ -326,7 +326,18 @@ async function sendEmail(to, subject, htmlContent) {
     });
 
     const json = await res.json();
-    if (!res.ok) return { success: false, error: json?.message || 'Resend API error' };
+    if (!res.ok) {
+      // Log del motivo EXACTO que devuelve Resend (dominio sin verificar, API key
+      // inválida, remitente no permitido...). Sin esto el 500 no dice nada y el
+      // diagnóstico se vuelve adivinanza.
+      console.error('[resend] envío rechazado', JSON.stringify({
+        status: res.status,
+        from: FROM_EMAIL,
+        to: Array.isArray(to) ? to : [to],
+        body: json,
+      }));
+      return { success: false, error: json?.message || `Resend API error (${res.status})` };
+    }
     return { success: true, data: json };
   } catch (error) {
     console.error('Error sending email via Resend:', error);

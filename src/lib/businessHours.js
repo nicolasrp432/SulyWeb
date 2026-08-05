@@ -81,21 +81,34 @@ function isSameLocalDay(a, b) {
  * Si dos tramos se solapan o repiten un slot, se deduplica y ordena.
  *
  * @param {Object} [options]
- * @param {Date}   [options.now]       Si se pasa y `date` es hoy, se descartan
- *                                     los slots ya pasados (más el margen).
- * @param {number} [options.marginMin] Minutos de antelación mínima para hoy (30).
+ * @param {Date}   [options.now]         Si se pasa y `date` es hoy, se descartan
+ *                                       los slots ya pasados (más el margen).
+ * @param {number} [options.marginMin]   Minutos de antelación mínima para hoy (30).
+ * @param {number} [options.durationMin] Duración de la cita a reservar. Si se pasa,
+ *                                       solo se ofrecen horas en las que la cita
+ *                                       ENTERA cabe dentro del tramo: sin esto se
+ *                                       ofrecían las 19:30 para un servicio de 90
+ *                                       min y el servidor lo rechazaba al final
+ *                                       (OUTSIDE_HOURS), tras rellenarlo todo.
  */
 export function generateDaySlots(date, businessHours, intervalMin = 30, options = {}) {
   if (!date) return [];
   const cfg = getDayConfig(date, businessHours);
   if (cfg.closed) return [];
 
+  const { durationMin } = options;
+  // Sin duración (o inválida) se mantiene el comportamiento anterior.
+  const dur = Number(durationMin) > 0 ? Number(durationMin) : 0;
+
   const set = new Set();
   for (const shift of cfg.shifts) {
     const open = timeToMinutes(shift.open);
     const close = timeToMinutes(shift.close);
     if (open == null || close == null || close <= open) continue;
+    // El último inicio válido es aquel en el que la cita termina dentro del tramo.
+    const lastStart = close - dur;
     for (let m = open; m < close; m += intervalMin) {
+      if (m > lastStart) break;
       set.add(m);
     }
   }

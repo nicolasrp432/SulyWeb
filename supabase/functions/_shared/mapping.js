@@ -57,6 +57,12 @@ export function bookingToEvent(b, servicesText = '') {
     end: { dateTime: toRfc3339(b.booking_date, b.booking_time, dur), timeZone: tz },
     colorId: STATUS_COLOR[b.status] || undefined,
     status: b.status === 'cancelled' ? 'cancelled' : 'confirmed',
+    // Aviso en el móvil (Google Calendar / iPhone) antes de la cita. No entra en
+    // syncHash, así que no afecta al anti-bucle de la sincronización.
+    reminders: {
+      useDefault: false,
+      overrides: [{ method: 'popup', minutes: 60 }],
+    },
     extendedProperties: {
       private: { source: APP_SOURCE, bookingId: String(b.id) },
     },

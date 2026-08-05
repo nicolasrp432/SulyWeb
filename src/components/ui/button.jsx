@@ -29,7 +29,9 @@ const buttonVariants = cva(
       size: {
         default: "h-11 px-5 py-2.5",
         sm: "h-9 rounded-md px-3 text-xs",
-        lg: "h-13 rounded-xl px-8 text-base",
+        // h-13 no existe en Tailwind: los botones size="lg" de todo el sitio se
+        // quedaban sin altura y colapsaban al alto de la línea.
+        lg: "h-12 rounded-xl px-8 text-base",
         xl: "h-14 rounded-xl px-10 text-base",
         icon: "h-10 w-10",
         "icon-sm": "h-8 w-8",
