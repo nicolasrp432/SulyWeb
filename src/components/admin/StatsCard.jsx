@@ -16,21 +16,26 @@ const StatsCard = ({ title, value, icon: Icon, color = 'rose', loading, hint }) 
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      className="bg-white border border-admin-border rounded-2xl p-4 sm:p-5 shadow-rose-xs hover:shadow-rose-sm transition-shadow"
+      className="min-w-0 bg-white border border-admin-border rounded-2xl p-4 sm:p-5 shadow-rose-xs hover:shadow-rose-sm transition-shadow"
     >
-      <div className="flex items-start justify-between gap-2">
+      {/* El título ocupa toda la anchura de la tarjeta: en pantallas estrechas
+          una palabra larga como "COMPLETADAS" no cabe junto al icono y se salía
+          de la tarjeta. El valor y el icono van debajo, en la misma línea. */}
+      <p className="text-[10px] sm:text-xs font-bold text-admin-muted uppercase tracking-wide break-words">
+        {title}
+      </p>
+      <div className="mt-1 flex items-end justify-between gap-2 min-w-0">
         <div className="min-w-0">
-          <p className="text-[10px] sm:text-xs font-bold text-admin-muted uppercase tracking-wider mb-1">{title}</p>
           {loading ? (
-            <div className="h-8 w-16 rounded-lg bg-admin-surface animate-pulse mt-1" />
+            <div className="h-8 w-16 rounded-lg bg-admin-surface animate-pulse" />
           ) : (
-            <p className="text-2xl sm:text-3xl font-sans font-bold text-admin-text">{value}</p>
+            <p className="text-2xl sm:text-3xl font-sans font-bold text-admin-text leading-none">{value}</p>
           )}
           {hint && !loading && (
             <p className="text-[10px] text-admin-muted mt-1 truncate">{hint}</p>
           )}
         </div>
-        <div className={`w-10 h-10 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
+        <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-xl ${c.bg} flex items-center justify-center shrink-0`}>
           <Icon className={`h-5 w-5 ${c.icon}`} />
         </div>
       </div>

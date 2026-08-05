@@ -25,11 +25,27 @@ const SOURCE_OPTIONS = [
   { value: 'presencial', label: 'Presencial' },
 ];
 
-const inputCls = 'w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
-const selectCls = 'w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors';
+// `text-base sm:text-sm`: en iOS un input con letra < 16px hace que Safari
+// haga zoom al enfocarlo y la pantalla se desplace de lado. `min-w-0` evita
+// que el ancho intrínseco de los campos nativos (date/time/select) estire el
+// contenedor y provoque scroll horizontal.
+const fieldBase = 'w-full min-w-0 max-w-full h-11 rounded-xl border border-admin-border bg-white text-base sm:text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors';
+const inputCls = `${fieldBase} pl-9 pr-3 placeholder:italic placeholder:font-normal placeholder:text-gray-400`;
+// pr-8 deja sitio a la flecha nativa del select para que no pise el texto.
+const selectCls = `${fieldBase} pl-9 pr-8 truncate`;
 
 const FieldIcon = ({ icon: Icon }) => (
   <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+);
+
+// Etiqueta corta sobre cada campo. Antes el único indicio era el placeholder y
+// en móvil se cortaba ("Asignar manicurista (auto si vac…"); con etiqueta el
+// texto de dentro puede ser breve y ya no se sale.
+const Field = ({ label, children }) => (
+  <label className="block min-w-0">
+    <span className="block text-[11px] font-semibold text-admin-muted mb-1">{label}</span>
+    <span className="relative block min-w-0">{children}</span>
+  </label>
 );
 
 const NewBookingSheet = ({
@@ -204,7 +220,7 @@ const NewBookingSheet = ({
   // Se definen una sola vez y se componen distinto en móvil (una columna, con
   // "Más opciones" plegable) y en escritorio (dos columnas, todo a la vista).
   const fClientName = (
-    <div className="relative">
+    <Field label="Nombre de la clienta">
       <FieldIcon icon={User} />
       <input
         value={form.client_name}
@@ -213,58 +229,61 @@ const NewBookingSheet = ({
         className={inputCls}
         autoFocus
       />
-    </div>
+    </Field>
   );
 
   const fPhone = (
-    <div className="relative">
+    <Field label="Teléfono">
       <FieldIcon icon={Phone} />
       <input
         type="tel"
         inputMode="tel"
         value={form.client_phone}
         onChange={setField('client_phone')}
-        placeholder="Ej. 612 345 678"
+        placeholder="612 345 678"
         className={inputCls}
       />
-    </div>
+    </Field>
   );
 
   const fDate = (
-    <div className="relative">
-      <CalendarPlus className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+    <Field label="Fecha">
+      <FieldIcon icon={CalendarPlus} />
       <input
         type="date"
         value={form.booking_date}
         onChange={setField('booking_date')}
-        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+        className={`${fieldBase} pl-9 pr-3`}
       />
-    </div>
+    </Field>
   );
 
   const fTime = (
-    <div className="relative">
-      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
+    <Field label="Hora">
+      <FieldIcon icon={Clock} />
       <input
         type="time"
         value={form.booking_time}
         onChange={setField('booking_time')}
-        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
+        className={`${fieldBase} pl-9 pr-3`}
+      />
+    </Field>
+  );
+
+  const fServices = (
+    <div className="min-w-0">
+      <span className="block text-[11px] font-semibold text-admin-muted mb-1">Servicios</span>
+      <ServicePicker
+        selectedIds={form.selectedServiceIds}
+        onChange={(ids) => setForm((prev) => ({ ...prev, selectedServiceIds: ids }))}
+        otherText={form.otherService}
+        onOtherChange={(t) => setForm((prev) => ({ ...prev, otherService: t }))}
       />
     </div>
   );
 
-  const fServices = (
-    <ServicePicker
-      selectedIds={form.selectedServiceIds}
-      onChange={(ids) => setForm((prev) => ({ ...prev, selectedServiceIds: ids }))}
-      otherText={form.otherService}
-      onOtherChange={(t) => setForm((prev) => ({ ...prev, otherService: t }))}
-    />
-  );
-
   const fEmail = (
-    <div className="relative">
+    <Field label="Email">
       <FieldIcon icon={Mail} />
       <input
         type="email"
@@ -273,27 +292,27 @@ const NewBookingSheet = ({
         placeholder="ejemplo@correo.com"
         className={inputCls}
       />
-    </div>
+    </Field>
   );
 
   const fLocation = (
-    <div className="relative">
+    <Field label="Sede">
       <FieldIcon icon={Store} />
       <select value={form.location_id} onChange={setField('location_id')} className={selectCls}>
-        <option value="">Selecciona sede</option>
+        <option value="">Sin asignar</option>
         {locations.map((l) => (
           <option key={l.id} value={String(l.id)}>{l.name}</option>
         ))}
       </select>
-    </div>
+    </Field>
   );
 
   const fStaff = (
-    <div className="relative">
+    <Field label="Manicurista">
       <FieldIcon icon={UserCheck} />
       {staffMembers.length > 0 ? (
         <select value={form.staff_id} onChange={onStaffChange} className={selectCls}>
-          <option value="">Asignar manicurista (auto si vacío)</option>
+          <option value="">Asignar automáticamente</option>
           {staffMembers.map((m) => (
             <option key={m.id} value={String(m.id)}>{m.full_name}</option>
           ))}
@@ -303,32 +322,33 @@ const NewBookingSheet = ({
           list="np-staff-options"
           value={form.assigned_to}
           onChange={setField('assigned_to')}
-          placeholder="Especialista (opcional)"
+          placeholder="Opcional"
           className={inputCls}
         />
       )}
       <datalist id="np-staff-options">
         {responsibleOptions.map((name) => <option key={name} value={name} />)}
       </datalist>
-    </div>
+    </Field>
   );
 
   const fStatus = (
-    <div className="relative">
+    <Field label="Estado">
       <FieldIcon icon={Activity} />
       <select value={form.status} onChange={setField('status')} className={selectCls}>
         {STATUS_OPTIONS.map((s) => (
           <option key={s.value} value={s.value}>{s.label}</option>
         ))}
       </select>
-    </div>
+    </Field>
   );
 
   const fDuration = (
-    <div className="relative">
+    <Field label="Duración (min)">
       <FieldIcon icon={Timer} />
       <input
         type="number"
+        inputMode="numeric"
         min="15"
         step="5"
         value={form.duration_minutes}
@@ -336,44 +356,256 @@ const NewBookingSheet = ({
         placeholder="30"
         className={inputCls}
       />
-    </div>
+    </Field>
   );
 
   const fSource = (
-    <div className="relative">
+    <Field label="Origen">
       <FieldIcon icon={Globe} />
       <select value={form.source} onChange={setField('source')} className={selectCls}>
         {SOURCE_OPTIONS.map((s) => (
           <option key={s.value} value={s.value}>{s.label}</option>
         ))}
       </select>
-    </div>
+    </Field>
   );
 
   const fNotes = (
-    <div className="relative">
+    <Field label="Notas">
       <FileText className="absolute left-3 top-3 w-4 h-4 text-admin-muted pointer-events-none" />
       <textarea
         value={form.notes}
         onChange={setField('notes')}
-        placeholder="Notas (opcional)"
-        className="w-full pl-9 pt-2 pr-3 pb-2 min-h-[72px] rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
+        placeholder="Opcional"
+        className="w-full min-w-0 max-w-full pl-9 pt-2 pr-3 pb-2 min-h-[72px] rounded-xl border border-admin-border bg-white text-base sm:text-sm text-admin-text placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
       />
-    </div>
+    </Field>
   );
 
   const colTitle = 'text-[11px] font-bold text-admin-muted uppercase tracking-wider';
-  const btnSize = isMobile ? 'flex-1 h-11' : 'h-11 px-6 min-w-[120px]';
+  const btnSize = isMobile ? 'flex-1 min-w-0 h-11' : 'h-11 px-6 min-w-[120px]';
 
-  const containerAnim = isMobile
-    ? { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' } }
-    : { initial: { opacity: 0, scale: 0.97 }, animate: { opacity: 1, scale: 1 }, exit: { opacity: 0, scale: 0.97 } };
+  const panel = (
+    <>
+      {isMobile && (
+        <div className="flex justify-center pt-2 pb-1">
+          <span className="w-10 h-1 rounded-full bg-zinc-300" />
+        </div>
+      )}
 
-  const containerCls = isMobile
-    ? 'fixed inset-x-0 bottom-0 z-[80] bg-white rounded-t-2xl shadow-2xl max-h-[92vh] flex flex-col'
-    // En escritorio el panel es ancho y a dos columnas: así los campos no se
-    // aprietan y la cita entra casi entera sin scroll.
-    : 'fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-[80] w-[calc(100%-3rem)] max-w-4xl bg-white rounded-2xl shadow-2xl max-h-[88vh] flex flex-col';
+      <div className="px-5 pt-3 pb-3 border-b border-admin-border shrink-0">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-base font-bold text-admin-text">
+              {mode === 'block' ? 'Cerrar horario' : 'Nueva cita'}
+            </h3>
+            <p className="text-xs text-admin-muted mt-0.5 capitalize">{dateLabel}</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-admin-muted hover:text-admin-text p-1.5 rounded-lg hover:bg-admin-surface transition-colors"
+            aria-label="Cerrar"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Selector de modo: nueva cita o cerrar horario */}
+        {onBlock && (
+          <div className="mt-3 grid grid-cols-2 gap-1 p-1 bg-admin-surface rounded-xl">
+            <button
+              type="button"
+              onClick={() => setMode('booking')}
+              className={`flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${
+                mode === 'booking' ? 'bg-white text-brand-rose shadow-sm' : 'text-admin-muted hover:text-admin-text'
+              }`}
+            >
+              <CalendarPlus className="w-3.5 h-3.5" /> Nueva cita
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('block')}
+              className={`flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${
+                mode === 'block' ? 'bg-white text-amber-600 shadow-sm' : 'text-admin-muted hover:text-admin-text'
+              }`}
+            >
+              <Lock className="w-3.5 h-3.5" /> Cerrar horario
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
+        {mode === 'block' ? (
+          <div className="space-y-4">
+            <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3">
+              <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <p className="text-xs text-amber-800">
+                Cierra este horario para que <strong>nadie</strong> pueda reservar (toda la sede). Útil para comidas, descansos o imprevistos.
+              </p>
+            </div>
+
+            <div className={`grid gap-3 ${isMobile ? 'grid-cols-1' : 'grid-cols-2'}`}>
+              <Field label="Fecha">
+                <FieldIcon icon={Lock} />
+                <input
+                  type="date"
+                  value={form.booking_date}
+                  onChange={setField('booking_date')}
+                  className={`${fieldBase} pl-9 pr-3`}
+                />
+              </Field>
+              <Field label="Hora de inicio">
+                <FieldIcon icon={Clock} />
+                <input
+                  type="time"
+                  value={form.booking_time}
+                  onChange={setField('booking_time')}
+                  className={`${fieldBase} pl-9 pr-3`}
+                />
+              </Field>
+            </div>
+
+            <div>
+              <p className="text-xs font-bold text-admin-text mb-2">Duración del cierre</p>
+              {/* 2 columnas en móvil: "Resto del día" no cabe en un cuarto de pantalla */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { label: '30 min', value: 30 },
+                  { label: '1 h', value: 60 },
+                  { label: '2 h', value: 120 },
+                  { label: 'Resto del día', value: 0 },
+                ].map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => setBlockForm((p) => ({ ...p, duration: opt.value }))}
+                    className={`h-10 rounded-xl text-xs font-bold border transition-all ${
+                      blockForm.duration === opt.value
+                        ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                        : 'bg-white text-admin-muted border-admin-border hover:border-amber-300'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Field label="Motivo">
+              <FieldIcon icon={FileText} />
+              <input
+                value={blockForm.reason}
+                onChange={(e) => setBlockForm((p) => ({ ...p, reason: e.target.value }))}
+                placeholder="Comida, descanso…"
+                className={inputCls}
+              />
+            </Field>
+          </div>
+        ) : isMobile ? (
+        /* ---------- Móvil: una columna, con "Más opciones" plegable ---------- */
+        <>
+        {fClientName}
+        {fPhone}
+
+        {/* Fecha y hora apiladas: los campos nativos date/time tienen un ancho
+            mínimo propio y en dos columnas empujaban la pantalla hacia la
+            derecha en móviles estrechos. */}
+        {fDate}
+        {fTime}
+
+        {fServices}
+
+        <button
+          type="button"
+          onClick={() => setShowMore((v) => !v)}
+          className="w-full min-w-0 flex items-center justify-center gap-1.5 mt-1 py-2 text-xs font-bold text-brand-rose hover:bg-brand-rose-50 rounded-lg transition-colors"
+        >
+          {showMore ? <ChevronUp className="w-3.5 h-3.5 shrink-0" /> : <ChevronDown className="w-3.5 h-3.5 shrink-0" />}
+          <span className="truncate">{showMore ? 'Menos opciones' : 'Más opciones'}</span>
+        </button>
+
+        {showMore && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="space-y-3 pt-2 border-t border-admin-border/50"
+          >
+            {fEmail}
+            {fLocation}
+            {fStaff}
+            {fStatus}
+            {fDuration}
+            {fSource}
+            {fNotes}
+          </motion.div>
+        )}
+        </>
+        ) : (
+        /* ---------- Escritorio: dos columnas, todo a la vista ---------- */
+        <div className="grid grid-cols-2 gap-x-8 gap-y-3 items-start min-w-0">
+          <div className="space-y-3 min-w-0">
+            <p className={colTitle}>Datos de la clienta</p>
+            {fClientName}
+            {fPhone}
+            {fEmail}
+            {fLocation}
+            {fStaff}
+          </div>
+          <div className="space-y-3 min-w-0">
+            <p className={colTitle}>Detalles de la cita</p>
+            <div className="grid grid-cols-2 gap-3 min-w-0">
+              {fDate}
+              {fTime}
+            </div>
+            {fServices}
+            <div className="grid grid-cols-2 gap-3 min-w-0">
+              {fStatus}
+              {fDuration}
+            </div>
+            {fSource}
+            {fNotes}
+          </div>
+        </div>
+        )}
+      </div>
+
+      {/* En móvil los botones ocupan todo el ancho (pulgar); en escritorio
+          se agrupan a la derecha para no estirarse por todo el panel. */}
+      <div className={`px-5 py-3 border-t border-admin-border bg-admin-bg shrink-0 flex items-center gap-2 ${isMobile ? '' : 'justify-end'}`}>
+        <button
+          type="button"
+          onClick={onClose}
+          className={`${btnSize} rounded-xl text-sm font-bold text-admin-muted hover:text-admin-text hover:bg-admin-surface transition-colors`}
+        >
+          Cancelar
+        </button>
+        {mode === 'block' ? (
+          <button
+            type="button"
+            disabled={saving}
+            onClick={handleBlock}
+            className={`${btnSize} rounded-xl text-sm font-bold text-white bg-amber-500 shadow-sm hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2`}
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+            Cerrar horario
+          </button>
+        ) : (
+          <button
+            type="button"
+            disabled={!valid || saving}
+            onClick={handleSubmit}
+            className={`${btnSize} rounded-xl text-sm font-bold text-white bg-gradient-rose-gold shadow-rose-sm hover:shadow-rose-md disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2`}
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            Guardar cita
+          </button>
+        )}
+      </div>
+    </>
+  );
+
+  const spring = { type: 'spring', stiffness: 340, damping: 34 };
 
   return (
     <AnimatePresence>
@@ -387,226 +619,43 @@ const NewBookingSheet = ({
             onClick={onClose}
             className="fixed inset-0 z-[75] bg-black/40 backdrop-blur-sm"
           />
-          <motion.div
-            key="sheet"
-            {...containerAnim}
-            transition={{ type: 'spring', stiffness: 340, damping: 34 }}
-            className={containerCls}
-          >
-            {isMobile && (
-              <div className="flex justify-center pt-2 pb-1">
-                <span className="w-10 h-1 rounded-full bg-zinc-300" />
-              </div>
-            )}
 
-            <div className="px-5 pt-3 pb-3 border-b border-admin-border shrink-0">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-bold text-admin-text">
-                    {mode === 'block' ? 'Cerrar horario' : 'Nueva cita'}
-                  </h3>
-                  <p className="text-xs text-admin-muted mt-0.5 capitalize">{dateLabel}</p>
-                </div>
-                <button
-                  onClick={onClose}
-                  className="text-admin-muted hover:text-admin-text p-1.5 rounded-lg hover:bg-admin-surface transition-colors"
-                  aria-label="Cerrar"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Selector de modo: nueva cita o cerrar horario */}
-              {onBlock && (
-                <div className="mt-3 grid grid-cols-2 gap-1 p-1 bg-admin-surface rounded-xl">
-                  <button
-                    type="button"
-                    onClick={() => setMode('booking')}
-                    className={`flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${
-                      mode === 'booking' ? 'bg-white text-brand-rose shadow-sm' : 'text-admin-muted hover:text-admin-text'
-                    }`}
-                  >
-                    <CalendarPlus className="w-3.5 h-3.5" /> Nueva cita
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMode('block')}
-                    className={`flex items-center justify-center gap-1.5 h-9 rounded-lg text-xs font-bold transition-all ${
-                      mode === 'block' ? 'bg-white text-amber-600 shadow-sm' : 'text-admin-muted hover:text-admin-text'
-                    }`}
-                  >
-                    <Lock className="w-3.5 h-3.5" /> Cerrar horario
-                  </button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              {mode === 'block' ? (
-                <div className="space-y-4">
-                  <div className="flex items-start gap-2.5 rounded-xl bg-amber-50 border border-amber-200 p-3">
-                    <Lock className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
-                    <p className="text-xs text-amber-800">
-                      Cierra este horario para que <strong>nadie</strong> pueda reservar (toda la sede). Útil para comidas, descansos o imprevistos.
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
-                      <input
-                        type="date"
-                        value={form.booking_date}
-                        onChange={setField('booking_date')}
-                        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
-                      />
-                    </div>
-                    <div className="relative">
-                      <Clock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
-                      <input
-                        type="time"
-                        value={form.booking_time}
-                        onChange={setField('booking_time')}
-                        className="w-full pl-9 h-11 rounded-xl border border-admin-border bg-white text-sm text-admin-text focus:outline-none focus:border-brand-rose transition-colors"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <p className="text-xs font-bold text-admin-text mb-2">Duración del cierre</p>
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        { label: '30 min', value: 30 },
-                        { label: '1 h', value: 60 },
-                        { label: '2 h', value: 120 },
-                        { label: 'Resto del día', value: 0 },
-                      ].map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setBlockForm((p) => ({ ...p, duration: opt.value }))}
-                          className={`h-10 rounded-xl text-xs font-bold border transition-all ${
-                            blockForm.duration === opt.value
-                              ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                              : 'bg-white text-admin-muted border-admin-border hover:border-amber-300'
-                          }`}
-                        >
-                          {opt.label}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="relative">
-                    <FileText className="absolute left-3 top-3 w-4 h-4 text-admin-muted pointer-events-none" />
-                    <input
-                      value={blockForm.reason}
-                      onChange={(e) => setBlockForm((p) => ({ ...p, reason: e.target.value }))}
-                      placeholder="Motivo (opcional): comida, descanso…"
-                      className={inputCls}
-                    />
-                  </div>
-                </div>
-              ) : isMobile ? (
-              /* ---------- Móvil: una columna, con "Más opciones" plegable ---------- */
-              <>
-              {fClientName}
-              {fPhone}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {fDate}
-                {fTime}
-              </div>
-
-              {fServices}
-
-              <button
-                type="button"
-                onClick={() => setShowMore((v) => !v)}
-                className="w-full flex items-center justify-center gap-1.5 mt-1 py-2 text-xs font-bold text-brand-rose hover:bg-brand-rose-50 rounded-lg transition-colors"
+          {isMobile ? (
+            <motion.div
+              key="sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={spring}
+              className="fixed inset-x-0 bottom-0 z-[80] bg-white rounded-t-2xl shadow-2xl max-h-[92dvh] flex flex-col overflow-hidden"
+            >
+              {panel}
+            </motion.div>
+          ) : (
+            /* En escritorio se centra con flex, no con `left-1/2 -translate-x-1/2`:
+               framer-motion escribe su propio `transform` para la animación de
+               escala y borraba ese translate, así que el panel aparecía medio
+               fuera de la pantalla por la derecha. El contenedor con padding
+               garantiza además que nunca toque los bordes ni desborde a lo alto. */
+            <motion.div
+              key="sheet"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              className="fixed inset-0 z-[80] flex items-center justify-center p-4 sm:p-6 pointer-events-none"
+            >
+              <motion.div
+                initial={{ scale: 0.97 }}
+                animate={{ scale: 1 }}
+                exit={{ scale: 0.97 }}
+                transition={spring}
+                className="pointer-events-auto w-full max-w-4xl max-h-full bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden"
               >
-                {showMore ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-                {showMore ? 'Menos opciones' : 'Más opciones (email, sede, especialista, estado…)'}
-              </button>
-
-              {showMore && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  className="space-y-3 pt-2 border-t border-admin-border/50"
-                >
-                  {fEmail}
-                  {fLocation}
-                  {fStaff}
-                  {fStatus}
-                  {fDuration}
-                  {fSource}
-                  {fNotes}
-                </motion.div>
-              )}
-              </>
-              ) : (
-              /* ---------- Escritorio: dos columnas, todo a la vista ---------- */
-              <div className="grid grid-cols-2 gap-x-8 gap-y-3 items-start">
-                <div className="space-y-3">
-                  <p className={colTitle}>Datos de la clienta</p>
-                  {fClientName}
-                  {fPhone}
-                  {fEmail}
-                  {fLocation}
-                  {fStaff}
-                </div>
-                <div className="space-y-3">
-                  <p className={colTitle}>Detalles de la cita</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {fDate}
-                    {fTime}
-                  </div>
-                  {fServices}
-                  <div className="grid grid-cols-2 gap-3">
-                    {fStatus}
-                    {fDuration}
-                  </div>
-                  {fSource}
-                  {fNotes}
-                </div>
-              </div>
-              )}
-            </div>
-
-            {/* En móvil los botones ocupan todo el ancho (pulgar); en escritorio
-                se agrupan a la derecha para no estirarse por todo el panel. */}
-            <div className={`px-5 py-3 border-t border-admin-border bg-admin-bg shrink-0 flex items-center gap-2 ${isMobile ? '' : 'justify-end'}`}>
-              <button
-                type="button"
-                onClick={onClose}
-                className={`${btnSize} rounded-xl text-sm font-bold text-admin-muted hover:text-admin-text hover:bg-admin-surface transition-colors`}
-              >
-                Cancelar
-              </button>
-              {mode === 'block' ? (
-                <button
-                  type="button"
-                  disabled={saving}
-                  onClick={handleBlock}
-                  className={`${btnSize} rounded-xl text-sm font-bold text-white bg-amber-500 shadow-sm hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2`}
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                  Cerrar horario
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={!valid || saving}
-                  onClick={handleSubmit}
-                  className={`${btnSize} rounded-xl text-sm font-bold text-white bg-gradient-rose-gold shadow-rose-sm hover:shadow-rose-md disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2`}
-                >
-                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-                  Guardar cita
-                </button>
-              )}
-            </div>
-          </motion.div>
+                {panel}
+              </motion.div>
+            </motion.div>
+          )}
         </>
       )}
     </AnimatePresence>

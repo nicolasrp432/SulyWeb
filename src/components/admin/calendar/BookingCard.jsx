@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { motion, useDragControls } from 'framer-motion';
 import { CalendarClock, Globe, MessageCircle, Store, User } from 'lucide-react';
 import { SLOT_HEIGHT, SNAP_MINUTES, minutesToTime, timeToMinutes } from './grid/timeGridUtils';
 
@@ -22,6 +22,13 @@ const ORIGIN_ICONS = {
 
 const MIN_DURATION = 15;
 const MAX_DURATION = 480;
+
+// Mover una cita exige mantener pulsado el bloque. Antes bastaba con deslizarlo
+// y era fácil cambiar la hora de una cita sin querer al desplazar la agenda.
+const LONG_PRESS_MS = { touch: 450, pen: 450, mouse: 250 };
+// Si el dedo se desplaza más que esto antes de cumplirse el tiempo, se entiende
+// que está haciendo scroll y no se activa el arrastre.
+const MOVE_TOLERANCE_PX = 10;
 
 const BookingCard = ({
   booking,
@@ -54,6 +61,79 @@ const BookingCard = ({
   const [dragPreviewTime, setDragPreviewTime] = useState(null);
   const draggable = !!(onMove || onResize);
 
+  // --- Pulsación mantenida para desbloquear el arrastre -----------------------
+  const dragControls = useDragControls();
+  const [armed, setArmed] = useState(false);
+  const pressRef = useRef({ timer: null, detach: null });
+
+  const cancelPress = useCallback(() => {
+    if (pressRef.current.timer) {
+      clearTimeout(pressRef.current.timer);
+      pressRef.current.timer = null;
+    }
+    if (pressRef.current.detach) {
+      pressRef.current.detach();
+      pressRef.current.detach = null;
+    }
+  }, []);
+
+  useEffect(() => cancelPress, [cancelPress]);
+
+  // Mientras el bloque está desbloqueado hay que impedir que la agenda haga
+  // scroll a la vez que se mueve la cita. `touch-action` no basta: Safari lo
+  // evalúa al empezar el gesto y el dedo ya está apoyado, así que se bloquea el
+  // touchmove. Los oyentes de pointerup son la red de seguridad para que el
+  // bloqueo se suelte aunque el arrastre no llegue a arrancar.
+  useEffect(() => {
+    if (!armed) return undefined;
+    const prevent = (e) => e.preventDefault();
+    const release = () => setArmed(false);
+    document.addEventListener('touchmove', prevent, { passive: false });
+    window.addEventListener('pointerup', release);
+    window.addEventListener('pointercancel', release);
+    return () => {
+      document.removeEventListener('touchmove', prevent);
+      window.removeEventListener('pointerup', release);
+      window.removeEventListener('pointercancel', release);
+    };
+  }, [armed]);
+
+  const handlePointerDown = (e) => {
+    if (!draggable || (e.button != null && e.button !== 0)) return;
+    cancelPress();
+
+    // Los oyentes van en la ventana, no en el bloque: al deslizar, el puntero
+    // sale enseguida de la cita y sus propios eventos dejarían de llegar, de
+    // modo que un deslizamiento rápido acababa activando el arrastre igual.
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const onMove = (ev) => {
+      if (Math.abs(ev.clientX - startX) > MOVE_TOLERANCE_PX ||
+          Math.abs(ev.clientY - startY) > MOVE_TOLERANCE_PX) {
+        cancelPress();
+      }
+    };
+    window.addEventListener('pointermove', onMove, true);
+    window.addEventListener('pointerup', cancelPress, true);
+    window.addEventListener('pointercancel', cancelPress, true);
+    pressRef.current.detach = () => {
+      window.removeEventListener('pointermove', onMove, true);
+      window.removeEventListener('pointerup', cancelPress, true);
+      window.removeEventListener('pointercancel', cancelPress, true);
+    };
+
+    const delay = LONG_PRESS_MS[e.pointerType] ?? LONG_PRESS_MS.touch;
+    pressRef.current.timer = setTimeout(() => {
+      cancelPress();
+      setArmed(true);
+      // Vibración corta para avisar de que ya se puede mover (Android).
+      navigator.vibrate?.(15);
+      // El dedo sigue apoyado, así que se arranca el arrastre con el evento
+      // original: framer-motion continúa el gesto desde ahí.
+      dragControls.start(e);
+    }, delay);
+  };
+
   const handleClick = (e) => {
     if (dragging) return;
     e.stopPropagation();
@@ -73,6 +153,7 @@ const BookingCard = ({
   const handleDragEnd = (_, info) => {
     setTimeout(() => setDragging(false), 50);
     setDragPreviewTime(null);
+    setArmed(false);
     if (!onMove) return;
     if (Math.abs(info.offset.y) < 6) return; // click, no drag
     const deltaMin = dragDeltaMinutes(info.offset.y);
@@ -107,19 +188,30 @@ const BookingCard = ({
         }
       : {}),
     ...(previewHeight !== null ? { height: previewHeight } : {}),
+    // Con dragListener={false} framer ya no fija touch-action, así que deslizar
+    // sobre una cita vuelve a desplazar la agenda como en cualquier otro sitio.
+    touchAction: armed || dragging ? 'none' : 'auto',
   };
 
   return (
     <motion.div
       drag={draggable ? 'y' : false}
+      // dragListener={false}: framer no arranca solo al deslizar; el arrastre
+      // se lanza a mano desde dragControls cuando se cumple la pulsación
+      // mantenida (ver handlePointerDown).
+      dragListener={false}
+      dragControls={dragControls}
       dragMomentum={false}
       dragElastic={0}
+      onPointerDown={handlePointerDown}
       onDragStart={() => setDragging(true)}
       onDrag={handleDrag}
       onDragEnd={handleDragEnd}
       whileDrag={{ scale: 1.03, zIndex: 50 }}
       style={effectiveStyle}
-      className={`absolute ${layout ? '' : 'left-1 right-1'} ${dragging ? 'cursor-grabbing shadow-lg z-40' : 'cursor-pointer'}`}
+      className={`absolute ${layout ? '' : 'left-1 right-1'} ${
+        dragging ? 'cursor-grabbing shadow-lg z-40' : 'cursor-pointer'
+      } ${armed ? 'z-40 ring-2 ring-brand-rose rounded-lg' : ''}`}
     >
       {/* Chip fantasma con la hora destino durante el drag */}
       {dragging && dragPreviewTime && (
