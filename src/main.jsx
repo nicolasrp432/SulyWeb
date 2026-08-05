@@ -6,6 +6,21 @@ import '@/index.css';
 import { AuthProvider } from '@/contexts/SupabaseAuthContext';
 import { BookingCartProvider } from '@/contexts/BookingCartContext';
 
+// PWA: el navegador dispara `beforeinstallprompt` muy pronto, normalmente ANTES
+// de que React monte. Si no se captura aquí, el evento se pierde y el botón
+// "Instalar" no llega a aparecer nunca (era el motivo de que no se pudiera
+// instalar en Android/Chrome). Lo guardamos y avisamos a quien lo necesite.
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault(); // evita el mini-banner nativo; instalamos desde nuestro botón
+  window.__sulyInstallPrompt = e;
+  window.dispatchEvent(new Event('suly:installable'));
+});
+
+window.addEventListener('appinstalled', () => {
+  window.__sulyInstallPrompt = null;
+  window.dispatchEvent(new Event('suly:installed'));
+});
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>

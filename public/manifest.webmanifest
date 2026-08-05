@@ -1,11 +1,11 @@
 {
+  "id": "/admin",
   "name": "Suly Pretty Nails — Panel",
   "short_name": "Suly Panel",
   "description": "Panel de administración de Suly Pretty Nails: agenda, reservas y clientas.",
   "start_url": "/admin",
-  "scope": "/admin",
+  "scope": "/",
   "display": "standalone",
-  "orientation": "portrait",
   "background_color": "#ffffff",
   "theme_color": "#e91e63",
   "lang": "es",
