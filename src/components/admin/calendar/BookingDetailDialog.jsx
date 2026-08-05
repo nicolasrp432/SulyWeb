@@ -20,8 +20,14 @@ const getInitials = (name = '') => {
   return parts.map((p) => p[0]?.toUpperCase() || '').join('') || '?';
 };
 
-const inputCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-white text-sm text-admin-text font-medium placeholder:italic placeholder:font-normal placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors';
-const selectCls = 'w-full pl-9 h-10 rounded-xl border border-admin-border bg-white text-sm text-admin-text font-medium focus:outline-none focus:border-brand-rose transition-colors';
+// `text-base sm:text-sm`: por debajo de 16px Safari hace zoom al enfocar el
+// campo y desplaza la pantalla de lado. `min-w-0` + `max-w-full` impiden que el
+// ancho intrínseco de los campos nativos estire el diálogo.
+const fieldBase = 'w-full min-w-0 max-w-full h-10 rounded-xl border border-admin-border bg-white text-base sm:text-sm text-admin-text font-medium focus:outline-none focus:border-brand-rose transition-colors';
+const inputCls = `${fieldBase} pl-9 pr-3 placeholder:italic placeholder:font-normal placeholder:text-gray-400`;
+const selectCls = `${fieldBase} pl-9 pr-8 truncate`;
+// Fecha y hora: el icono nativo de iOS ocupa el lado derecho, por eso pr-2.
+const dateCls = `${fieldBase} pl-9 pr-2`;
 
 const FieldIcon = ({ icon: Icon }) => (
   <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-admin-muted pointer-events-none" />
@@ -159,7 +165,7 @@ const BookingDetailDialog = ({
         </div>
 
         {/* Body — en desktop es la única zona con scroll; header y footer quedan fijos */}
-        <div className="px-5 py-4 space-y-4 sm:flex-1 sm:overflow-y-auto sm:min-h-0">
+        <div className="px-5 py-4 space-y-4 min-w-0 sm:flex-1 sm:overflow-y-auto sm:min-h-0">
           {/* Banner de completado para citas sincronizadas desde Google/iPhone */}
           {isIncompleteSync && (
             <div className="rounded-xl border border-brand-gold/40 bg-brand-gold/10 p-3">
@@ -207,8 +213,8 @@ const BookingDetailDialog = ({
                   <FieldIcon icon={User} />
                   <input value={form.client_name} onChange={setField('client_name')} placeholder="Nombre del cliente" className={inputCls} />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <div className="relative">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
+                  <div className="relative min-w-0">
                     <FieldIcon icon={Phone} />
                     <input value={form.client_phone} onChange={setField('client_phone')} placeholder="Teléfono" className={inputCls} />
                   </div>
@@ -242,15 +248,15 @@ const BookingDetailDialog = ({
             </button>
             {showBookingData && (
               <div className="space-y-2 pt-1">
-                {/* Date and Time: Stacks on mobile, side-by-side on desktop */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {/* Fecha y hora: apiladas en móvil, en paralelo en escritorio */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 min-w-0">
                   <div className="relative min-w-0">
                     <FieldIcon icon={CalendarIcon} />
-                    <input type="date" value={form.booking_date} onChange={setField('booking_date')} className={`${inputCls} text-xs sm:text-sm px-2`} />
+                    <input type="date" value={form.booking_date} onChange={setField('booking_date')} className={dateCls} />
                   </div>
                   <div className="relative min-w-0">
                     <FieldIcon icon={Clock} />
-                    <input type="time" value={form.booking_time} onChange={setField('booking_time')} className={`${inputCls} text-xs sm:text-sm px-2`} />
+                    <input type="time" value={form.booking_time} onChange={setField('booking_time')} className={dateCls} />
                   </div>
                 </div>
                 <ServicePicker
@@ -275,7 +281,7 @@ const BookingDetailDialog = ({
           {/* Quick action bar - Located under client and appointment details for mobile ergonomic ease */}
           <div className="pt-2 border-t border-admin-border/30">
             <p className="text-[11px] font-bold text-admin-text uppercase tracking-wider mb-2">Acciones rápidas</p>
-            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 min-w-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -303,7 +309,7 @@ const BookingDetailDialog = ({
                 <X className="w-3.5 h-3.5 mr-1" /> Cancelar
               </Button>
             </div>
-            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 mt-2">
+            <div className="grid grid-cols-1 xs:grid-cols-3 gap-2 mt-2 min-w-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -346,7 +352,7 @@ const BookingDetailDialog = ({
               className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-bold text-brand-rose hover:bg-brand-rose-50 rounded-lg transition-colors"
             >
               {showAdvanced ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-              {showAdvanced ? 'Menos opciones' : 'Más opciones (especialista, estado, notas internas...)'}
+              <span className="truncate">{showAdvanced ? 'Menos opciones' : 'Más opciones'}</span>
             </button>
           </div>
 
@@ -365,7 +371,7 @@ const BookingDetailDialog = ({
                   {responsibleOptions.map((name) => <option key={name} value={name} />)}
                 </datalist>
               </div>
-              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 xs:grid-cols-2 gap-2 min-w-0">
                 <div className="relative min-w-0">
                   <FieldIcon icon={Activity} />
                   <select value={form.status} onChange={setField('status')} className={selectCls}>

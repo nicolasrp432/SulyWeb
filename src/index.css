@@ -198,6 +198,39 @@ h3 { font-size: clamp(1.125rem, 2.5vw, 1.5rem); }
   padding-bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
 }
 
+/* Campos de fecha y hora en iOS.
+   Safari los dibuja como un control propio con un ancho mínimo intrínseco que
+   ignora `width: 100%`, y además centra el valor. En un iPhone eso hacía que el
+   campo sobresaliera del panel y la pantalla se pudiera arrastrar de lado.
+   Con `appearance: none` pasan a comportarse como una caja de texto normal que
+   respeta el ancho del contenedor. */
+input[type='date'],
+input[type='time'],
+input[type='datetime-local'],
+input[type='month'],
+input[type='week'] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  text-align: left;
+}
+
+/* iOS coloca su icono de calendario/reloj pegado al borde derecho; sin esto se
+   solapa con el texto cuando el campo es estrecho. */
+input[type='date']::-webkit-date-and-time-value,
+input[type='time']::-webkit-date-and-time-value,
+input[type='datetime-local']::-webkit-date-and-time-value {
+  text-align: left;
+}
+
+input[type='date']::-webkit-calendar-picker-indicator,
+input[type='time']::-webkit-calendar-picker-indicator,
+input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  margin-inline-start: 0;
+  padding-inline-start: 0;
+}
+
 /* Pill badge */
 .badge-pill {
   display: inline-flex;

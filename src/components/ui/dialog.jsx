@@ -29,7 +29,10 @@ const DialogContent = React.forwardRef(({ className, children, ...props }, ref) 
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 grid w-full gap-4 border bg-white p-6 shadow-lg duration-200",
+        // grid-cols-1 (no `grid` a secas): define la columna como minmax(0,1fr),
+        // así el contenido no puede imponer su ancho mínimo y estirar el
+        // diálogo más allá de la pantalla en móviles estrechos.
+        "fixed z-50 grid grid-cols-1 w-full gap-4 border bg-white p-6 shadow-lg duration-200",
         // Mobile layout & animation (bottom drawer)
         "bottom-0 top-auto left-0 right-0 translate-x-0 translate-y-0 rounded-t-[2rem] rounded-b-none border-x-0 border-b-0 max-h-[80vh] overflow-y-auto",
         "data-[state=open]:animate-in data-[state=closed]:animate-out",
