@@ -37,7 +37,10 @@ import TeamPage from '@/pages/admin/TeamPage';
 const PublicLayout = () => (
   <div className="min-h-screen flex flex-col font-body">
     <Navbar />
-    <main className="flex-1">
+    {/* overflow-x-hidden: red de seguridad contra el scroll lateral en móvil
+        (el mapa de Leaflet de Contacto se salía 16 px). Lo que sí necesita
+        desplazarse en horizontal tiene su propio contenedor. */}
+    <main className="flex-1 overflow-x-hidden">
       <Outlet />
     </main>
     <Footer />

@@ -16,6 +16,7 @@ const Navbar = () => {
   const [isOpen, setIsOpen]       = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const location = useLocation();
+  const isBookingFlow = location.pathname.startsWith('/reservas');
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 40);
@@ -213,24 +214,31 @@ const Navbar = () => {
         )}
       </AnimatePresence>
 
-      {/* ── Mobile: floating bottom CTA bar ── */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden safe-area-pb">
-        <div className="bg-white/95 backdrop-blur-sm border-t border-brand-rose-100 px-4 py-3">
-          <Button
-            asChild
-            size="lg"
-            className="w-full bg-gradient-rose-gold text-white rounded-xl shadow-rose-md"
-          >
-            <Link to="/reservas">
-              <Calendar className="h-4 w-4 mr-2" />
-              Reservar Cita Online
-            </Link>
-          </Button>
-        </div>
-      </div>
+      {/* ── Móvil: barra inferior fija con la llamada a reservar ──
+          No se muestra dentro del propio flujo de reserva: allí llevaría a la
+          página en la que ya estás y, sobre todo, tapaba el botón "Continuar"
+          de cada paso, que es la acción que la clienta tiene que ver. */}
+      {!isBookingFlow && (
+        <>
+          <div className="fixed bottom-0 left-0 right-0 z-40 lg:hidden safe-area-pb">
+            <div className="bg-white/95 backdrop-blur-sm border-t border-brand-rose-100 px-4 py-3">
+              <Button
+                asChild
+                size="lg"
+                className="w-full bg-gradient-rose-gold text-white rounded-xl shadow-rose-md"
+              >
+                <Link to="/reservas">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Reservar Cita Online
+                </Link>
+              </Button>
+            </div>
+          </div>
 
-      {/* Spacer so content doesn't hide behind floating bottom bar on mobile */}
-      <div className="lg:hidden h-[72px]" aria-hidden="true" />
+          {/* Hueco para que el contenido no quede debajo de la barra fija */}
+          <div className="lg:hidden h-[72px]" aria-hidden="true" />
+        </>
+      )}
     </>
   );
 };

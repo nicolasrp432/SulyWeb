@@ -4,6 +4,8 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
-    include: ['src/**/*.test.{js,jsx}'],
+    // También la lógica pura compartida por las Edge Functions (formato de los
+    // avisos): es JS normal, sin APIs de Deno, y conviene tenerla cubierta.
+    include: ['src/**/*.test.{js,jsx}', 'supabase/functions/**/*.test.js'],
   },
 });

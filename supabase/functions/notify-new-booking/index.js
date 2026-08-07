@@ -1,7 +1,13 @@
 // Edge Function: notify-new-booking  (aviso fiable al equipo)
-// La dispara el trigger `notify_new_booking` en cada INSERT de bookings con
-// origin IN ('online','whatsapp'). Envía por email (Resend) el aviso de nueva
-// reserva a TODOS los destinatarios configurados en settings.
+// Avisa por email (Resend) de los movimientos que la clienta provoca sola, a
+// TODOS los destinatarios configurados en notification_config:
+//
+//   · 'new'       — trigger `notify_new_booking` en cada INSERT con
+//                   origin IN ('online','whatsapp').
+//   · 'cancelled' — trigger `notify_client_cancellation` cuando una clienta
+//                   cancela desde el enlace de su cita (cancelled_by='client').
+//                   Las que cancela el equipo desde el panel no avisan: ya lo
+//                   sabe quien las cancela.
 //
 // A diferencia del aviso antiguo (que salía desde el navegador de la clienta),
 // este corre en el servidor: llega aunque la clienta cierre la pestaña.
@@ -10,6 +16,7 @@
 // gcal-push. Desplegar con verify_jwt desactivado.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { buildSubject, salonToday, shortTime } from '../_shared/notifyFormat.js';
 
 const supabase = createClient(
   Deno.env.get('SUPABASE_URL'),
@@ -62,31 +69,46 @@ async function servicesText(bookingId) {
   return (data || []).map((r) => r.services?.name).filter(Boolean).join(', ');
 }
 
-function buildHtml(b, svc, locationName) {
+// Cada evento tiene su propio color y titular para que el correo se distinga
+// de un vistazo, sin tener que leerlo entero.
+const EVENT_STYLE = {
+  new:       { color: '#e11d48', title: 'Nueva reserva' },
+  cancelled: { color: '#b45309', title: 'Cita cancelada por la clienta' },
+};
+
+function buildHtml(event, b, svc, locationName) {
+  const style = EVENT_STYLE[event] || EVENT_STYLE.new;
+  const cancelled = event === 'cancelled';
   return `
     <!DOCTYPE html><html><head><meta charset="utf-8">
     <style>
       body{font-family:Arial,sans-serif;line-height:1.6;color:#333;max-width:600px;margin:0 auto;padding:20px}
-      .header{background-color:#e11d48;color:#fff;padding:20px;text-align:center;border-radius:8px 8px 0 0}
+      .header{background-color:${style.color};color:#fff;padding:20px;text-align:center;border-radius:8px 8px 0 0}
       .content{background-color:#f9f9f9;padding:20px;border-radius:0 0 8px 8px}
       .booking-details{background-color:#fff;padding:15px;border-radius:8px;margin:10px 0}
-      .label{color:#e11d48;font-weight:bold}
+      .label{color:${style.color};font-weight:bold}
+      .note{background-color:#fffbeb;border:1px solid #fcd34d;padding:12px;border-radius:8px;margin:10px 0}
     </style></head>
     <body>
-      <div class="header"><h1 style="margin:0">Nueva Reserva Recibida</h1></div>
+      <div class="header"><h1 style="margin:0">${style.title}</h1></div>
       <div class="content">
+        ${cancelled ? `<div class="note"><strong>El hueco vuelve a estar libre.</strong> Si tienes lista de espera, es buen momento para reofrecerlo.</div>` : ''}
         <div class="booking-details">
           <p><span class="label">Cliente:</span> ${esc(b.client_name) || '—'}</p>
           <p><span class="label">Teléfono:</span> ${esc(b.client_phone) || '—'}</p>
           <p><span class="label">Email:</span> ${esc(b.client_email) || '—'}</p>
           <p><span class="label">Fecha:</span> ${esc(formatDate(b.booking_date))}</p>
-          <p><span class="label">Hora:</span> ${esc((b.booking_time || '').slice(0, 5)) || '—'}</p>
+          <p><span class="label">Hora:</span> ${esc(shortTime(b.booking_time)) || '—'}</p>
           <p><span class="label">Sede:</span> ${esc(locationName) || '—'}</p>
           <p><span class="label">Servicios:</span> ${esc(svc) || '—'}</p>
           ${b.notes ? `<p><span class="label">Notas:</span> ${esc(b.notes)}</p>` : ''}
-          <p><span class="label">Origen:</span> ${esc(b.origin || 'online')}</p>
+          ${cancelled
+            ? `<p><span class="label">Motivo:</span> ${esc(b.cancellation_reason) || 'No indicado'}</p>`
+            : `<p><span class="label">Origen:</span> ${esc(b.origin || 'online')}</p>`}
         </div>
-        <p style="font-size:13px;color:#666">Recibida el ${new Date().toLocaleString('es-ES')}.</p>
+        <p style="font-size:13px;color:#666">
+          ${cancelled ? 'Cancelada' : 'Recibida'} el ${new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })}.
+        </p>
       </div>
     </body></html>`;
 }
@@ -124,6 +146,9 @@ Deno.serve(async (req) => {
   const bookingId = payload.booking_id || payload.record?.id;
   if (!bookingId) return json(400, { error: 'missing_booking_id' });
 
+  // Sin `event` es una reserva nueva: así el trigger antiguo sigue valiendo.
+  const event = payload.event === 'cancelled' ? 'cancelled' : 'new';
+
   try {
     const { data: b, error } = await supabase
       .from('bookings').select('*').eq('id', bookingId).single();
@@ -143,11 +168,11 @@ Deno.serve(async (req) => {
 
     const result = await sendEmail(
       recipients,
-      'Nueva Reserva - Suly Pretty Nails',
-      buildHtml(b, svc, locationName),
+      buildSubject(event, b, salonToday()),
+      buildHtml(event, b, svc, locationName),
     );
-    if (!result.ok) return json(200, { ok: false, error: result.error });
-    return json(200, { ok: true, sent_to: recipients.length, id: result.id });
+    if (!result.ok) return json(200, { ok: false, event, error: result.error });
+    return json(200, { ok: true, event, sent_to: recipients.length, id: result.id });
   } catch (e) {
     return json(200, { ok: false, error: String(e) });
   }

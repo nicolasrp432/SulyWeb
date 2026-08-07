@@ -1,7 +1,17 @@
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 
 const WhatsAppButton = ({ phoneNumber }) => {
+  const { pathname } = useLocation();
+
+  // La burbuja no se muestra dentro del flujo de reserva. Se superponía al
+  // botón "Continuar" del paso 1 y, en los pasos 2 y 3, el botón principal
+  // ocupa todo el ancho, así que no hay esquina libre donde ponerla sin tapar
+  // la acción de la clienta. El número de WhatsApp sigue estando en el pie de
+  // la página y en la pantalla de confirmación.
+  if (pathname.startsWith('/reservas')) return null;
+
   return (
     <motion.a
       href={phoneNumber}

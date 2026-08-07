@@ -291,8 +291,8 @@ const SettingsPage = () => {
           </div>
         </SectionCard>
 
-        {/* Avisos de nuevas reservas */}
-        <SectionCard icon={Mail} title="Avisos de nuevas reservas" subtitle="Correos que reciben el aviso cuando una clienta reserva online">
+        {/* Avisos de movimientos en la agenda */}
+        <SectionCard icon={Mail} title="Avisos de la agenda" subtitle="Correos que avisan cuando una clienta reserva o cancela online">
           <div className="space-y-3">
             <div>
               <label htmlFor="notify-emails" className="block text-[11px] font-bold text-admin-muted uppercase tracking-wider mb-1">
@@ -307,7 +307,10 @@ const SettingsPage = () => {
                 className="w-full px-3 py-2 rounded-xl border border-admin-border bg-white text-sm text-admin-text placeholder:italic placeholder:text-gray-400 focus:outline-none focus:border-brand-rose transition-colors resize-none"
               />
               <p className="text-[11px] text-admin-muted mt-1">
-                El aviso se envía desde el servidor en cuanto entra la reserva, aunque nadie tenga el panel abierto.
+                Llegan dos avisos: <strong>reserva nueva</strong> y <strong>cancelación hecha por la clienta</strong>.
+                Las citas que cancela el equipo desde el panel no avisan. El asunto ya trae el nombre y
+                la hora («Nueva reserva · Ana · mañana 10:00»), así que se entiende sin abrir el correo.
+                Se envía desde el servidor, aunque nadie tenga el panel abierto.
               </p>
             </div>
             <button
